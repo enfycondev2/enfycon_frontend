@@ -515,9 +515,7 @@ export default function JobsTable({
                             <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                                 Submissions
                             </TableHead>
-                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                Urgency
-                            </TableHead>
+
                             <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
                                 Req Type
                             </TableHead>
@@ -571,10 +569,20 @@ export default function JobsTable({
                                 return (
                                     <TableRow key={job.id} className={cn("transition-colors border-b border-neutral-100", isEditing ? "bg-blue-50 dark:bg-blue-950/30" : "hover:bg-neutral-50 dark:hover:bg-slate-800/50")}>
                                         {/* Job Title */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start font-medium capitalize">
+                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
                                             {isEditing
                                                 ? <Input className={inputCls} value={editForm.jobTitle ?? ""} onChange={ef("jobTitle")} />
-                                                : job.jobTitle.toLowerCase()}
+                                                : (
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <span className="font-medium capitalize">{job.jobTitle.toLowerCase()}</span>
+                                                        {job.urgency && (
+                                                            <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${job.urgency === "HOT" ? "bg-red-50 text-red-600 border-red-200" :
+                                                                job.urgency === "WARM" ? "bg-amber-50 text-amber-600 border-amber-200" :
+                                                                    "bg-blue-50 text-blue-600 border-blue-200"
+                                                                }`}>{job.urgency}</span>
+                                                        )}
+                                                    </div>
+                                                )}
                                         </TableCell>
                                         {/* Job Code - never editable */}
                                         <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
@@ -645,19 +653,7 @@ export default function JobsTable({
                                                 </div>
                                             )}
                                         </TableCell>
-                                        {/* Urgency */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                            {isEditing ? (
-                                                <Select value={editForm.urgency ?? ""} onValueChange={efSel("urgency")}>
-                                                    <SelectTrigger className={selCls}><SelectValue /></SelectTrigger>
-                                                    <SelectContent>
-                                                        {["HOT", "WARM", "COLD"].map(u => <SelectItem key={u} value={u} className="text-xs">{u}</SelectItem>)}
-                                                    </SelectContent>
-                                                </Select>
-                                            ) : job.urgency && (
-                                                <Badge variant={job.urgency === "HOT" ? "destructive" : "secondary"} className="text-[10px] px-1.5 py-0 w-fit">{job.urgency}</Badge>
-                                            )}
-                                        </TableCell>
+
                                         {/* Req Type */}
                                         <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
                                             <span className="text-xs capitalize">{(job.requirementType || "").replace(/_/g, " ").toLowerCase()}</span>
