@@ -18,6 +18,7 @@ import {
     Search,
     X,
     Filter,
+    Pencil,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,6 +29,9 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { cn, formatUsDate, formatUsTime } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { apiClient } from "@/lib/apiClient";
+import { toast } from "react-hot-toast";
 
 export interface CandidateSubmission {
     id: string | number;
@@ -63,6 +67,7 @@ export interface CandidateSubmission {
 interface SubmittedJobsTableProps {
     submissions: CandidateSubmission[];
     showExtendedDetails?: boolean;
+    onUpdate?: () => void;
 }
 
 const getBadgeStyles = (status: string) => {
@@ -81,6 +86,102 @@ const getBadgeStyles = (status: string) => {
     }
     return "bg-gray-100 text-gray-700";
 };
+
+const STAGE_STATUSES = ["PENDING", "CLEARED", "REJECTED"];
+const FINAL_STATUSES = ["SUBMITTED", "REJECTED", "OFFER", "JOIN"];
+
+function EditStatusPopover({ sub, onSaved }: { sub: CandidateSubmission; onSaved?: () => void }) {
+    const [open, setOpen] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [form, setForm] = useState({
+        l1Status: sub.l1Status || "PENDING",
+        l2Status: sub.l2Status || "PENDING",
+        l3Status: sub.l3Status || "PENDING",
+        finalStatus: sub.finalStatus || "PENDING",
+        remarks: sub.remarks || "",
+    });
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            const res = await apiClient(`/recruiter-submissions/${sub.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(form),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.message || "Update failed");
+            }
+            toast.success("Status updated");
+            setOpen(false);
+            onSaved?.();
+        } catch (e: any) {
+            toast.error(e.message || "Failed to update status");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const sf = (key: keyof typeof form) => (val: string) => setForm(p => ({ ...p, [key]: val }));
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button size="sm" variant="outline" className="h-7 px-2 gap-1 text-xs">
+                    <Pencil className="h-3 w-3" /> Edit
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-4 space-y-3" align="end">
+                <p className="text-xs font-semibold text-neutral-700 border-b pb-2">Update Pipeline Status</p>
+
+                {(["l1Status", "l2Status", "l3Status"] as const).map((key, i) => (
+                    <div key={key} className="flex items-center gap-2">
+                        <span className="text-xs font-semibold w-6 text-neutral-500">L{i + 1}</span>
+                        <Select value={form[key]} onValueChange={sf(key)}>
+                            <SelectTrigger className="h-7 text-xs flex-1">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {STAGE_STATUSES.map(s => (
+                                    <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                ))}
+
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold w-6 text-neutral-500">Final</span>
+                    <Select value={form.finalStatus} onValueChange={sf("finalStatus")}>
+                        <SelectTrigger className="h-7 text-xs flex-1">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {FINAL_STATUSES.map(s => (
+                                <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div>
+                    <label className="text-xs font-semibold text-neutral-500 block mb-1">Feedback / Remarks</label>
+                    <Input
+                        value={form.remarks}
+                        onChange={e => setForm(p => ({ ...p, remarks: e.target.value }))}
+                        placeholder="Add feedback..."
+                        className="h-7 text-xs"
+                    />
+                </div>
+
+                <Button size="sm" className="w-full" onClick={handleSave} disabled={saving}>
+                    {saving ? "Saving..." : "Save Changes"}
+                </Button>
+            </PopoverContent>
+        </Popover>
+    );
+}
 
 // Pipeline Component for L1/L2/L3
 const PipelineProgress = ({ sub }: { sub: CandidateSubmission }) => {
@@ -131,6 +232,7 @@ const PipelineProgress = ({ sub }: { sub: CandidateSubmission }) => {
 export default function SubmittedJobsTable({
     submissions,
     showExtendedDetails = true,
+    onUpdate,
 }: SubmittedJobsTableProps) {
     const [currentPage, setCurrentPage] = useState(1);
     const [searchQuery, setSearchQuery] = useState("");
@@ -463,11 +565,11 @@ export default function SubmittedJobsTable({
                                                 </TableCell>
                                             )}
 
-                                            {/* 7. Action Button */}
+                                            {/* Action Buttons */}
                                             <TableCell className="px-6 py-4 text-end">
-                                                <button className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 rounded-md px-2 py-1 hover:bg-blue-50">
-                                                    View Details
-                                                </button>
+                                                <div className="flex justify-end items-center gap-2">
+                                                    <EditStatusPopover sub={sub} onSaved={onUpdate} />
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     );

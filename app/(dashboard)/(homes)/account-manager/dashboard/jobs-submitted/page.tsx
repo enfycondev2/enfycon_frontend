@@ -55,7 +55,7 @@ export default function AccountManagerSubmittedJobsPage() {
         <>
             <DashboardBreadcrumb title="Submitted Candidates" text="Job Management" />
             <div className="p-6 bg-gray-50 min-h-[calc(100vh-4rem)]">
-                <div className="max-w-7xl mx-auto space-y-6">
+                <div className="space-y-6">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight text-gray-900">
@@ -79,7 +79,7 @@ export default function AccountManagerSubmittedJobsPage() {
                             <p className="text-sm text-neutral-500 font-medium">Loading submissions...</p>
                         </div>
                     ) : (
-                        <SubmittedJobsTable submissions={submissions} showExtendedDetails={true} />
+                        <SubmittedJobsTable submissions={submissions} showExtendedDetails={true} onUpdate={fetchSubmissions} />
                     )}
                 </div>
             </div>
