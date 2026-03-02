@@ -55,6 +55,7 @@ interface Job {
     };
     assignedRecruiters?: TeamMember[];
     requirementType?: string;
+    carryForwardAge?: number;
     pod?: {
         id: string;
         name: string;
@@ -332,6 +333,12 @@ export default function RecruiterJobsTable({
                             <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
                                 Created Date
                             </TableHead>
+                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                Req Type
+                            </TableHead>
+                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+                                CFR Age
+                            </TableHead>
                             <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                                 Status
                             </TableHead>
@@ -404,6 +411,25 @@ export default function RecruiterJobsTable({
                                                     {formatUsTime(job.createdAt)}
                                                 </span>
                                             </div>
+                                        </TableCell>
+                                        <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                            <div className="flex flex-col gap-1">
+                                                {job.requirementType === "NEW" && (
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border w-fit bg-emerald-50 text-emerald-700 border-emerald-200">New</span>
+                                                )}
+                                                {job.requirementType === "CFR" && (
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border w-fit bg-red-50 text-red-700 border-red-200">Carry Forward</span>
+                                                )}
+                                                {job.requirementType === "CFR_EXTENDED" && (
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border w-fit bg-amber-50 text-amber-700 border-amber-200 whitespace-nowrap">
+                                                        CFR Ext
+                                                    </span>
+                                                )}
+                                                {!job.requirementType && <span className="text-xs text-neutral-400">—</span>}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-center">
+                                            <span className="text-sm font-medium">{job.carryForwardAge ?? 0}</span>
                                         </TableCell>
                                         <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-center">
                                             <Badge variant={status.variant as any} className="font-semibold px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider">
