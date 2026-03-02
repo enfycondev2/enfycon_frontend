@@ -51,11 +51,24 @@ import { apiClient } from "@/lib/apiClient";
 interface Job {
     id: string;
     jobTitle: string;
+    jobType: string;
+    jobDescription?: string;
+    jobLocation: string;
+    visaType: string;
+    clientBillRate: string;
+    payRate: string;
     clientName: string;
     endClientName: string;
     jobCode: string;
+    noOfPositions: number;
+    submissionRequired: number;
+    submissionDone: number;
+    urgency: string;
+    requirementType: string;
+    carryForwardAge: number;
     status: string;
     createdAt: string;
+    updatedAt: string;
     accountManager?: {
         fullName: string | null;
         email: string;
@@ -69,6 +82,11 @@ interface Job {
         name: string;
     }[];
     podIds?: string[];
+    assignedRecruiters?: {
+        id: string;
+        fullName: string | null;
+        email: string;
+    }[];
 }
 
 interface JobsTableProps {
@@ -431,10 +449,34 @@ export default function JobsTable({
                                 Job Code
                             </TableHead>
                             <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                Type / Location
+                            </TableHead>
+                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                Visa
+                            </TableHead>
+                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
                                 Client
                             </TableHead>
-                              <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
                                 End Client
+                            </TableHead>
+                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+                                Positions
+                            </TableHead>
+                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+                                Submissions
+                            </TableHead>
+                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                Urgency
+                            </TableHead>
+                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                Req Type
+                            </TableHead>
+                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+                                CFR Age
+                            </TableHead>
+                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                Rates
                             </TableHead>
                             {showAccountManager && (
                                 <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
@@ -448,6 +490,9 @@ export default function JobsTable({
                             )}
                             <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
                                 Created Date
+                            </TableHead>
+                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                Last Updated
                             </TableHead>
                             <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                                 Status
@@ -463,7 +508,7 @@ export default function JobsTable({
                         {currentJobs.length === 0 ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={5 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0)}
+                                    colSpan={13 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0)}
                                     className="h-24 text-center text-muted-foreground italic"
                                 >
                                     No jobs found.
@@ -482,11 +527,46 @@ export default function JobsTable({
                                                 {job.jobCode}
                                             </code>
                                         </TableCell>
+                                        <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-xs font-medium capitalize">{(job.jobType || "").replace("_", " ").toLowerCase()}</span>
+                                                <span className="text-[10px] text-muted-foreground capitalize">{job.jobLocation}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">{job.visaType}</Badge>
+                                        </TableCell>
                                         <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
                                             {job.clientName}
                                         </TableCell>
                                         <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
                                             {job.endClientName}
+                                        </TableCell>
+                                        <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-center">
+                                            <span className="font-semibold text-sm">{job.noOfPositions ?? "-"}</span>
+                                        </TableCell>
+                                        <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-center">
+                                            <div className="flex flex-col items-center gap-0.5">
+                                                <span className="font-medium text-sm">{job.submissionDone ?? 0} / {job.submissionRequired ?? 0}</span>
+                                                <span className="text-[10px] text-muted-foreground">done / req</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                            {job.urgency && (
+                                                <Badge variant={job.urgency === "HOT" ? "destructive" : "secondary"} className="text-[10px] px-1.5 py-0 w-fit">{job.urgency}</Badge>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                            <span className="text-xs capitalize">{(job.requirementType || "").replace(/_/g, " ").toLowerCase()}</span>
+                                        </TableCell>
+                                        <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-center">
+                                            <span className="text-sm font-medium">{job.carryForwardAge ?? 0}</span>
+                                        </TableCell>
+                                        <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">
+                                            <div className="flex flex-col gap-0.5 text-xs">
+                                                <span><span className="text-muted-foreground">Bill:</span> {job.clientBillRate || "-"}</span>
+                                                <span><span className="text-muted-foreground">Pay:</span> {job.payRate || "-"}</span>
+                                            </div>
                                         </TableCell>
                                         {showAccountManager && (
                                             <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">
@@ -531,6 +611,12 @@ export default function JobsTable({
                                                     </div>
                                                 )
                                                 : new Date(job.createdAt).toLocaleDateString()}
+                                        </TableCell>
+                                        <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">
+                                            <div className="flex flex-col">
+                                                <span className="text-sm">{estDateFormatter.format(new Date(job.updatedAt))}</span>
+                                                <span className="text-[10px] text-muted-foreground">{estTimeFormatter.format(new Date(job.updatedAt))}</span>
+                                            </div>
                                         </TableCell>
                                         <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-center flex justify-center">
                                             <JobStatusSelect job={job} onRefresh={onRefresh} />
