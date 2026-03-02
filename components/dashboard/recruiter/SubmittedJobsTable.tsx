@@ -323,7 +323,7 @@ export default function SubmittedJobsTable({
 
         submissions.forEach(sub => {
             const final = (sub.finalStatus || "").toUpperCase();
-            if (["REJECTED", "OFFER", "JOIN", "SELECTED"].includes(final)) {
+            if (final === "JOIN") {
                 finalized++;
             } else if (!sub.l1Status || sub.l1Status.toUpperCase() === "PENDING") {
                 pendingL1++;
