@@ -141,14 +141,20 @@ export default function RecruiterJobDetailPage() {
                                 </div>
                             </div>
                         </div>
-                        <Button
-                            className="shrink-0 gap-2 h-10 px-5"
-                            disabled={job.status === "CLOSED" || job.status === "FILLED"}
-                            onClick={() => setSubmissionOpen(true)}
-                        >
-                            <UserPlus className="h-4 w-4" />
-                            Submit Candidate
-                        </Button>
+                        {job.requirementType === "CFR" ? (
+                            <div className="shrink-0 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-2">
+                                <span className="text-sm font-semibold text-red-700">🚫 Submissions Blocked</span>
+                            </div>
+                        ) : (
+                            <Button
+                                className="shrink-0 gap-2 h-10 px-5"
+                                disabled={job.status === "CLOSED" || job.status === "FILLED"}
+                                onClick={() => setSubmissionOpen(true)}
+                            >
+                                <UserPlus className="h-4 w-4" />
+                                Submit Candidate
+                            </Button>
+                        )}
                     </div>
 
                     {/* Quick stats strip */}

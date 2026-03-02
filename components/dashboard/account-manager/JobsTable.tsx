@@ -49,6 +49,7 @@ import { Save, X as XIcon } from "lucide-react";
 
 import { apiClient } from "@/lib/apiClient";
 import { LocationSelect } from "@/components/shared/location-select";
+import CfrExtendButton from "./CfrExtendButton";
 
 interface Job {
     id: string;
@@ -67,6 +68,7 @@ interface Job {
     submissionDone: number;
     urgency: string;
     requirementType: string;
+    cfrDaysRemaining: number;
     carryForwardAge: number;
     status: string;
     createdAt: string;
@@ -99,6 +101,7 @@ interface JobsTableProps {
     showPod?: boolean;
     showFilters?: boolean;
     showEstCreatedDateTime?: boolean;
+    showCfrExtend?: boolean;
     onRefresh?: () => void;
 }
 
@@ -182,6 +185,7 @@ export default function JobsTable({
     showPod = false,
     showFilters = false,
     showEstCreatedDateTime = false,
+    showCfrExtend = false,
     onRefresh
 }: JobsTableProps) {
     const { data: session } = useSession();
@@ -656,7 +660,25 @@ export default function JobsTable({
 
                                         {/* Req Type */}
                                         <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                            <span className="text-xs capitalize">{(job.requirementType || "").replace(/_/g, " ").toLowerCase()}</span>
+                                            <div className="flex flex-col gap-1">
+                                                {job.requirementType === "NEW" && (
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border w-fit bg-emerald-50 text-emerald-700 border-emerald-200">New</span>
+                                                )}
+                                                {job.requirementType === "CFR" && (
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border w-fit bg-red-50 text-red-700 border-red-200">Carry Forward</span>
+                                                        {showCfrExtend && <CfrExtendButton jobId={job.id} onSuccess={onRefresh} />}
+                                                    </div>
+                                                )}
+                                                {job.requirementType === "CFR_EXTENDED" && (
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border w-fit bg-amber-50 text-amber-700 border-amber-200 whitespace-nowrap">
+                                                        CFR Ext · {job.cfrDaysRemaining ?? 0}d left
+                                                    </span>
+                                                )}
+                                                {!["NEW", "CFR", "CFR_EXTENDED"].includes(job.requirementType) && (
+                                                    <span className="text-xs capitalize text-neutral-500">{(job.requirementType || "").replace(/_/g, " ").toLowerCase()}</span>
+                                                )}
+                                            </div>
                                         </TableCell>
                                         {/* CFR Age */}
                                         <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-center">

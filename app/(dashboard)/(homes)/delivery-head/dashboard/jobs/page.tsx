@@ -44,6 +44,7 @@ export default async function DeliveryHeadJobsPage() {
                     showActions={false}
                     showFilters={true}
                     showEstCreatedDateTime={true}
+                    showCfrExtend={true}
                 />
             </div>
         </>

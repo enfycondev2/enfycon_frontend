@@ -54,6 +54,7 @@ interface Job {
         email: string;
     };
     assignedRecruiters?: TeamMember[];
+    requirementType?: string;
     pod?: {
         id: string;
         name: string;
@@ -319,7 +320,7 @@ export default function RecruiterJobsTable({
                             <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
                                 Client
                             </TableHead>
-                             <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
                                 End Client
                             </TableHead>
                             <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
@@ -411,16 +412,22 @@ export default function RecruiterJobsTable({
                                         </TableCell>
                                         <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-end">
                                             <div className="flex justify-end gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10"
-                                                    onClick={() => setSubmissionJob({ id: job.id, jobCode: job.jobCode })}
-                                                    title="Submit Candidate"
-                                                    disabled={job.status === "CLOSED"}
-                                                >
-                                                    <UserPlus className="h-4 w-4" />
-                                                </Button>
+                                                {job.requirementType === "CFR" ? (
+                                                    <span className="text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+                                                        Submissions blocked
+                                                    </span>
+                                                ) : (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10"
+                                                        onClick={() => setSubmissionJob({ id: job.id, jobCode: job.jobCode })}
+                                                        title="Submit Candidate"
+                                                        disabled={job.status === "CLOSED"}
+                                                    >
+                                                        <UserPlus className="h-4 w-4" />
+                                                    </Button>
+                                                )}
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20" asChild>
                                                     <Link href={`${baseUrl}/${job.id}`}>
                                                         <Eye className="h-4 w-4" />
