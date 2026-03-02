@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { Smile } from "lucide-react";
 import { redirect } from "next/navigation";
 
 export default async function DashboardRedirect() {
@@ -26,10 +27,21 @@ export default async function DashboardRedirect() {
     } else {
         // Default fallback if no specific role matched
         return (
-            <div className="flex h-screen w-full items-center justify-center">
-                <div className="text-center">
-                    <h1 className="text-3xl font-bold mb-2">Unauthorized Access</h1>
-                    <p className="text-neutral-500">You do not have the required roles to view this dashboard.</p>
+            <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center p-4">
+                <div className="text-center max-w-md mx-auto p-10 bg-white dark:bg-slate-800 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] border border-neutral-100 dark:border-slate-700/50">
+                    <div className="flex justify-center mb-8 relative">
+                        <div className="absolute inset-0 bg-yellow-400/20 blur-2xl rounded-full w-28 h-28 mx-auto animate-pulse"></div>
+                        <div className="w-28 h-28 bg-yellow-400/10 rounded-full flex items-center justify-center relative shadow-inner">
+                            <Smile className="w-16 h-16 text-yellow-500 animate-bounce drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+                        </div>
+                    </div>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold mb-4 text-neutral-800 dark:text-neutral-100 tracking-tight">Hang Tight!</h1>
+                    <p className="text-neutral-500 dark:text-neutral-400 text-base sm:text-lg mb-2 leading-relaxed">
+                        We're preparing your workspace.
+                    </p>
+                    <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-2 leading-relaxed">
+                        Please kindly wait while your designation is assigned by your admin.
+                    </p>
                 </div>
             </div>
         );

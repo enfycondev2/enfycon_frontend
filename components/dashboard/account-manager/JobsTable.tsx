@@ -693,8 +693,8 @@ export default function JobsTable({
                                                 </div>
                                             ) : (
                                                 <div className="flex flex-col gap-0.5 text-xs">
-                                                    <span><span className="text-muted-foreground">Bill:</span> {job.clientBillRate || "-"}</span>
-                                                    <span><span className="text-muted-foreground">Pay:</span> {job.payRate || "-"}</span>
+                                                    <span><span className="text-muted-foreground">Bill:</span> {job.clientBillRate ? `$${job.clientBillRate}` : "-"}</span>
+                                                    <span><span className="text-muted-foreground">Pay:</span> {job.payRate ? `$${job.payRate}` : "-"}</span>
                                                 </div>
                                             )}
                                         </TableCell>
