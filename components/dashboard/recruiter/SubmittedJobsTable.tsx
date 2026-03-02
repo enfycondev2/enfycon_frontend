@@ -90,6 +90,35 @@ const getBadgeStyles = (status: string) => {
 const STAGE_STATUSES = ["PENDING", "CLEARED", "REJECTED"];
 const FINAL_STATUSES = ["SUBMITTED", "REJECTED", "OFFER", "JOIN"];
 
+function FeedbackPopover({ remarks, comment }: { remarks?: string; comment?: string }) {
+    const hasContent = !!(remarks || comment);
+    if (!hasContent) return <span className="text-gray-400 text-xs italic">-</span>;
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <button className="text-xs text-blue-600 hover:text-blue-800 font-medium hover:underline">
+                    View feedback
+                </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-4 space-y-2" align="end">
+                <p className="text-xs font-semibold text-neutral-700 border-b pb-2">Feedback</p>
+                {remarks && (
+                    <div>
+                        <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Remarks</span>
+                        <p className="text-xs text-neutral-700 mt-0.5 whitespace-pre-wrap">{remarks}</p>
+                    </div>
+                )}
+                {comment && (
+                    <div>
+                        <span className="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">Recruiter Note</span>
+                        <p className="text-xs text-neutral-600 mt-0.5 whitespace-pre-wrap">{comment}</p>
+                    </div>
+                )}
+            </PopoverContent>
+        </Popover>
+    );
+}
+
 function EditStatusPopover({ sub, onSaved }: { sub: CandidateSubmission; onSaved?: () => void }) {
     const [open, setOpen] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -544,30 +573,15 @@ export default function SubmittedJobsTable({
                                                 </span>
                                             </TableCell>
 
-                                            {/* Feedback (Remarks & Comments) */}
                                             {showExtendedDetails && (
-                                                <TableCell className="px-6 py-4 text-start max-w-[250px]">
-                                                    <div className="flex flex-col gap-1.5">
-                                                        {sub.remarks && (
-                                                            <div className="text-xs">
-                                                                <span className="font-semibold text-gray-600">Remarks: </span>
-                                                                <span className="text-gray-500 line-clamp-1" title={sub.remarks}>{sub.remarks}</span>
-                                                            </div>
-                                                        )}
-                                                        {sub.recruiterComment && (
-                                                            <div className="text-[10px]">
-                                                                <span className="font-semibold text-gray-500">Note: </span>
-                                                                <span className="text-gray-400 line-clamp-1" title={sub.recruiterComment}>{sub.recruiterComment}</span>
-                                                            </div>
-                                                        )}
-                                                        {!sub.remarks && !sub.recruiterComment && <span className="text-gray-400 text-xs italic">-</span>}
-                                                    </div>
+                                                <TableCell className="px-4 py-4 text-start w-[120px]">
+                                                    <FeedbackPopover remarks={sub.remarks} comment={sub.recruiterComment} />
                                                 </TableCell>
                                             )}
 
                                             {/* Action Buttons */}
-                                            <TableCell className="px-6 py-4 text-end">
-                                                <div className="flex justify-end items-center gap-2">
+                                            <TableCell className="px-4 py-4 text-end whitespace-nowrap w-[80px]">
+                                                <div className="flex justify-end items-center">
                                                     <EditStatusPopover sub={sub} onSaved={onUpdate} />
                                                 </div>
                                             </TableCell>
