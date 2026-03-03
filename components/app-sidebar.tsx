@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 
 import { NavMain } from "@/components/nav-main";
 import {
@@ -15,6 +16,7 @@ import { useSession } from "next-auth/react";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession();
+  const pathname = usePathname();
   const rawRoles = ((session?.user as { roles?: string[] } | undefined)?.roles) || [];
   const validRoles = [
     "ADMIN",
@@ -23,11 +25,31 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     "RECRUITER",
     "DELIVERY_HEAD", "DELIVERY-HEAD"
   ];
-  const primaryRole = rawRoles.find((role: string) =>
-    validRoles.includes(role.toUpperCase())
-  );
+  let urlRole = "";
+  if (pathname?.startsWith("/account-manager") || pathname?.startsWith("/account_manager")) {
+    urlRole = "ACCOUNT_MANAGER";
+  } else if (pathname?.startsWith("/delivery-head") || pathname?.startsWith("/delivery_head")) {
+    urlRole = "DELIVERY_HEAD";
+  } else if (pathname?.startsWith("/recruiter")) {
+    urlRole = "RECRUITER";
+  } else if (pathname?.startsWith("/pod-lead") || pathname?.startsWith("/pod_lead")) {
+    urlRole = "POD_LEAD";
+  } else if (pathname?.startsWith("/admin")) {
+    urlRole = "ADMIN";
+  }
 
-  console.log("AppSidebar Role Mapping:", { rawRoles, primaryRole });
+  const normalizedRawRoles = rawRoles.map((r: string) => r.toUpperCase().replace('-', '_'));
+
+  let primaryRole = "";
+  if (urlRole && normalizedRawRoles.includes(urlRole)) {
+    primaryRole = urlRole;
+  } else {
+    primaryRole = rawRoles.find((role: string) =>
+      validRoles.includes(role.toUpperCase())
+    ) || "";
+  }
+
+  console.log("AppSidebar Role Mapping:", { rawRoles, primaryRole, pathname });
 
   if (!primaryRole) {
     return null;

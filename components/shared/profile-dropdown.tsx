@@ -8,10 +8,11 @@ import {
 import { cn } from "@/lib/utils";
 import { apiClient } from "@/lib/apiClient";
 import userImg from "@/public/assets/images/user.png";
-import { ChevronDown, Mail, Settings, Sparkles, User } from "lucide-react";
+import { ChevronDown, Mail, Settings, Sparkles, User, House, BriefcaseBusiness } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 type PodTeamMember = {
@@ -22,6 +23,7 @@ type PodTeamMember = {
 
 const ProfileDropdown = () => {
   const { data: session } = useSession();
+  const pathname = usePathname();
   const [resolvedPodName, setResolvedPodName] = useState("");
   const [podTeamMembers, setPodTeamMembers] = useState<PodTeamMember[]>([]);
   const [isPodHeadVerified, setIsPodHeadVerified] = useState(false);
@@ -47,10 +49,29 @@ const ProfileDropdown = () => {
   const hasPodLead = selectedRolesBase.includes("POD_LEAD");
   const hasRecruiter = selectedRolesBase.includes("RECRUITER");
   const hasDeliveryHead = selectedRolesBase.includes("DELIVERY_HEAD");
-  const selectedRoles =
-    hasPodLead && hasRecruiter
+  const hasAccountManager = selectedRolesBase.includes("ACCOUNT_MANAGER");
+  const canSwitchDashboard = hasDeliveryHead && hasAccountManager;
+
+  let urlRole = "";
+  if (pathname?.startsWith("/account-manager") || pathname?.startsWith("/account_manager")) {
+    urlRole = "ACCOUNT_MANAGER";
+  } else if (pathname?.startsWith("/delivery-head") || pathname?.startsWith("/delivery_head")) {
+    urlRole = "DELIVERY_HEAD";
+  } else if (pathname?.startsWith("/recruiter")) {
+    urlRole = "RECRUITER";
+  } else if (pathname?.startsWith("/pod-lead") || pathname?.startsWith("/pod_lead")) {
+    urlRole = "POD_LEAD";
+  } else if (pathname?.startsWith("/admin")) {
+    urlRole = "ADMIN";
+  }
+
+  const activeRole = urlRole && selectedRolesBase.includes(urlRole) ? urlRole : undefined;
+
+  const selectedRoles = activeRole
+    ? [activeRole]
+    : (hasPodLead && hasRecruiter
       ? selectedRolesBase.filter((role) => role !== "RECRUITER")
-      : selectedRolesBase;
+      : selectedRolesBase);
 
   const formattedRoles = selectedRoles.map((role) =>
     role
@@ -291,6 +312,30 @@ const ProfileDropdown = () => {
             </div>
           ) : null}
           <ul className="flex flex-col gap-3">
+            {canSwitchDashboard ? (
+              <>
+                <li className="pt-1 mt-1 -mb-1">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-300">Switch Dashboard</span>
+                </li>
+                <li>
+                  <Link
+                    href="/delivery-head/dashboard"
+                    className="text-black dark:text-white hover:text-primary dark:hover:text-primary flex items-center gap-3 w-full"
+                  >
+                    <House className="w-5 h-5" /> Delivery Head
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/account-manager/dashboard"
+                    className="text-black dark:text-white hover:text-primary dark:hover:text-primary flex items-center gap-3 w-full"
+                  >
+                    <BriefcaseBusiness className="w-5 h-5" /> Account Manager
+                  </Link>
+                </li>
+                <li className="mb-1 border-b border-neutral-200 dark:border-slate-700"></li>
+              </>
+            ) : null}
             <li>
               <Link
                 href={profileUrl}
