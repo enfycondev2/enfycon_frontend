@@ -29,7 +29,7 @@ export async function doSocialLogin (formData:FormData) {
     const redirectUri = normalizeRedirectUri(
       process.env.NEXT_PUBLIC_SSO_REDIRECT_URI || "http://localhost:3000/callback"
     );
-    const scope = "openid profile email";
+    const scope = "openid profile email offline_access";
 
     if (!issuer || !clientId) {
       console.error("Missing KEYCLOAK_ISSUER or KEYCLOAK_CLIENT_ID for SSO redirect.");

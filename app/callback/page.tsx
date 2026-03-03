@@ -53,6 +53,9 @@ export default function CallbackPage() {
         }
 
         const accessToken = data?.access_token || data?.accessToken;
+        const refreshToken = data?.refresh_token || data?.refreshToken;
+        const expiresIn = data?.expires_in || data?.expiresIn;
+
         if (!accessToken || !data?.user) {
           throw new Error("Missing token or user in SSO response.");
         }
@@ -60,6 +63,8 @@ export default function CallbackPage() {
         const signInResult = await signIn("credentials", {
           accessToken,
           userString: JSON.stringify(data.user),
+          refreshToken: refreshToken || "",
+          expiresIn: expiresIn?.toString() || "",
           redirect: false,
         });
 

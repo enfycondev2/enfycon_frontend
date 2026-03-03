@@ -68,11 +68,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: {},
         accessToken: {},
         userString: {},
+        refreshToken: {},
+        expiresIn: {},
       },
       authorize: async (credentials) => {
         try {
           const ssoAccessToken = credentials?.accessToken as string | undefined;
           const userString = credentials?.userString as string | undefined;
+          const ssoRefreshToken = credentials?.refreshToken as string | undefined;
+          const ssoExpiresIn = credentials?.expiresIn ? Number(credentials.expiresIn) : undefined;
 
           // SSO callback path: backend has already validated code and returned user + token.
           if (ssoAccessToken && userString) {
@@ -84,6 +88,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               name: parsedUser.fullName || parsedUser.name || parsedUser.email,
               roles: parsedUser.roles || [],
               accessToken: ssoAccessToken,
+              refreshToken: ssoRefreshToken,
+              expiresIn: ssoExpiresIn,
             };
           }
 
