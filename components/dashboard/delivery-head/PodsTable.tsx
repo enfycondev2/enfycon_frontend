@@ -128,17 +128,20 @@ export default function PodsTable({ pods: initialPods }: PodsTableProps) {
                                 <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
                                     <div className="flex flex-col">
                                         <span className="text-sm">
-                                            {new Date(pod.updatedAt).toLocaleDateString(undefined, {
+                                            {new Date(pod.updatedAt).toLocaleDateString('en-US', {
+                                                timeZone: 'America/New_York',
                                                 year: 'numeric',
                                                 month: 'short',
                                                 day: 'numeric'
                                             })}
                                         </span>
                                         <span className="text-[10px] text-muted-foreground italic uppercase">
-                                            {new Date(pod.updatedAt).toLocaleTimeString([], {
+                                            {new Date(pod.updatedAt).toLocaleTimeString('en-US', {
+                                                timeZone: 'America/New_York',
                                                 hour: '2-digit',
                                                 minute: '2-digit',
-                                                hour12: true
+                                                hour12: true,
+                                                timeZoneName: 'short'
                                             })}
                                         </span>
                                     </div>
