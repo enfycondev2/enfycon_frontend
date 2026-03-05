@@ -295,7 +295,7 @@ const ProfileDropdown = () => {
           {podTeamMembers.length > 0 ? (
             <div className="mb-4 pb-3 border-b border-neutral-200 dark:border-slate-700">
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-300 mb-2">
-                Pod Team
+                Pod Members
               </p>
               <div className="space-y-2">
                 {podTeamMembers.map((member) => (
