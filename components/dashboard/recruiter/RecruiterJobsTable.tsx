@@ -130,7 +130,6 @@ export default function RecruiterJobsTable({
     const filterOptions = useMemo(() => {
         const ams = new Map<string, string>();
         const clients = new Set<string>();
-        const recruiters = new Map<string, string>();
 
         jobs.forEach(job => {
             if (job.accountManager) {
@@ -138,21 +137,21 @@ export default function RecruiterJobsTable({
                 ams.set(job.accountManager.email, name);
             }
             if (job.clientName) clients.add(job.clientName);
-
-            if (job.assignedRecruiters) {
-                job.assignedRecruiters.forEach(rec => {
-                    const name = rec.fullName || rec.email;
-                    recruiters.set(rec.id, name);
-                });
-            }
         });
+
+        // Use teamMembers (scoped to the current pod via /pods/my-team) instead of
+        // deriving recruiters from job.assignedRecruiters, which would include
+        // recruiters from other pods when a job is assigned to multiple pods.
+        const recruiters = teamMembers
+            .map(m => ({ id: m.id, name: m.fullName || m.email }))
+            .sort((a, b) => a.name.localeCompare(b.name));
 
         return {
             ams: Array.from(ams.entries()).map(([email, name]) => ({ email, name })),
             clients: Array.from(clients).sort(),
-            recruiters: Array.from(recruiters.entries()).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
+            recruiters,
         };
-    }, [jobs]);
+    }, [jobs, teamMembers]);
 
     // Apply filtering
     const filteredJobs = useMemo(() => {
@@ -396,7 +395,7 @@ export default function RecruiterJobsTable({
                                         <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
                                             <RecruiterAssignCell
                                                 jobId={job.id}
-                                                assignedRecruiters={job.assignedRecruiters ?? []}
+                                                assignedRecruiters={(job.assignedRecruiters ?? []).filter(r => teamMembers.some(m => m.id === r.id))}
                                                 teamMembers={teamMembers}
                                                 token={token}
                                                 canEdit={isPodLead && job.status !== "CLOSED"}
