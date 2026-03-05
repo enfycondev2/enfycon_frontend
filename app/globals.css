@@ -492,18 +492,24 @@ html[layout="boron"] .dashboard-sidebar-container {
 
 /* ======================================= Layout Css End ================================== */
 
-/* Jobs table vertical column separators */
+/* Dashboard table vertical column separators */
 .jobs-table-grid th,
-.jobs-table-grid td {
+.jobs-table-grid td,
+.table-grid-lines th,
+.table-grid-lines td {
   border-right: 1px solid rgb(229 229 229);
 }
 
 .jobs-table-grid th:last-child,
-.jobs-table-grid td:last-child {
+.jobs-table-grid td:last-child,
+.table-grid-lines th:last-child,
+.table-grid-lines td:last-child {
   border-right: 0;
 }
 
 .dark .jobs-table-grid th,
-.dark .jobs-table-grid td {
+.dark .jobs-table-grid td,
+.dark .table-grid-lines th,
+.dark .table-grid-lines td {
   border-right-color: rgb(71 85 105);
 }

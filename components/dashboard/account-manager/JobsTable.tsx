@@ -496,11 +496,11 @@ export default function JobsTable({
                 <Table className="jobs-table-grid table-auto border-spacing-0 border-separate">
                     <TableHeader>
                         <TableRow className="border-0">
-                            <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                Job Title
-                            </TableHead>
-                            <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                            <TableHead className="sticky left-0 z-20 min-w-[170px] w-[170px] whitespace-nowrap bg-slate-100/95 dark:bg-slate-700/95 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(71,85,105,1)]">
                                 Job Code
+                            </TableHead>
+                            <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start min-w-[220px]">
+                                Job Title
                             </TableHead>
                             <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
                                 Type / Location
@@ -571,6 +571,11 @@ export default function JobsTable({
                                 const isEditing = editingJobId === job.id;
                                 const inputCls = "h-7 px-1.5 text-xs border border-blue-300 rounded w-full focus:outline-none focus:ring-1 focus:ring-blue-400";
                                 const selCls = "h-7 text-xs border border-blue-300 rounded focus:ring-blue-400";
+                                const stickyBgClass = isEditing
+                                    ? "bg-blue-50 dark:bg-blue-950"
+                                    : index % 2 === 0
+                                        ? "bg-white dark:bg-slate-900"
+                                        : "bg-slate-50 dark:bg-slate-800";
                                 return (
                                     <TableRow
                                         key={job.id}
@@ -583,6 +588,10 @@ export default function JobsTable({
                                                     : "bg-slate-50/70 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75"
                                         )}
                                     >
+                                        {/* Job Code - never editable */}
+                                        <TableCell className={cn("sticky left-0 z-30 min-w-[170px] w-[170px] whitespace-nowrap overflow-hidden py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(71,85,105,1)]", stickyBgClass)}>
+                                            <code className="inline-block bg-neutral-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-xs font-mono whitespace-nowrap">{job.jobCode}</code>
+                                        </TableCell>
                                         {/* Job Title */}
                                         <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
                                             {isEditing
@@ -598,10 +607,6 @@ export default function JobsTable({
                                                         )}
                                                     </div>
                                                 )}
-                                        </TableCell>
-                                        {/* Job Code - never editable */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                            <code className="bg-neutral-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-xs font-mono">{job.jobCode}</code>
                                         </TableCell>
                                         {/* Type / Location */}
                                         <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">

@@ -113,27 +113,27 @@ export default function PodsTable({
                 </div>
             )}
 
-            <div className="rounded-lg border border-neutral-200 dark:border-slate-600 overflow-hidden">
-            <Table className="table-auto border-spacing-0 border-separate">
+            <div className="rounded-lg border border-neutral-200 dark:border-slate-600 overflow-hidden bg-white dark:bg-slate-900/40">
+            <Table className="table-grid-lines table-auto border-spacing-0 border-separate">
                 <TableHeader>
                     <TableRow className="border-0">
-                        <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                        <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
                             Pod Name
                         </TableHead>
-                        <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                        <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
                             Pod Lead
                         </TableHead>
-                        <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+                        <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                             Recruiters
                         </TableHead>
-                        <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+                        <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                             Jobs Assigned
                         </TableHead>
-                        <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                        <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
                             Last Updated
                         </TableHead>
                         {showActions && (
-                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-end">
+                            <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-end">
                                 Actions
                             </TableHead>
                         )}
@@ -147,8 +147,15 @@ export default function PodsTable({
                             </TableCell>
                         </TableRow>
                     ) : (
-                        displayedPods.map((pod) => (
-                            <TableRow key={pod.id} className="hover:bg-neutral-50 dark:hover:bg-slate-800/50 transition-colors">
+                        displayedPods.map((pod, index) => (
+                            <TableRow
+                                key={pod.id}
+                                className={`transition-colors ${
+                                    index % 2 === 0
+                                        ? "bg-white dark:bg-slate-900/20 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                                        : "bg-slate-50/70 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75"
+                                }`}
+                            >
                                 <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start font-medium capitalize">
                                     <Link
                                         href={`${basePath}/${pod.id}`}

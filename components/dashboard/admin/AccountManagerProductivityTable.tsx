@@ -146,26 +146,26 @@ export default function AccountManagerProductivityTable({
         )}
       </div>
 
-      <div className="rounded-lg border border-neutral-200 dark:border-slate-600 overflow-hidden">
+      <div className="rounded-lg border border-neutral-200 dark:border-slate-600 overflow-hidden bg-white dark:bg-slate-900/40">
         <Table className="table-grid-lines table-auto border-spacing-0 border-separate min-w-full">
           <TableHeader>
             <TableRow className="border-0">
-              <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+              <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
                 Account Manager
               </TableHead>
-              <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+              <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                 Posted Jobs
               </TableHead>
-              <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+              <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                 Active
               </TableHead>
-              <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+              <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                 Filled
               </TableHead>
-              <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+              <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                 On Hold
               </TableHead>
-              <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+              <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                 Fill Rate
               </TableHead>
             </TableRow>
@@ -178,13 +178,17 @@ export default function AccountManagerProductivityTable({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredRows.map((row) => (
+              filteredRows.map((row, index) => (
                 (() => {
                   const current = row.metrics[timeFilter];
                   return (
                 <TableRow
                   key={row.email}
-                  className="hover:bg-neutral-50 dark:hover:bg-slate-800/50 transition-colors"
+                  className={`transition-colors ${
+                    index % 2 === 0
+                      ? "bg-white dark:bg-slate-900/20 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                      : "bg-slate-50/70 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75"
+                  }`}
                 >
                   <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
                     <div className="flex flex-col">

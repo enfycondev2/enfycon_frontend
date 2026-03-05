@@ -112,26 +112,26 @@ export default function RecruiterProductivityTable({
         )}
       </div>
 
-      <div className="rounded-lg border border-neutral-200 dark:border-slate-600 overflow-hidden">
-        <Table className="table-auto border-spacing-0 border-separate min-w-full">
+      <div className="rounded-lg border border-neutral-200 dark:border-slate-600 overflow-hidden bg-white dark:bg-slate-900/40">
+        <Table className="table-grid-lines table-auto border-spacing-0 border-separate min-w-full">
           <TableHeader>
             <TableRow className="border-0">
-              <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+              <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
                 Recruiter
               </TableHead>
-              <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+              <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                 Submissions
               </TableHead>
-              <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+              <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                 In Progress
               </TableHead>
-              <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+              <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                 Selected
               </TableHead>
-              <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+              <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                 Rejected
               </TableHead>
-              <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
+              <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-center">
                 Conversion
               </TableHead>
             </TableRow>
@@ -144,10 +144,14 @@ export default function RecruiterProductivityTable({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredRows.map((row) => (
+              filteredRows.map((row, index) => (
                 <TableRow
                   key={row.id}
-                  className="hover:bg-neutral-50 dark:hover:bg-slate-800/50 transition-colors"
+                  className={`transition-colors ${
+                    index % 2 === 0
+                      ? "bg-white dark:bg-slate-900/20 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                      : "bg-slate-50/70 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75"
+                  }`}
                 >
                   <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
                     <div className="flex flex-col">
@@ -179,4 +183,3 @@ export default function RecruiterProductivityTable({
     </div>
   );
 }
-
