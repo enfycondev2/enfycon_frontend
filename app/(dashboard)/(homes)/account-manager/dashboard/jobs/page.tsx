@@ -17,7 +17,8 @@ async function getJobs() {
             return [];
         }
 
-        return response.json();
+        const data = await response.json();
+        return Array.isArray(data?.data) ? data.data : [];
     } catch (error) {
         console.error("Error fetching jobs:", error);
         return [];
