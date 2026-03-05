@@ -41,6 +41,7 @@ export default async function DeliveryHeadJobsPage() {
 
                 <JobsTable
                     jobs={jobs}
+                    baseUrl="/delivery-head/dashboard/jobs"
                     showAccountManager={true}
                     showPod={true}
                     showActions={false}

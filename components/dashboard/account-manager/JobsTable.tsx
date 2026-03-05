@@ -228,6 +228,11 @@ export default function JobsTable({
     }, [showPod]);
 
     const itemsPerPage = 10;
+    const isInteractiveTarget = (target: EventTarget | null) => {
+        const el = target as HTMLElement | null;
+        if (!el) return false;
+        return !!el.closest("a, button, input, textarea, select, [role='combobox'], [role='listbox'], [data-radix-collection-item]");
+    };
 
     // Extract unique values for filters
     const filterOptions = useMemo(() => {
@@ -593,8 +598,13 @@ export default function JobsTable({
                                                 ? "bg-blue-50 dark:bg-blue-950/30"
                                                 : index % 2 === 0
                                                     ? "bg-white dark:bg-slate-900/20 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                                                    : "bg-slate-50/70 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75"
+                                                    : "bg-slate-50/70 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75",
+                                            !isEditing && "cursor-pointer"
                                         )}
+                                        onClick={(e) => {
+                                            if (isEditing || isInteractiveTarget(e.target)) return;
+                                            router.push(`${baseUrl}/${job.id}`);
+                                        }}
                                     >
                                         {/* Job Code - never editable */}
                                         <TableCell className={cn("sticky left-0 z-30 min-w-[170px] w-[170px] whitespace-nowrap overflow-hidden py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(71,85,105,1)]", stickyBgClass)}>
