@@ -2,38 +2,37 @@
 "use client";
 
 import { Loader2, LogOutIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { startTransition, useState } from "react";
+import { signOut } from "next-auth/react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "../ui/button";
 import { doLogout, LogoutResponse } from "./actions/logout";
 
 const Logout = () => {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setLoading(true);
+    try {
+      // Call backend to revoke Keycloak session (server action)
+      const result = (await doLogout()) as LogoutResponse;
 
-    startTransition(async () => {
-      try {
-        const result = (await doLogout()) as LogoutResponse;
-
-        if ("error" in result) {
-          toast.error(result.error);
-        } else {
-          toast.success("You logged out successfully.");
-          router.push("/auth/login");
-        }
-      } catch (error) {
-        console.error("Logout error:", error);
-        toast.error("Something went wrong. Please try again.");
-      } finally {
+      if ("error" in result) {
+        toast.error(result.error);
         setLoading(false);
+        return;
       }
-    });
-  };
 
+      toast.success("You logged out successfully.");
+
+      // Clear client-side NextAuth session and redirect to login
+      await signOut({ callbackUrl: "/auth/login", redirect: true });
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Something went wrong. Please try again.");
+      setLoading(false);
+    }
+  };
 
   return (
     <Button

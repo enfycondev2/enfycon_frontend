@@ -7,8 +7,7 @@ import {
     HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { apiClient } from "@/lib/apiClient";
-import { Loader2, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Crown, Users } from "lucide-react";
 
 interface PodHoverCardProps {
     podId: string;
@@ -20,15 +19,11 @@ interface PodHoverCardProps {
 export function PodHoverCard({ podId, podName, initialMembers, children }: PodHoverCardProps) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [podDetails, setPodDetails] = useState<any>(
-        initialMembers !== undefined ? { name: podName, members: initialMembers } : null
-    );
+    const [podDetails, setPodDetails] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Only fetch if initialMembers was NOT provided.
-        // If it was provided as [], it means we already know there are no members.
-        if (open && initialMembers === undefined && !podDetails && !loading && !error) {
+        if (open && !podDetails && !loading && !error) {
             setLoading(true);
             apiClient(`/pods/${podId}`)
                 .then(async (res) => {
@@ -41,17 +36,47 @@ export function PodHoverCard({ podId, podName, initialMembers, children }: PodHo
                 })
                 .finally(() => setLoading(false));
         }
-    }, [open, podId, podDetails, loading, error, initialMembers]);
+    }, [open, podId, podDetails, loading, error]);
+
+    const podLead = podDetails?.podHead;
 
     return (
         <HoverCard open={open} onOpenChange={setOpen} openDelay={200} closeDelay={200}>
             <HoverCardTrigger asChild>
                 {children}
             </HoverCardTrigger>
-            <HoverCardContent className="w-auto p-3" side="top" align="start">
-                <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-purple-600" />
-                    <h4 className="text-sm font-semibold">{podName}</h4>
+            <HoverCardContent className="w-52 p-3" side="top" align="start">
+                <div className="flex flex-col gap-2">
+                    {/* Pod name */}
+                    <div className="flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+                        <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">{podName}</span>
+                    </div>
+
+                    {/* Pod lead */}
+                    {loading && (
+                        <p className="text-xs text-neutral-400 italic">Loading...</p>
+                    )}
+                    {!loading && podLead && (
+                        <div className="flex items-start gap-1.5 pt-0.5 border-t border-neutral-100 dark:border-slate-700">
+                            <Crown className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
+                            <div className="flex flex-col min-w-0">
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-0.5">Pod Lead</span>
+                                <span className="text-xs font-medium text-neutral-700 dark:text-neutral-200 truncate">
+                                    {podLead.fullName || podLead.email}
+                                </span>
+                                {podLead.fullName && (
+                                    <span className="text-[10px] text-neutral-400 truncate">{podLead.email}</span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    {!loading && !error && podDetails && !podLead && (
+                        <p className="text-xs text-neutral-400 italic border-t border-neutral-100 dark:border-slate-700 pt-1.5">No pod lead assigned</p>
+                    )}
+                    {error && (
+                        <p className="text-xs text-red-400 italic">{error}</p>
+                    )}
                 </div>
             </HoverCardContent>
         </HoverCard>

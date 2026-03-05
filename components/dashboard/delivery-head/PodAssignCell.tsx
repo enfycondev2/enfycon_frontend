@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Check, ChevronDown, Loader2, Search, Plus } from "lucide-react";
+import { Check, ChevronDown, Crown, Loader2, Search, Plus } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,23 @@ export default function PodAssignCell({
     );
     const [search, setSearch] = useState("");
     const [saving, setSaving] = useState(false);
+    const [podLeads, setPodLeads] = useState<Record<string, { fullName?: string | null; email?: string }>>({});
+
+    // Fetch pod leads for assigned pods
+    useEffect(() => {
+        assignedPods.forEach(pod => {
+            if (!podLeads[pod.id]) {
+                apiClient(`/pods/${pod.id}`)
+                    .then(res => res.ok ? res.json() : null)
+                    .then(data => {
+                        if (data?.podHead) {
+                            setPodLeads(prev => ({ ...prev, [pod.id]: data.podHead }));
+                        }
+                    })
+                    .catch(() => { });
+            }
+        });
+    }, [assignedPods]);
 
     // Reset selection when popover opens (reflect current state)
     useEffect(() => {
@@ -140,28 +157,20 @@ export default function PodAssignCell({
             >
                 <div className="flex items-center gap-1">
                     {assignedPods.slice(0, 1).map(pod => {
-                        // Extract members from assignedRecruiters if available
-                        const podMembers = ((pod as any).members?.length > 0)
-                            ? (pod as any).members
-                            : (assignedRecruiters && assignedRecruiters.length > 0)
-                                ? assignedRecruiters.filter(r => r.podId === pod.id).map(r => ({
-                                    id: r.id,
-                                    role: r.roles?.includes("POD_LEADER") ? "POD_LEADER" : "MEMBER",
-                                    admin: {
-                                        email: r.email,
-                                        fullName: r.fullName
-                                    }
-                                }))
-                                : undefined;
-
+                        const lead = podLeads[pod.id];
                         return (
-                            <div key={pod.id}>
-                                {/* @ts-ignore */}
-                                <PodHoverCard podId={pod.id} podName={pod.name} initialMembers={podMembers}>
-                                    <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-none font-medium flex gap-1 items-center cursor-help">
+                            <div key={pod.id} className="flex flex-col gap-0.5">
+                                <PodHoverCard podId={pod.id} podName={pod.name}>
+                                    <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-none font-medium flex gap-1 items-center cursor-help w-fit">
                                         {pod.name}
                                     </Badge>
                                 </PodHoverCard>
+                                {lead && (
+                                    <span className="flex items-center gap-1 text-[10px] text-neutral-500 dark:text-neutral-400">
+                                        <Crown className="h-2.5 w-2.5 text-amber-500 shrink-0" />
+                                        {lead.fullName || lead.email}
+                                    </span>
+                                )}
                             </div>
                         );
                     })}

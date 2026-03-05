@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import LoginForm from "@/components/auth/login-form";
 import ThemeLogo from "@/components/shared/theme-logo";
 import SocialLogin from "@/components/auth/social-login";
@@ -13,9 +15,18 @@ const forgotPassImage: StaticImg = {
 };
 
 const Login = () => {
+  const { status } = useSession();
+  const router = useRouter();
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-12345678
+
+  // If already authenticated, redirect to dashboard
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/dashboard");
+    }
+  }, [status, router]);
+
   useEffect(() => {
     const fetchMedia = async () => {
       try {
@@ -24,8 +35,6 @@ const Login = () => {
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
-          // Check that dataUrl actually contains base64 data, not just the prefix.
-          // e.g., "data:image/jpeg;base64," has 23 characters.
           if (data && !data.default && data.dataUrl && data.dataUrl.length > 30) {
             setMediaUrl(data.dataUrl);
           }
@@ -38,6 +47,11 @@ const Login = () => {
     };
     fetchMedia();
   }, []);
+
+  // Suppress login UI while redirect is in flight
+  if (status === "authenticated") {
+    return null;
+  }
 
   return (
     <section className="bg-white dark:bg-slate-900 flex flex-wrap min-h-screen">

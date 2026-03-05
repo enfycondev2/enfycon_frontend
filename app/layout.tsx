@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { SessionProvider } from "next-auth/react";
 import { LoadingProvider } from "@/contexts/LoadingContext";
+import SessionGuard from "@/components/auth/SessionGuard";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -49,9 +50,11 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
-        <SessionProvider session={session}>
+        <SessionProvider session={session} refetchInterval={60} refetchOnWindowFocus={true}>
           <LoadingProvider>
-            {children}
+            <SessionGuard>
+              {children}
+            </SessionGuard>
           </LoadingProvider>
         </SessionProvider>
       </body>

@@ -27,6 +27,7 @@ const ProfileDropdown = () => {
   const [resolvedPodName, setResolvedPodName] = useState("");
   const [podTeamMembers, setPodTeamMembers] = useState<PodTeamMember[]>([]);
   const [isPodHeadVerified, setIsPodHeadVerified] = useState(false);
+  const [isRoleResolved, setIsRoleResolved] = useState(false);
 
   const rawRoles = [...(((session?.user as { roles?: string[] } | undefined)?.roles) || [])];
   if (isPodHeadVerified && !rawRoles.includes("POD_LEAD")) {
@@ -67,8 +68,11 @@ const ProfileDropdown = () => {
 
   const activeRole = urlRole && selectedRolesBase.includes(urlRole) ? urlRole : undefined;
 
-  const selectedRoles = activeRole
-    ? [activeRole]
+  // If on the /recruiter/* path but the user also has POD_LEAD, show Pod Lead instead
+  const effectiveActiveRole = (activeRole === "RECRUITER" && hasPodLead) ? "POD_LEAD" : activeRole;
+
+  const selectedRoles = effectiveActiveRole
+    ? [effectiveActiveRole]
     : (hasPodLead && hasRecruiter
       ? selectedRolesBase.filter((role) => role !== "RECRUITER")
       : selectedRolesBase);
@@ -167,8 +171,9 @@ const ProfileDropdown = () => {
           if (authMeData.isPodHead && isMounted) {
             setIsPodHeadVerified(true);
           }
+          if (isMounted) setIsRoleResolved(true);
         }
-      } catch { }
+      } catch { if (isMounted) setIsRoleResolved(true); }
 
       try {
         const myTeamRes = await apiClient("/pods/my-team");
@@ -251,7 +256,7 @@ const ProfileDropdown = () => {
                   <span className="truncate">{activePodName}</span>
                 </span>
               ) : null}
-              {formattedRoles.slice(0, 2).map((roleLabel, index) => (
+              {isRoleResolved ? formattedRoles.slice(0, 2).map((roleLabel, index) => (
                 <span
                   key={roleLabel}
                   className={cn(
@@ -262,7 +267,7 @@ const ProfileDropdown = () => {
                   <Sparkles className="size-3 shrink-0" />
                   <span className="truncate">{roleLabel}</span>
                 </span>
-              ))}
+              )) : <span className="inline-block h-5 w-16 rounded-full bg-slate-100 dark:bg-slate-700 animate-pulse" />}
             </span>
           </div>
 
