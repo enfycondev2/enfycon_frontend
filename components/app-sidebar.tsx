@@ -52,12 +52,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   let primaryRole = ROLE_PRIORITY.find(r => normalizedRawRoles.includes(r)) || "";
 
-  // If URL gives a stronger signal (user navigating to a specific role's area directly), honour it —
-  // but only for roles that don't overlap (i.e. skip this override if URL says RECRUITER but user is POD_LEAD).
   if (urlRole && normalizedRawRoles.includes(urlRole)) {
-    const urlRolePriority = ROLE_PRIORITY.indexOf(urlRole);
-    const sessionRolePriority = ROLE_PRIORITY.indexOf(primaryRole);
-    if (urlRolePriority <= sessionRolePriority) {
+    if (urlRole === "RECRUITER" && normalizedRawRoles.includes("POD_LEAD")) {
+      primaryRole = "POD_LEAD";
+    } else {
       primaryRole = urlRole;
     }
   }
