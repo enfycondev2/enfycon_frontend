@@ -17,6 +17,11 @@ interface JobRow {
         id: string;
         name: string;
     } | null;
+    pods?: Array<{
+        id: string;
+        name?: string;
+    }> | null;
+    podIds?: string[] | null;
 }
 
 interface SubmissionRow {
@@ -50,17 +55,25 @@ const PodSubmissionChart = () => {
         const fetchChartData = async () => {
             setIsLoading(true);
             try {
-                const [podsRes, jobsRes, subsRes] = await Promise.all([
-                    apiClient('/pods/my-pods'),
+                const [podsData, jobsRes, subsRes] = await Promise.all([
+                    apiClient('/pods/all').then(async (res) => {
+                        if (res.ok) return res.json();
+                        const fallback = await apiClient('/pods/my-pods');
+                        return fallback.ok ? fallback.json() : [];
+                    }),
                     apiClient('/jobs'),
                     apiClient('/recruiter-submissions'),
                 ]);
 
-                const podsData = podsRes.ok ? await podsRes.json() : [];
                 const jobsData = jobsRes.ok ? await jobsRes.json() : [];
                 const subsData = subsRes.ok ? await subsRes.json() : [];
 
-                const pods: PodRow[] = Array.isArray(podsData) ? podsData : [];
+                const podsPayload = podsData as PodRow[] | { data?: PodRow[] };
+                const pods: PodRow[] = Array.isArray(podsPayload)
+                    ? podsPayload
+                    : Array.isArray(podsPayload?.data)
+                        ? podsPayload.data
+                        : [];
                 const jobs: JobRow[] = Array.isArray(jobsData) ? jobsData : (jobsData?.data ?? jobsData?.content ?? []);
                 const submissions: SubmissionRow[] = Array.isArray(subsData)
                     ? subsData
@@ -81,11 +94,30 @@ const PodSubmissionChart = () => {
                 }
 
                 const podIdSet = new Set(pods.map((pod) => pod.id));
-                const jobToPodName = new Map<string, string>();
+                const podNameById = new Map(pods.map((pod) => [pod.id, pod.name || "Unknown Pod"]));
+                const jobToPodNames = new Map<string, string[]>();
+
+                const getJobPodIds = (job: JobRow): string[] => {
+                    const ids = new Set<string>();
+                    if (job.pod?.id) ids.add(job.pod.id);
+                    if (Array.isArray(job.podIds)) {
+                        job.podIds.forEach((id) => {
+                            if (id) ids.add(id);
+                        });
+                    }
+                    if (Array.isArray(job.pods)) {
+                        job.pods.forEach((p) => {
+                            if (p?.id) ids.add(p.id);
+                        });
+                    }
+                    return Array.from(ids).filter((id) => podIdSet.has(id));
+                };
 
                 jobs.forEach((job) => {
-                    if (!job.pod?.id || !podIdSet.has(job.pod.id)) return;
-                    jobToPodName.set(job.id, job.pod.name || 'Unknown Pod');
+                    const podIds = getJobPodIds(job);
+                    if (podIds.length === 0) return;
+                    const podNames = podIds.map((id) => podNameById.get(id) || "Unknown Pod");
+                    jobToPodNames.set(job.id, podNames);
                 });
 
                 const metricsByPod = new Map<string, PodMetrics>();
@@ -115,18 +147,20 @@ const PodSubmissionChart = () => {
                         const submittedAt = new Date(sub.submissionDate);
                         if (Number.isNaN(submittedAt.getTime()) || submittedAt < rangeStart) return;
                     }
-                    const podName = jobToPodName.get(sub.jobId);
-                    if (!podName) return;
+                    const podNames = jobToPodNames.get(sub.jobId);
+                    if (!podNames || podNames.length === 0) return;
 
-                    const current = metricsByPod.get(podName) || {
-                        submissions: 0,
-                        interviews: 0,
-                        placements: 0,
-                    };
-                    current.submissions += 1;
-                    if (isInterviewProgressed(sub)) current.interviews += 1;
-                    if (isPlacement(sub)) current.placements += 1;
-                    metricsByPod.set(podName, current);
+                    podNames.forEach((podName) => {
+                        const current = metricsByPod.get(podName) || {
+                            submissions: 0,
+                            interviews: 0,
+                            placements: 0,
+                        };
+                        current.submissions += 1;
+                        if (isInterviewProgressed(sub)) current.interviews += 1;
+                        if (isPlacement(sub)) current.placements += 1;
+                        metricsByPod.set(podName, current);
+                    });
                 });
 
                 const sortedPodRows = Array.from(metricsByPod.entries()).sort(
