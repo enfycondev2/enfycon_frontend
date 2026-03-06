@@ -17,6 +17,7 @@ interface JobRow {
   status?: string;
   urgency?: string;
   createdAt?: string;
+  updatedAt?: string;
   pod?: { id: string; name: string } | null;
   pods?: Array<{ id: string; name: string }>;
   podIds?: string[];

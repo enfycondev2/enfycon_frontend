@@ -46,6 +46,7 @@ import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import PodAssignCell from "../delivery-head/PodAssignCell";
 import { Save, X as XIcon } from "lucide-react";
+import { DateRange } from "react-day-picker";
 
 import { apiClient } from "@/lib/apiClient";
 import { LocationSelect } from "@/components/shared/location-select";
@@ -222,7 +223,8 @@ export default function JobsTable({
     const [podFilter, setPodFilter] = useState<string>("all");
     const [amFilter, setAmFilter] = useState<string>("all");
     const [clientFilter, setClientFilter] = useState<string>("all");
-    const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+    const [timeFilter, setTimeFilter] = useState<string>("all");
+    const [dateFilter, setDateFilter] = useState<DateRange | undefined>(undefined);
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState<string>("date-desc");
 
@@ -288,19 +290,69 @@ export default function JobsTable({
 
     // Apply filtering
     const filteredJobs = useMemo(() => {
+        // EST Timezone Helpers
+        const getESTPart = (date: Date, part: 'year' | 'month' | 'day' | 'week') => {
+            if (part === 'week') {
+                const d = new Date(date.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+                d.setHours(0, 0, 0, 0);
+                d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+                const yearStart = new Date(d.getFullYear(), 0, 1);
+                return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+            }
+            const options: Intl.DateTimeFormatOptions = { timeZone: 'America/New_York' };
+            if (part === 'year') options.year = 'numeric';
+            if (part === 'month') options.month = 'numeric';
+            if (part === 'day') options.day = 'numeric';
+            return new Intl.DateTimeFormat('en-US', options).format(date);
+        };
+
+        const now = new Date();
+        const currentYear = getESTPart(now, 'year');
+        const currentMonth = getESTPart(now, 'month');
+        const currentDay = getESTPart(now, 'day');
+        const currentWeek = getESTPart(now, 'week');
+
         return jobs.filter(job => {
             const matchesPod = podFilter === "all" || job.pod?.id === podFilter || job.pods?.some((p: any) => p.id === podFilter) || job.podIds?.includes(podFilter);
             const matchesAM = amFilter === "all" || job.accountManager?.email === amFilter;
             const matchesClient = clientFilter === "all" || job.clientName === clientFilter;
-            const matchesDate = !dateFilter || isSameDay(new Date(job.createdAt), dateFilter);
+
+            let matchesTime = true;
+            if (timeFilter !== "all") {
+                const jobDate = new Date(job.createdAt);
+                const jobYear = getESTPart(jobDate, 'year');
+                const jobMonth = getESTPart(jobDate, 'month');
+                const jobDay = getESTPart(jobDate, 'day');
+                const jobWeek = getESTPart(jobDate, 'week');
+
+                if (timeFilter === "today") matchesTime = jobYear === currentYear && jobMonth === currentMonth && jobDay === currentDay;
+                else if (timeFilter === "week") matchesTime = jobYear === currentYear && jobWeek === currentWeek;
+                else if (timeFilter === "month") matchesTime = jobYear === currentYear && jobMonth === currentMonth;
+                else if (timeFilter === "year") matchesTime = jobYear === currentYear;
+            }
+
+            let matchesDate = true;
+            if (dateFilter?.from) {
+                const jobDate = new Date(job.createdAt);
+                jobDate.setHours(0, 0, 0, 0);
+
+                if (dateFilter.to) {
+                    const toDate = new Date(dateFilter.to);
+                    toDate.setHours(23, 59, 59, 999);
+                    matchesDate = jobDate >= dateFilter.from && jobDate <= toDate;
+                } else {
+                    matchesDate = jobDate >= dateFilter.from;
+                }
+            }
+
             const matchesSearch = !searchQuery ||
                 job.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 job.jobCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 job.clientName.toLowerCase().includes(searchQuery.toLowerCase());
 
-            return matchesPod && matchesAM && matchesClient && matchesDate && matchesSearch;
+            return matchesPod && matchesAM && matchesClient && matchesTime && matchesDate && matchesSearch;
         });
-    }, [jobs, podFilter, amFilter, clientFilter, dateFilter, searchQuery]);
+    }, [jobs, podFilter, amFilter, clientFilter, timeFilter, dateFilter, searchQuery]);
 
     const sortedJobs = useMemo(() => {
         const now = new Date();
@@ -387,6 +439,7 @@ export default function JobsTable({
         setPodFilter("all");
         setAmFilter("all");
         setClientFilter("all");
+        setTimeFilter("all");
         setDateFilter(undefined);
         setSearchQuery("");
         setSortBy("date-desc");
@@ -516,26 +569,56 @@ export default function JobsTable({
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider ml-1">Date</label>
+                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider ml-1">Period</label>
+                        <Select value={timeFilter} onValueChange={(v) => { setTimeFilter(v); setCurrentPage(1); }}>
+                            <SelectTrigger className="w-[150px] h-10 bg-white dark:bg-slate-900 border-neutral-200 dark:border-slate-600 rounded-lg">
+                                <SelectValue placeholder="All Time" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Time</SelectItem>
+                                <SelectItem value="today">Today</SelectItem>
+                                <SelectItem value="week">This Week</SelectItem>
+                                <SelectItem value="month">This Month</SelectItem>
+                                <SelectItem value="year">This Year</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider ml-1">Range</label>
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
                                     variant={"outline"}
                                     className={cn(
-                                        "w-[150px] h-10 justify-start text-left font-normal bg-white dark:bg-slate-900 border-neutral-200 dark:border-slate-600 rounded-lg",
+                                        "w-[190px] h-10 justify-start text-left font-normal bg-white dark:bg-slate-900 border-neutral-200 dark:border-slate-600 rounded-lg",
                                         !dateFilter && "text-muted-foreground"
                                     )}
                                 >
                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {dateFilter ? format(dateFilter, "PPP") : <span>Pick date</span>}
+                                    <div className="flex-1 truncate">
+                                        {dateFilter?.from ? (
+                                            dateFilter.to ? (
+                                                <>
+                                                    {format(dateFilter.from, "MMM d")} - {format(dateFilter.to, "MMM d")}
+                                                </>
+                                            ) : (
+                                                format(dateFilter.from, "MMM d")
+                                            )
+                                        ) : (
+                                            <span>Pick a range</span>
+                                        )}
+                                    </div>
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start">
                                 <Calendar
-                                    mode="single"
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={dateFilter?.from}
                                     selected={dateFilter}
                                     onSelect={(d) => { setDateFilter(d); setCurrentPage(1); }}
-                                    initialFocus
+                                    numberOfMonths={2}
                                 />
                             </PopoverContent>
                         </Popover>
@@ -558,7 +641,7 @@ export default function JobsTable({
                         </Select>
                     </div>
 
-                    {(podFilter !== "all" || amFilter !== "all" || clientFilter !== "all" || dateFilter || searchQuery || sortBy !== "date-desc") && (
+                    {(podFilter !== "all" || amFilter !== "all" || clientFilter !== "all" || timeFilter !== "all" || dateFilter?.from || searchQuery || sortBy !== "date-desc") && (
                         <Button
                             variant="ghost"
                             size="icon"
@@ -583,9 +666,14 @@ export default function JobsTable({
                                 Job Title
                             </TableHead>
                             {showPod && (
-                                <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                    Assigned Pods
-                                </TableHead>
+                                <>
+                                    <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                        Assigned Pods
+                                    </TableHead>
+                                    <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                        Assigned Recruiters
+                                    </TableHead>
+                                </>
                             )}
                             {showAccountManager && (
                                 <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-start">
@@ -769,33 +857,53 @@ export default function JobsTable({
                                                             </div>
                                                         )}
                                                 </TableCell>
-                                                {/* Pod */}
+                                                {/* Pod & Recruiters */}
                                                 {showPod && (
-                                                    <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                                        {(() => {
-                                                            const resolvedAssignedPods =
-                                                                job.pods && job.pods.length > 0
-                                                                    ? job.pods
-                                                                    : job.podIds && job.podIds.length > 0 && availablePods.length > 0
-                                                                        ? (job.podIds.map(id => availablePods.find(p => p.id === id)).filter(Boolean) as { id: string; name: string }[])
-                                                                        : job.pod ? [job.pod] : [];
+                                                    <>
+                                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                                            {(() => {
+                                                                const resolvedAssignedPods =
+                                                                    job.pods && job.pods.length > 0
+                                                                        ? job.pods
+                                                                        : job.podIds && job.podIds.length > 0 && availablePods.length > 0
+                                                                            ? (job.podIds.map(id => availablePods.find(p => p.id === id)).filter(Boolean) as { id: string; name: string }[])
+                                                                            : job.pod ? [job.pod] : [];
 
-                                                            const myPodIds = new Set(availablePods.map(p => p.id));
-                                                            const ownsAllAssignedPods = resolvedAssignedPods.every((p) => myPodIds.has(p.id));
-                                                            const canEdit = isAdmin || (canEditByRole && ownsAllAssignedPods);
+                                                                const myPodIds = new Set(availablePods.map(p => p.id));
+                                                                const ownsAllAssignedPods = resolvedAssignedPods.every((p) => myPodIds.has(p.id));
+                                                                const isJobActive = job.status !== "CLOSED" && job.status !== "FILLED";
+                                                                const canEdit = (isAdmin || (canEditByRole && ownsAllAssignedPods)) && isJobActive;
 
-                                                            return (
-                                                                <PodAssignCell
-                                                                    jobId={job.id}
-                                                                    assignedPods={resolvedAssignedPods}
-                                                                    assignedRecruiters={job.assignedRecruiters}
-                                                                    availablePods={availablePods}
-                                                                    canEdit={canEdit}
-                                                                    onSuccess={() => { if (onRefresh) onRefresh(); else router.refresh(); }}
-                                                                />
-                                                            );
-                                                        })()}
-                                                    </TableCell>
+                                                                return (
+                                                                    <PodAssignCell
+                                                                        jobId={job.id}
+                                                                        assignedPods={resolvedAssignedPods}
+                                                                        assignedRecruiters={job.assignedRecruiters}
+                                                                        availablePods={availablePods}
+                                                                        canEdit={canEdit}
+                                                                        onSuccess={() => { if (onRefresh) onRefresh(); else router.refresh(); }}
+                                                                    />
+                                                                );
+                                                            })()}
+                                                        </TableCell>
+                                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {job.assignedRecruiters && job.assignedRecruiters.length > 0 ? (
+                                                                    job.assignedRecruiters.map((recruiter: any) => (
+                                                                        <Badge
+                                                                            key={recruiter.id}
+                                                                            variant="outline"
+                                                                            className="text-[10px] px-1.5 py-0 font-normal bg-neutral-100 dark:bg-slate-800 text-neutral-600 dark:text-slate-300 border-none"
+                                                                        >
+                                                                            {recruiter.fullName || recruiter.email.split('@')[0]}
+                                                                        </Badge>
+                                                                    ))
+                                                                ) : (
+                                                                    <span className="text-[10px] text-muted-foreground italic">Unassigned</span>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+                                                    </>
                                                 )}
                                                 {/* Account Manager */}
                                                 {showAccountManager && (

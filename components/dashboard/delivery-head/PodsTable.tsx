@@ -45,6 +45,7 @@ interface Pod {
     submissionDone?: number;
     submissionRate?: number;
     filteredJobsCount?: number;
+    lastActivityAt?: string;
 }
 
 interface PodsTableProps {
@@ -87,7 +88,7 @@ export default function PodsTable({
         const currentDay = getESTPart(now, 'day');
         const currentWeek = getESTPart(now, 'week');
 
-        const podAggregations: Record<string, { totalJobs: number; totalPositions: number; subReq: number; subDone: number }> = {};
+        const podAggregations: Record<string, { totalJobs: number; totalPositions: number; subReq: number; subDone: number; lastActivityAt: string | null }> = {};
 
         // Only run filtering if jobs are provided
         if (jobs && jobs.length > 0) {
@@ -127,12 +128,18 @@ export default function PodsTable({
 
                     linkedPods.forEach((podName, podId) => {
                         if (!podAggregations[podId]) {
-                            podAggregations[podId] = { totalJobs: 0, totalPositions: 0, subReq: 0, subDone: 0 };
+                            podAggregations[podId] = { totalJobs: 0, totalPositions: 0, subReq: 0, subDone: 0, lastActivityAt: null };
                         }
                         podAggregations[podId].totalJobs += 1;
                         podAggregations[podId].totalPositions += (job.positions || 1);
                         podAggregations[podId].subReq += (job.submissionRequired || 0);
                         podAggregations[podId].subDone += (job.submissionDone || 0);
+
+                        if (job.updatedAt) {
+                            if (!podAggregations[podId].lastActivityAt || new Date(job.updatedAt) > new Date(podAggregations[podId].lastActivityAt!)) {
+                                podAggregations[podId].lastActivityAt = job.updatedAt;
+                            }
+                        }
                     });
                 }
             });
@@ -150,6 +157,7 @@ export default function PodsTable({
             const submissionRate = submissionRequired && submissionRequired > 0
                 ? Math.round((submissionDone! / submissionRequired) * 100)
                 : 0;
+            const lastActivityAt = agg?.lastActivityAt ? agg.lastActivityAt : pod.updatedAt; // Added this line
 
             return {
                 ...pod,
@@ -158,6 +166,7 @@ export default function PodsTable({
                 submissionRequired,
                 submissionDone,
                 submissionRate,
+                lastActivityAt, // Added this line
             };
         });
 
@@ -314,16 +323,16 @@ export default function PodsTable({
                                     <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
                                         <div className="flex flex-col">
                                             <span className="text-sm font-medium">
-                                                {formatDistanceToNow(new Date(pod.updatedAt), { addSuffix: true })}
+                                                {formatDistanceToNow(new Date(pod.lastActivityAt || pod.updatedAt), { addSuffix: true })}
                                             </span>
                                             <span className="text-[10px] text-muted-foreground italic uppercase mt-0.5">
-                                                {new Date(pod.updatedAt).toLocaleDateString('en-US', {
+                                                {new Date(pod.lastActivityAt || pod.updatedAt).toLocaleDateString('en-US', {
                                                     timeZone: 'America/New_York',
                                                     month: 'short',
                                                     day: 'numeric',
                                                 })}
                                                 {' • '}
-                                                {new Date(pod.updatedAt).toLocaleTimeString('en-US', {
+                                                {new Date(pod.lastActivityAt || pod.updatedAt).toLocaleTimeString('en-US', {
                                                     timeZone: 'America/New_York',
                                                     hour: '2-digit',
                                                     minute: '2-digit',
