@@ -52,11 +52,11 @@ const normalizeStatus = (status?: string) => (status || "").trim().toUpperCase()
 const hasStageValue = (status?: string) => normalizeStatus(status) !== "";
 const isFinalized = (status?: string) => {
   const s = normalizeStatus(status);
-  return s === "SELECTED" || s === "REJECTED" || s === "FILLED" || s === "CLOSED";
+  return ["SELECTED", "REJECTED", "FILLED", "CLOSED", "JOIN", "OFFER"].includes(s);
 };
 
 function getCurrentPipelineStage(submission: SubmissionRow) {
-  if (isFinalized(submission.finalStatus)) return "FINAL";
+  if (isFinalized(submission.finalStatus)) return "FINALIZED";
   if (hasStageValue(submission.l3Status)) return "FINAL";
   if (hasStageValue(submission.l2Status)) return "L2";
   if (hasStageValue(submission.l1Status)) return "L1";
@@ -192,7 +192,7 @@ export default async function DashboardPage() {
           </Suspense>
         </div>
 
-        <div className="xl:col-span-12 2xl:col-span-6">
+        {/* <div className="xl:col-span-12 2xl:col-span-6">
           <Suspense fallback={<LoadingSkeleton />}>
             <SalesStaticCard
               title="Recruitment Throughput"
@@ -243,7 +243,7 @@ export default async function DashboardPage() {
           <Suspense fallback={<LoadingSkeleton />}>
             <GenerateContentCard />
           </Suspense>
-        </div>
+        </div> */}
       </div>
     </>
   );

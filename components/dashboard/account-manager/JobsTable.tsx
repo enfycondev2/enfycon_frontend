@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
     Table,
     TableBody,
@@ -303,7 +303,51 @@ export default function JobsTable({
     }, [jobs, podFilter, amFilter, clientFilter, dateFilter, searchQuery]);
 
     const sortedJobs = useMemo(() => {
+        const now = new Date();
+        const todayDateStr = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/New_York',
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric'
+        }).format(now);
+
+        const isTodayGroup = (job: Job) => {
+            const jobDateStr = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/New_York',
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric'
+            }).format(new Date(job.createdAt));
+            return jobDateStr === todayDateStr || job.requirementType === 'CFR_EXTENDED';
+        };
+
         return [...filteredJobs].sort((a, b) => {
+            if (sortBy === "date-desc") {
+                const isTodayA = isTodayGroup(a);
+                const isTodayB = isTodayGroup(b);
+
+                if (isTodayA && !isTodayB) return -1;
+                if (!isTodayA && isTodayB) return 1;
+
+                if (isTodayA) {
+                    const typeA = a.requirementType;
+                    const typeB = b.requirementType;
+
+                    // NEW jobs are #1 priority
+                    if (typeA === 'NEW' && typeB !== 'NEW') return -1;
+                    if (typeA !== 'NEW' && typeB === 'NEW') return 1;
+
+                    // CFR_EXTENDED jobs are #2 priority
+                    if (typeA === 'CFR_EXTENDED' && typeB !== 'CFR_EXTENDED') return -1;
+                    if (typeA !== 'CFR_EXTENDED' && typeB === 'CFR_EXTENDED') return 1;
+
+                    // Within CFR_EXTENDED, sort by days remaining
+                    if (typeA === 'CFR_EXTENDED' && typeB === 'CFR_EXTENDED') {
+                        return (a.cfrDaysRemaining ?? 0) - (b.cfrDaysRemaining ?? 0);
+                    }
+                }
+            }
+
             switch (sortBy) {
                 case "date-desc":
                     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -596,251 +640,329 @@ export default function JobsTable({
                         {currentJobs.length === 0 ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={13 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0)}
+                                    colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0)}
                                     className="h-24 text-center text-muted-foreground italic"
                                 >
                                     No jobs found.
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            currentJobs.map((job, index) => {
-                                const isEditing = editingJobId === job.id;
-                                const inputCls = "h-7 px-1.5 text-xs border border-blue-300 rounded w-full focus:outline-none focus:ring-1 focus:ring-blue-400";
-                                const selCls = "h-7 text-xs border border-blue-300 rounded focus:ring-blue-400";
-                                const stickyBgClass = isEditing
-                                    ? "bg-blue-50 dark:bg-blue-950"
-                                    : index % 2 === 0
-                                        ? "bg-white dark:bg-slate-900"
-                                        : "bg-slate-50 dark:bg-slate-800";
-                                return (
-                                    <TableRow
-                                        key={job.id}
-                                        className={cn(
-                                            "transition-colors border-b border-neutral-100 dark:border-slate-700/80",
-                                            isEditing
-                                                ? "bg-blue-50 dark:bg-blue-950/30"
-                                                : index % 2 === 0
-                                                    ? "bg-white dark:bg-slate-900/20 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                                                    : "bg-slate-50/70 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75",
-                                            !isEditing && "cursor-pointer"
-                                        )}
-                                        onClick={(e) => {
-                                            if (isEditing || isInteractiveTarget(e.target)) return;
-                                            router.push(`${baseUrl}/${job.id}`);
-                                        }}
-                                    >
-                                        {/* Job Code - never editable */}
-                                        <TableCell className={cn("sticky left-0 z-30 min-w-[170px] w-[170px] whitespace-nowrap overflow-hidden py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(71,85,105,1)]", stickyBgClass)}>
-                                            <code className="inline-block bg-neutral-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-xs font-mono whitespace-nowrap">{job.jobCode}</code>
-                                        </TableCell>
-                                        {/* Job Title */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                            {isEditing
-                                                ? <Input className={inputCls} value={editForm.jobTitle ?? ""} onChange={ef("jobTitle")} />
-                                                : (
-                                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                                        <span className="font-medium capitalize">{job.jobTitle.toLowerCase()}</span>
-                                                        {job.urgency && (
-                                                            <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${job.urgency === "HOT" ? "bg-red-50 text-red-600 border-red-200" :
-                                                                job.urgency === "WARM" ? "bg-amber-50 text-amber-600 border-amber-200" :
-                                                                    "bg-blue-50 text-blue-600 border-blue-200"
-                                                                }`}>{job.urgency}</span>
+                            (() => {
+                                const now = new Date();
+                                const todayDateStr = new Intl.DateTimeFormat('en-US', {
+                                    timeZone: 'America/New_York',
+                                    year: 'numeric',
+                                    month: 'numeric',
+                                    day: 'numeric'
+                                }).format(now);
+
+                                let hasShownTodayHeader = false;
+                                let hasShownPastHeader = false;
+                                let hasShownNewSubHeader = false;
+                                let hasShownCfrExtSubHeader = false;
+
+                                return currentJobs.map((job, index) => {
+                                    const jobDateStr = new Intl.DateTimeFormat('en-US', {
+                                        timeZone: 'America/New_York',
+                                        year: 'numeric',
+                                        month: 'numeric',
+                                        day: 'numeric'
+                                    }).format(new Date(job.createdAt));
+
+                                    const isToday = jobDateStr === todayDateStr || job.requirementType === 'CFR_EXTENDED';
+                                    const showTodayHeader = isToday && !hasShownTodayHeader;
+                                    const showPastHeader = !isToday && !hasShownPastHeader;
+
+                                    const showNewSubHeader = isToday && job.requirementType === 'NEW' && !hasShownNewSubHeader;
+                                    const showCfrExtSubHeader = isToday && job.requirementType === 'CFR_EXTENDED' && !hasShownCfrExtSubHeader;
+
+                                    if (showTodayHeader) hasShownTodayHeader = true;
+                                    if (showPastHeader) hasShownPastHeader = true;
+                                    if (showNewSubHeader) hasShownNewSubHeader = true;
+                                    if (showCfrExtSubHeader) hasShownCfrExtSubHeader = true;
+
+                                    const isEditing = editingJobId === job.id;
+                                    const inputCls = "h-7 px-1.5 text-xs border border-blue-300 rounded w-full focus:outline-none focus:ring-1 focus:ring-blue-400";
+                                    const selCls = "h-7 text-xs border border-blue-300 rounded focus:ring-blue-400";
+                                    const stickyBgClass = isEditing
+                                        ? "bg-blue-50 dark:bg-blue-950"
+                                        : index % 2 === 0
+                                            ? "bg-white dark:bg-slate-900"
+                                            : "bg-slate-50 dark:bg-slate-800";
+
+                                    return (
+                                        <React.Fragment key={job.id}>
+                                            {showTodayHeader && (
+                                                <TableRow className="bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20">
+                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0)} className="py-2 px-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                                                            <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">Today's Jobs</span>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                            {showNewSubHeader && (
+                                                <TableRow className="bg-emerald-100/10 dark:bg-emerald-900/5 hover:bg-emerald-100/10 dark:hover:bg-emerald-900/5 border-0">
+                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0)} className="py-1 px-6 border-b border-emerald-50 dark:border-emerald-900/20">
+                                                        <span className="text-[10px] font-bold text-emerald-600/80 dark:text-emerald-500/80 uppercase tracking-widest italic">New Requirements</span>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                            {showCfrExtSubHeader && (
+                                                <TableRow className="bg-amber-100/10 dark:bg-amber-900/5 hover:bg-amber-100/10 dark:hover:bg-amber-900/5 border-0">
+                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0)} className="py-1 px-6 border-b border-amber-50 dark:border-amber-900/20">
+                                                        <span className="text-[10px] font-bold text-amber-600/80 dark:text-amber-500/80 uppercase tracking-widest italic">Requirement Extensions (CFR)</span>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                            {showPastHeader && (
+                                                <TableRow className="bg-neutral-100/50 dark:bg-slate-800/50 hover:bg-neutral-100/50 dark:hover:bg-slate-800/50">
+                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0)} className="py-2 px-4">
+                                                        <span className="text-sm font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Past Jobs</span>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                            <TableRow
+                                                className={cn(
+                                                    "transition-colors border-b border-neutral-100 dark:border-slate-700/80",
+                                                    isEditing
+                                                        ? "bg-blue-50 dark:bg-blue-950/30"
+                                                        : index % 2 === 0
+                                                            ? "bg-white dark:bg-slate-900/20 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                                                            : "bg-slate-50/70 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75",
+                                                    !isEditing && "cursor-pointer"
+                                                )}
+                                                onClick={(e) => {
+                                                    if (isEditing || isInteractiveTarget(e.target)) return;
+                                                    router.push(`${baseUrl}/${job.id}`);
+                                                }}
+                                            >
+                                                {/* Job Code - never editable */}
+                                                <TableCell className={cn("sticky left-0 z-30 min-w-[170px] w-[170px] whitespace-nowrap overflow-hidden py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(71,85,105,1)]", stickyBgClass)}>
+                                                    <code className="inline-block bg-neutral-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-xs font-mono whitespace-nowrap">{job.jobCode}</code>
+                                                </TableCell>
+                                                {/* Job Title */}
+                                                <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                                    {isEditing
+                                                        ? <Input className={inputCls} value={editForm.jobTitle ?? ""} onChange={ef("jobTitle")} />
+                                                        : (
+                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                <span className="font-medium capitalize">{job.jobTitle.toLowerCase()}</span>
+                                                                {job.requirementType === "NEW" && (
+                                                                    <span className="text-[7px] font-bold uppercase tracking-widest px-1 py-0.5 rounded border bg-emerald-50 text-emerald-600 border-emerald-200">New</span>
+                                                                )}
+                                                                {job.requirementType === "CFR" && (
+                                                                    <span className="text-[7px] font-bold uppercase tracking-widest px-1 py-0.5 rounded border bg-rose-50 text-rose-600 border-rose-200">CFR</span>
+                                                                )}
+                                                                {job.requirementType === "CFR_EXTENDED" && (
+                                                                    <span className="text-[7px] font-bold uppercase tracking-widest px-1 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-200">
+                                                                        CFR Ext {job.cfrDaysRemaining !== undefined ? `· ${job.cfrDaysRemaining}d left` : ""}
+                                                                    </span>
+                                                                )}
+                                                                {job.urgency && (
+                                                                    <span className={`text-[7px] font-bold uppercase tracking-widest px-1 py-0.5 rounded border ${job.urgency === "HOT" ? "bg-red-50 text-red-600 border-red-200" :
+                                                                        job.urgency === "WARM" ? "bg-amber-50 text-amber-600 border-amber-200" :
+                                                                            "bg-blue-50 text-blue-600 border-blue-200"
+                                                                        }`}>{job.urgency}</span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                </TableCell>
+                                                {/* Pod */}
+                                                {showPod && (
+                                                    <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                                        {(() => {
+                                                            const resolvedAssignedPods =
+                                                                job.pods && job.pods.length > 0
+                                                                    ? job.pods
+                                                                    : job.podIds && job.podIds.length > 0 && availablePods.length > 0
+                                                                        ? (job.podIds.map(id => availablePods.find(p => p.id === id)).filter(Boolean) as { id: string; name: string }[])
+                                                                        : job.pod ? [job.pod] : [];
+
+                                                            const myPodIds = new Set(availablePods.map(p => p.id));
+                                                            const ownsAllAssignedPods = resolvedAssignedPods.every((p) => myPodIds.has(p.id));
+                                                            const canEdit = isAdmin || (canEditByRole && ownsAllAssignedPods);
+
+                                                            return (
+                                                                <PodAssignCell
+                                                                    jobId={job.id}
+                                                                    assignedPods={resolvedAssignedPods}
+                                                                    assignedRecruiters={job.assignedRecruiters}
+                                                                    availablePods={availablePods}
+                                                                    canEdit={canEdit}
+                                                                    onSuccess={() => { if (onRefresh) onRefresh(); else router.refresh(); }}
+                                                                />
+                                                            );
+                                                        })()}
+                                                    </TableCell>
+                                                )}
+                                                {/* Account Manager */}
+                                                {showAccountManager && (
+                                                    <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium text-sm">{job.accountManager?.fullName || "N/A"}</span>
+                                                            <span className="text-[10px] text-muted-foreground">{job.accountManager?.email}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                )}
+                                                {/* Type / Location */}
+                                                <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                                    {isEditing ? (
+                                                        <div className="flex flex-col gap-1">
+                                                            <Select value={editForm.jobType ?? ""} onValueChange={efSel("jobType")}>
+                                                                <SelectTrigger className={selCls}><SelectValue /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    {["FULL_TIME", "PART_TIME", "CONTRACT", "CONTRACT_TO_HIRE", "TEMPORARY", "INTERNSHIP", "FREELANCE"].map(t => <SelectItem key={t} value={t} className="text-xs">{t.replace(/_/g, " ")}</SelectItem>)}
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <LocationSelect
+                                                                value={editForm.jobLocation ?? ""}
+                                                                onChange={(val) => setEditForm(p => ({ ...p, jobLocation: val }))}
+                                                                placeholder="Select location"
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <span className="text-xs font-medium capitalize">{(job.jobType || "").replace(/_/g, " ").toLowerCase()}</span>
+                                                            <span className="text-[10px] text-muted-foreground capitalize">{job.jobLocation}</span>
+                                                        </div>
+                                                    )}
+                                                </TableCell>
+                                                {/* Visa */}
+                                                <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                                    {isEditing ? (
+                                                        <MultiSelect
+                                                            options={visaOptions}
+                                                            selected={parseVisaTypes(editForm.visaType)}
+                                                            onChange={(selected) => setEditForm((prev) => ({ ...prev, visaType: selected.join(",") }))}
+                                                            placeholder="Select visa type(s)"
+                                                        />
+                                                    ) : (
+                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">{formatVisaType(job.visaType)}</Badge>
+                                                    )}
+                                                </TableCell>
+                                                {/* Client */}
+                                                <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                                    {isEditing
+                                                        ? <Input className={inputCls} value={editForm.clientName ?? ""} onChange={ef("clientName")} />
+                                                        : job.clientName}
+                                                </TableCell>
+                                                {/* End Client */}
+                                                <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                                    {isEditing
+                                                        ? <Input className={inputCls} value={editForm.endClientName ?? ""} onChange={ef("endClientName")} />
+                                                        : job.endClientName}
+                                                </TableCell>
+                                                {/* Positions */}
+                                                <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-center">
+                                                    {isEditing
+                                                        ? <Input type="number" min={1} className={inputCls} value={editForm.noOfPositions ?? ""} onChange={(e) => setEditForm(p => ({ ...p, noOfPositions: parseInt(e.target.value) }))} />
+                                                        : <span className="font-semibold text-sm">{job.noOfPositions ?? "-"}</span>}
+                                                </TableCell>
+                                                {/* Submissions */}
+                                                <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-center">
+                                                    {isEditing ? (
+                                                        <Input type="number" min={0} className={inputCls} value={editForm.submissionRequired ?? ""} onChange={(e) => setEditForm(p => ({ ...p, submissionRequired: parseInt(e.target.value) }))} />
+                                                    ) : (
+                                                        <div className="flex flex-col items-center gap-0.5">
+                                                            <span className="font-medium text-sm">{job.submissionDone ?? 0} / {job.submissionRequired ?? 0}</span>
+                                                            <span className="text-[10px] text-muted-foreground">done / req</span>
+                                                        </div>
+                                                    )}
+                                                </TableCell>
+
+                                                {/* Req Type */}
+                                                <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
+                                                    <div className="flex flex-col gap-1">
+                                                        {job.requirementType === "NEW" && (
+                                                            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border w-fit bg-emerald-50 text-emerald-700 border-emerald-200">New</span>
+                                                        )}
+                                                        {job.requirementType === "CFR" && (
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border w-fit bg-red-50 text-red-700 border-red-200">Carry Forward</span>
+                                                                {showCfrExtend && <CfrExtendButton jobId={job.id} onSuccess={onRefresh} />}
+                                                            </div>
+                                                        )}
+                                                        {job.requirementType === "CFR_EXTENDED" && (
+                                                            <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border w-fit bg-amber-50 text-amber-700 border-amber-200 whitespace-nowrap">
+                                                                CFR Ext · {job.cfrDaysRemaining ?? 0}d left
+                                                            </span>
+                                                        )}
+                                                        {!["NEW", "CFR", "CFR_EXTENDED"].includes(job.requirementType) && (
+                                                            <span className="text-xs capitalize text-neutral-500">{(job.requirementType || "").replace(/_/g, " ").toLowerCase()}</span>
                                                         )}
                                                     </div>
-                                                )}
-                                        </TableCell>
-                                        {/* Pod */}
-                                        {showPod && (
-                                            <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                                {(() => {
-                                                    const resolvedAssignedPods =
-                                                        job.pods && job.pods.length > 0
-                                                            ? job.pods
-                                                            : job.podIds && job.podIds.length > 0 && availablePods.length > 0
-                                                                ? (job.podIds.map(id => availablePods.find(p => p.id === id)).filter(Boolean) as { id: string; name: string }[])
-                                                                : job.pod ? [job.pod] : [];
-
-                                                    const myPodIds = new Set(availablePods.map(p => p.id));
-                                                    const ownsAllAssignedPods = resolvedAssignedPods.every((p) => myPodIds.has(p.id));
-                                                    const canEdit = isAdmin || (canEditByRole && ownsAllAssignedPods);
-
-                                                    return (
-                                                        <PodAssignCell
-                                                            jobId={job.id}
-                                                            assignedPods={resolvedAssignedPods}
-                                                            assignedRecruiters={job.assignedRecruiters}
-                                                            availablePods={availablePods}
-                                                            canEdit={canEdit}
-                                                            onSuccess={() => { if (onRefresh) onRefresh(); else router.refresh(); }}
-                                                        />
-                                                    );
-                                                })()}
-                                            </TableCell>
-                                        )}
-                                        {/* Account Manager */}
-                                        {showAccountManager && (
-                                            <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium text-sm">{job.accountManager?.fullName || "N/A"}</span>
-                                                    <span className="text-[10px] text-muted-foreground">{job.accountManager?.email}</span>
-                                                </div>
-                                            </TableCell>
-                                        )}
-                                        {/* Type / Location */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                            {isEditing ? (
-                                                <div className="flex flex-col gap-1">
-                                                    <Select value={editForm.jobType ?? ""} onValueChange={efSel("jobType")}>
-                                                        <SelectTrigger className={selCls}><SelectValue /></SelectTrigger>
-                                                        <SelectContent>
-                                                            {["FULL_TIME", "PART_TIME", "CONTRACT", "CONTRACT_TO_HIRE", "TEMPORARY", "INTERNSHIP", "FREELANCE"].map(t => <SelectItem key={t} value={t} className="text-xs">{t.replace(/_/g, " ")}</SelectItem>)}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <LocationSelect
-                                                        value={editForm.jobLocation ?? ""}
-                                                        onChange={(val) => setEditForm(p => ({ ...p, jobLocation: val }))}
-                                                        placeholder="Select location"
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div className="flex flex-col gap-0.5">
-                                                    <span className="text-xs font-medium capitalize">{(job.jobType || "").replace(/_/g, " ").toLowerCase()}</span>
-                                                    <span className="text-[10px] text-muted-foreground capitalize">{job.jobLocation}</span>
-                                                </div>
-                                            )}
-                                        </TableCell>
-                                        {/* Visa */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                            {isEditing ? (
-                                                <MultiSelect
-                                                    options={visaOptions}
-                                                    selected={parseVisaTypes(editForm.visaType)}
-                                                    onChange={(selected) => setEditForm((prev) => ({ ...prev, visaType: selected.join(",") }))}
-                                                    placeholder="Select visa type(s)"
-                                                />
-                                            ) : (
-                                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">{formatVisaType(job.visaType)}</Badge>
-                                            )}
-                                        </TableCell>
-                                        {/* Client */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                            {isEditing
-                                                ? <Input className={inputCls} value={editForm.clientName ?? ""} onChange={ef("clientName")} />
-                                                : job.clientName}
-                                        </TableCell>
-                                        {/* End Client */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                            {isEditing
-                                                ? <Input className={inputCls} value={editForm.endClientName ?? ""} onChange={ef("endClientName")} />
-                                                : job.endClientName}
-                                        </TableCell>
-                                        {/* Positions */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-center">
-                                            {isEditing
-                                                ? <Input type="number" min={1} className={inputCls} value={editForm.noOfPositions ?? ""} onChange={(e) => setEditForm(p => ({ ...p, noOfPositions: parseInt(e.target.value) }))} />
-                                                : <span className="font-semibold text-sm">{job.noOfPositions ?? "-"}</span>}
-                                        </TableCell>
-                                        {/* Submissions */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-center">
-                                            {isEditing ? (
-                                                <Input type="number" min={0} className={inputCls} value={editForm.submissionRequired ?? ""} onChange={(e) => setEditForm(p => ({ ...p, submissionRequired: parseInt(e.target.value) }))} />
-                                            ) : (
-                                                <div className="flex flex-col items-center gap-0.5">
-                                                    <span className="font-medium text-sm">{job.submissionDone ?? 0} / {job.submissionRequired ?? 0}</span>
-                                                    <span className="text-[10px] text-muted-foreground">done / req</span>
-                                                </div>
-                                            )}
-                                        </TableCell>
-
-                                        {/* Req Type */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                            <div className="flex flex-col gap-1">
-                                                {job.requirementType === "NEW" && (
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border w-fit bg-emerald-50 text-emerald-700 border-emerald-200">New</span>
-                                                )}
-                                                {job.requirementType === "CFR" && (
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border w-fit bg-red-50 text-red-700 border-red-200">Carry Forward</span>
-                                                        {showCfrExtend && <CfrExtendButton jobId={job.id} onSuccess={onRefresh} />}
-                                                    </div>
-                                                )}
-                                                {job.requirementType === "CFR_EXTENDED" && (
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border w-fit bg-amber-50 text-amber-700 border-amber-200 whitespace-nowrap">
-                                                        CFR Ext · {job.cfrDaysRemaining ?? 0}d left
-                                                    </span>
-                                                )}
-                                                {!["NEW", "CFR", "CFR_EXTENDED"].includes(job.requirementType) && (
-                                                    <span className="text-xs capitalize text-neutral-500">{(job.requirementType || "").replace(/_/g, " ").toLowerCase()}</span>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        {/* CFR Age */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-center">
-                                            <span className="text-sm font-medium">{job.carryForwardAge ?? 0}</span>
-                                        </TableCell>
-                                        {/* Rates */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
-                                            {isEditing ? (
-                                                <div className="flex flex-col gap-1">
-                                                    <Input className={inputCls} value={editForm.clientBillRate ?? ""} onChange={ef("clientBillRate")} placeholder="Bill rate" />
-                                                    <Input className={inputCls} value={editForm.payRate ?? ""} onChange={ef("payRate")} placeholder="Pay rate" />
-                                                </div>
-                                            ) : (
-                                                <div className="flex flex-col gap-0.5 text-xs">
-                                                    <span><span className="text-muted-foreground">Bill:</span> {job.clientBillRate ? `$${job.clientBillRate}` : "-"}</span>
-                                                    <span><span className="text-muted-foreground">Pay:</span> {job.payRate ? `$${job.payRate}` : "-"}</span>
-                                                </div>
-                                            )}
-                                        </TableCell>
-                                        {/* Created Date */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">
-                                            {showEstCreatedDateTime ? (
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm">{estDateFormatter.format(new Date(job.createdAt))}</span>
-                                                    <span className="text-[10px] text-muted-foreground">{estTimeFormatter.format(new Date(job.createdAt))}</span>
-                                                </div>
-                                            ) : new Date(job.createdAt).toLocaleDateString()}
-                                        </TableCell>
-                                        {/* Last Updated */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">
-                                            <div className="flex flex-col">
-                                                <span className="text-sm">{estDateFormatter.format(new Date(job.updatedAt))}</span>
-                                                <span className="text-[10px] text-muted-foreground">{estTimeFormatter.format(new Date(job.updatedAt))}</span>
-                                            </div>
-                                        </TableCell>
-                                        {/* Status */}
-                                        <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-center flex justify-center">
-                                            <JobStatusSelect job={job} onRefresh={onRefresh} />
-                                        </TableCell>
-                                        {/* Actions */}
-                                        {showActions && (
-                                            <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-end">
-                                                <div className="flex justify-end gap-1">
+                                                </TableCell>
+                                                {/* CFR Age */}
+                                                <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-center">
+                                                    <span className="text-sm font-medium">{job.carryForwardAge ?? 0}</span>
+                                                </TableCell>
+                                                {/* Rates */}
+                                                <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
                                                     {isEditing ? (
-                                                        <>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => saveEdit(job.id)} disabled={isSaving} title="Save">
-                                                                <Save className="h-4 w-4" />
-                                                            </Button>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={cancelEdit} title="Cancel">
-                                                                <XIcon className="h-4 w-4" />
-                                                            </Button>
-                                                        </>
+                                                        <div className="flex flex-col gap-1">
+                                                            <Input className={inputCls} value={editForm.clientBillRate ?? ""} onChange={ef("clientBillRate")} placeholder="Bill rate" />
+                                                            <Input className={inputCls} value={editForm.payRate ?? ""} onChange={ef("payRate")} placeholder="Pay rate" />
+                                                        </div>
                                                     ) : (
-                                                        <>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20" asChild>
-                                                                <Link href={`${baseUrl}/${job.id}`}><Eye className="h-4 w-4" /></Link>
-                                                            </Button>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20" onClick={() => startEdit(job)} title="Edit">
-                                                                <Edit2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </>
+                                                        <div className="flex flex-col gap-0.5 text-xs">
+                                                            <span><span className="text-muted-foreground">Bill:</span> {job.clientBillRate ? `$${job.clientBillRate}` : "-"}</span>
+                                                            <span><span className="text-muted-foreground">Pay:</span> {job.payRate ? `$${job.payRate}` : "-"}</span>
+                                                        </div>
                                                     )}
-                                                </div>
-                                            </TableCell>
-                                        )}
-                                    </TableRow>
-                                );
-                            })
+                                                </TableCell>
+                                                {/* Created Date */}
+                                                <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">
+                                                    {showEstCreatedDateTime ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm">{estDateFormatter.format(new Date(job.createdAt))}</span>
+                                                            <span className="text-[10px] text-muted-foreground">{estTimeFormatter.format(new Date(job.createdAt))}</span>
+                                                        </div>
+                                                    ) : new Date(job.createdAt).toLocaleDateString()}
+                                                </TableCell>
+                                                {/* Last Updated */}
+                                                <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm">{estDateFormatter.format(new Date(job.updatedAt))}</span>
+                                                        <span className="text-[10px] text-muted-foreground">{estTimeFormatter.format(new Date(job.updatedAt))}</span>
+                                                    </div>
+                                                </TableCell>
+                                                {/* Status */}
+                                                <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-center flex justify-center">
+                                                    <JobStatusSelect job={job} onRefresh={onRefresh} />
+                                                </TableCell>
+                                                {/* Actions */}
+                                                {showActions && (
+                                                    <TableCell className="py-2 px-4 border-b border-neutral-200 dark:border-slate-600 text-end">
+                                                        <div className="flex justify-end gap-1">
+                                                            {isEditing ? (
+                                                                <>
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50" onClick={() => saveEdit(job.id)} disabled={isSaving} title="Save">
+                                                                        <Save className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={cancelEdit} title="Cancel">
+                                                                        <XIcon className="h-4 w-4" />
+                                                                    </Button>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20" asChild>
+                                                                        <Link href={`${baseUrl}/${job.id}`}><Eye className="h-4 w-4" /></Link>
+                                                                    </Button>
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20" onClick={() => startEdit(job)} title="Edit">
+                                                                        <Edit2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                )}
+                                            </TableRow>
+                                        </React.Fragment>
+                                    );
+                                });
+                            })()
                         )}
                     </TableBody>
                 </Table>
