@@ -20,7 +20,9 @@ export default function PodLeadTeamSubmissionsPage() {
             const res = await apiClient("/recruiter-submissions");
             if (!res.ok) throw new Error("Failed to fetch team submissions");
             const data = await res.json();
-            const arr = Array.isArray(data) ? data : (data?.submissions || []);
+            const arr = Array.isArray(data)
+                ? data
+                : (data?.data || data?.submissions || []);
             setSubmissions(arr);
         } catch (err: any) {
             setError(err.message || "An error occurred while fetching submissions");

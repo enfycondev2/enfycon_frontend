@@ -23,7 +23,9 @@ async function getDeliveryHeadData() {
         const jobsRaw = jobsRes.ok ? await jobsRes.json() : {};
         const jobs = Array.isArray(jobsRaw?.data) ? jobsRaw.data : [];
         const subsData = subsRes.ok ? await subsRes.json() : [];
-        const submissions = Array.isArray(subsData) ? subsData : subsData?.submissions || [];
+        const submissions = Array.isArray(subsData)
+            ? subsData
+            : (subsData?.data || subsData?.submissions || []);
 
         return { jobs, submissions };
     } catch (error) {

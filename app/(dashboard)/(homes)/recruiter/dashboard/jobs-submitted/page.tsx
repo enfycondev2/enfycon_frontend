@@ -25,8 +25,11 @@ export default function SubmittedJobsPage() {
             }
 
             const data = await res.json();
-            // Ensure data is array
-            const arr = Array.isArray(data) ? data : (data?.submissions || []);
+            // Handle paginated response { data, total, page, limit, totalPages }
+            // and legacy formats (direct array or data.submissions)
+            const arr = Array.isArray(data)
+                ? data
+                : (data?.data || data?.submissions || []);
 
             console.log("Fetched submissions payload:", arr);
             setSubmissions(arr);

@@ -52,7 +52,9 @@ async function getSubmissions(): Promise<SubmissionRow[]> {
         });
         if (!response.ok) return [];
         const data = await response.json();
-        const arr = Array.isArray(data) ? data : data?.submissions;
+        const arr = Array.isArray(data)
+            ? data
+            : (data?.data || data?.submissions || []);
         return Array.isArray(arr) ? arr : [];
     } catch {
         return [];
