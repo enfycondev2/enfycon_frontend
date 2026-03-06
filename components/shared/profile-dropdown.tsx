@@ -123,6 +123,11 @@ const ProfileDropdown = () => {
     },
   };
 
+  const neutralRoleColors = {
+    chip: "text-slate-700 dark:text-slate-200 bg-slate-50/80 dark:bg-slate-950/30 border-slate-100/60 dark:border-slate-900/35",
+    banner: "bg-slate-50/90 dark:bg-slate-950/35",
+  };
+
   const getRoleColors = (role?: string) => (role ? { chip: roleConfig[role]?.chip || neutralRoleColors.chip, banner: roleConfig[role]?.banner || neutralRoleColors.banner } : neutralRoleColors);
 
   const displayName = session?.user?.name?.trim() || "User";
