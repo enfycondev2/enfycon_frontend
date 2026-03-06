@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
     Table,
     TableBody,
@@ -42,6 +42,8 @@ export interface CandidateSubmission {
         jobTitle: string;
         submissionRequired?: number;
         submissionDone?: number;
+        requirementType?: string;
+        createdAt?: string;
     };
     recruiterId: string;
     candidateName: string;
@@ -411,9 +413,37 @@ export default function SubmittedJobsTable({
         });
     }, [submissions, searchQuery, statusFilter, l1Filter, l2Filter, l3Filter, dateFilter]);
 
-    // Apply sorting (by newest submission date)
+
+    // Apply sorting (Prioritize Today's Jobs/CFR Extended, then by newest submission date)
     const sortedSubmissions = useMemo(() => {
+        const today = formatUsDate(new Date());
         return [...filteredSubmissions].sort((a, b) => {
+            const aIsToday = formatUsDate(a.job?.createdAt) === today ||
+                formatUsDate(a.createdAt) === today ||
+                formatUsDate(a.submissionDate) === today ||
+                a.job?.requirementType === 'CFR_EXTENDED';
+            const bIsToday = formatUsDate(b.job?.createdAt) === today ||
+                formatUsDate(b.createdAt) === today ||
+                formatUsDate(b.submissionDate) === today ||
+                b.job?.requirementType === 'CFR_EXTENDED';
+
+            if (aIsToday && !bIsToday) return -1;
+            if (!aIsToday && bIsToday) return 1;
+
+            if (aIsToday && bIsToday) {
+                // Within Today, prioritize CFR_EXTENDED
+                const aIsCfrExt = a.job?.requirementType === 'CFR_EXTENDED';
+                const bIsCfrExt = b.job?.requirementType === 'CFR_EXTENDED';
+                if (aIsCfrExt && !bIsCfrExt) return -1;
+                if (!aIsCfrExt && bIsCfrExt) return 1;
+
+                // Then NEW
+                const aIsNew = a.job?.requirementType === 'NEW';
+                const bIsNew = b.job?.requirementType === 'NEW';
+                if (aIsNew && !bIsNew) return -1;
+                if (!aIsNew && bIsNew) return 1;
+            }
+
             return new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime();
         });
     }, [filteredSubmissions]);
@@ -597,42 +627,42 @@ export default function SubmittedJobsTable({
             {/* Table wrapper inside clean card container */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
-                    <Table className="table-grid-lines table-auto border-spacing-0 w-full min-w-max">
+                    <Table className="table-grid-lines table-auto border-spacing-0 w-full min-w-max border-separate">
                         <TableHeader className="bg-gray-50 border-b border-gray-200">
                             <TableRow className="border-0 hover:bg-transparent">
-                                <TableHead className="sticky left-0 z-30 bg-gray-50 text-gray-600 font-medium text-sm px-6 py-4 text-start shadow-[1px_0_0_0_rgba(226,232,240,1)]">
+                                <TableHead className="sticky left-0 z-30 bg-gray-50 text-gray-600 font-medium text-sm px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600 shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(71,85,105,1)]">
                                     Job Reference
                                 </TableHead>
-                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start">
+                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
                                     Submitted By
                                 </TableHead>
 
 
-                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start">
+                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
                                     Candidate Details
                                 </TableHead>
-                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start">
+                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
                                     Created At
                                 </TableHead>
-                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start">
+                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
                                     Submission Date
                                 </TableHead>
                                 {showExtendedDetails && (
-                                    <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start">
+                                    <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
                                         Pipeline Progress
                                     </TableHead>
                                 )}
-                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-center">
+                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-center border-b border-r border-neutral-200 dark:border-slate-600">
                                     Status
                                 </TableHead>
                                 {showExtendedDetails && (
                                     <>
-                                        <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start">
+                                        <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
                                             Feedback
                                         </TableHead>
                                     </>
                                 )}
-                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-end">
+                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-end border-b border-neutral-200 dark:border-slate-600">
                                     Actions
                                 </TableHead>
                             </TableRow>
@@ -641,7 +671,7 @@ export default function SubmittedJobsTable({
                             {currentSubmissions.length === 0 ? (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={showExtendedDetails ? 8 : 6}
+                                        colSpan={showExtendedDetails ? 9 : 7}
                                         className="h-32 text-center text-gray-500"
                                     >
                                         <div className="flex flex-col items-center justify-center gap-2">
@@ -651,217 +681,268 @@ export default function SubmittedJobsTable({
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                currentSubmissions.map((sub, index) => {
-                                    const stickyBgClass = index % 2 === 0
-                                        ? "bg-white dark:bg-slate-900/20"
-                                        : "bg-slate-50/70 dark:bg-slate-800/35";
-                                    return (
-                                        <TableRow
-                                            key={sub.id}
-                                            className={cn(
-                                                "transition-colors border-b border-gray-100 last:border-0 group",
-                                                index % 2 === 0
-                                                    ? "bg-white dark:bg-slate-900/20 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                                                    : "bg-slate-50/70 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75"
-                                            )}
-                                        >
-                                            {/* Job Reference */}
-                                            <TableCell className={cn(
-                                                "sticky left-0 z-20 px-6 py-4 text-start shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(71,85,105,1)]",
-                                                stickyBgClass
-                                            )}>
-                                                <div className="flex flex-col gap-1.5">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-semibold text-gray-900 text-sm">
-                                                            {sub.job?.jobCode || "N/A"}
-                                                        </span>
-                                                        {(sub.job?.submissionRequired !== undefined || submissionCountsByJob[sub.jobId]) && (
-                                                            <span className="bg-gray-100 text-gray-600 text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap">
-                                                                {sub.job?.submissionRequired !== undefined
-                                                                    ? `${sub.job?.submissionDone || 0}/${sub.job.submissionRequired}`
-                                                                    : `${submissionCountsByJob[sub.jobId]}`}
+                                (() => {
+                                    let hasShownTodayHeader = false;
+                                    let hasShownPastHeader = false;
+                                    let hasShownNewSubHeader = false;
+                                    let hasShownCfrExtSubHeader = false;
+
+                                    const today = formatUsDate(new Date());
+                                    return currentSubmissions.map((sub, index) => {
+                                        const isToday = formatUsDate(sub.job?.createdAt) === today ||
+                                            formatUsDate(sub.createdAt) === today ||
+                                            formatUsDate(sub.submissionDate) === today ||
+                                            sub.job?.requirementType === 'CFR_EXTENDED';
+                                        const showTodayHeader = isToday && !hasShownTodayHeader;
+                                        const showPastHeader = !isToday && !hasShownPastHeader;
+
+                                        const showNewSubHeader = isToday && sub.job?.requirementType === 'NEW' && !hasShownNewSubHeader;
+                                        const showCfrExtSubHeader = isToday && sub.job?.requirementType === 'CFR_EXTENDED' && !hasShownCfrExtSubHeader;
+
+                                        if (showTodayHeader) hasShownTodayHeader = true;
+                                        if (showPastHeader) hasShownPastHeader = true;
+                                        if (showNewSubHeader) hasShownNewSubHeader = true;
+                                        if (showCfrExtSubHeader) hasShownCfrExtSubHeader = true;
+
+                                        const colSpanTotal = showExtendedDetails ? 9 : 7;
+                                        const stickyBgClass = index % 2 === 0
+                                            ? "bg-white dark:bg-slate-900/20"
+                                            : "bg-slate-50/70 dark:bg-slate-800/35";
+
+                                        return (
+                                            <React.Fragment key={sub.id}>
+                                                {showTodayHeader && (
+                                                    <TableRow className="bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 shadow-sm">
+                                                        <TableCell colSpan={colSpanTotal} className="py-2 px-0 border-b border-emerald-100 dark:border-emerald-900/30">
+                                                            <div className="sticky left-0 px-6 flex items-center gap-2 w-max">
+                                                                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                                                                <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">Today's Jobs</span>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                                {showNewSubHeader && (
+                                                    <TableRow className="bg-emerald-100/10 dark:bg-emerald-900/5 hover:bg-emerald-100/10 dark:hover:bg-emerald-900/5 border-0">
+                                                        <TableCell colSpan={colSpanTotal} className="py-1 px-0 border-b border-emerald-50 dark:border-emerald-900/20 text-start">
+                                                            <div className="sticky left-0 px-8 w-max">
+                                                                <span className="text-[10px] font-bold text-emerald-600/80 dark:text-emerald-500/80 uppercase tracking-widest italic">New Requirements</span>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                                {showCfrExtSubHeader && (
+                                                    <TableRow className="bg-amber-100/10 dark:bg-amber-900/5 hover:bg-amber-100/10 dark:hover:bg-amber-900/5 border-0">
+                                                        <TableCell colSpan={colSpanTotal} className="py-1 px-0 border-b border-amber-50 dark:border-amber-900/20 text-start">
+                                                            <div className="sticky left-0 px-8 w-max">
+                                                                <span className="text-[10px] font-bold text-amber-600/80 dark:text-amber-500/80 uppercase tracking-widest italic">Requirement Extensions (CFR)</span>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                                {showPastHeader && (
+                                                    <TableRow className="bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50/50 dark:hover:bg-red-950/20 shadow-sm">
+                                                        <TableCell colSpan={colSpanTotal} className="py-2 px-0 border-b border-red-100 dark:border-red-900/30">
+                                                            <div className="sticky left-0 px-6 w-max">
+                                                                <span className="text-sm font-bold text-red-700 dark:text-red-400 uppercase tracking-widest">Past Jobs</span>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                                <TableRow
+                                                    className={cn(
+                                                        "transition-colors group",
+                                                        index % 2 === 0
+                                                            ? "bg-white dark:bg-slate-900/20 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                                                            : "bg-slate-50/70 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75"
+                                                    )}
+                                                >
+                                                    <TableCell className={cn(
+                                                        "sticky left-0 z-20 px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600 shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(71,85,105,1)]",
+                                                        stickyBgClass
+                                                    )}>
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-semibold text-gray-900 text-sm">
+                                                                    {sub.job?.jobCode || "N/A"}
+                                                                </span>
+                                                                {(sub.job?.submissionRequired !== undefined || submissionCountsByJob[sub.jobId]) && (
+                                                                    <span className="bg-gray-100 text-gray-600 text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                                        {sub.job?.submissionRequired !== undefined
+                                                                            ? `${sub.job?.submissionDone || 0}/${sub.job.submissionRequired}`
+                                                                            : `${submissionCountsByJob[sub.jobId]}`}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-xs text-gray-500 capitalize truncate max-w-[220px]" title={sub.job?.jobTitle}>
+                                                                {sub.job?.jobTitle?.toLowerCase() || "-"}
                                                             </span>
-                                                        )}
-                                                    </div>
-                                                    <span className="text-xs text-gray-500 capitalize truncate max-w-[220px]" title={sub.job?.jobTitle}>
-                                                        {sub.job?.jobTitle?.toLowerCase() || "-"}
-                                                    </span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="px-6 py-4 text-start">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="font-medium text-sm text-gray-900 capitalize">
-                                                        {sub.recruiter?.fullName || "-"}
-                                                    </span>
-                                                    <a href={`mailto:${sub.recruiter?.email}`} className="text-xs text-gray-500 hover:text-blue-600 hover:underline break-all">
-                                                        {sub.recruiter?.email || "-"}
-                                                    </a>
-                                                </div>
-                                            </TableCell>
-
-                                            {/* Candidate Details */}
-                                            <TableCell className="px-6 py-4 text-start">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="font-medium text-sm text-gray-900 capitalize">
-                                                        {sub.candidateName}
-                                                    </span>
-                                                    <a href={`mailto:${sub.candidateEmail}`} className="text-xs text-gray-500 hover:text-blue-600 hover:underline break-all">
-                                                        {sub.candidateEmail}
-                                                    </a>
-                                                    {sub.candidatePhone && (
-                                                        <span className="text-[11px] text-gray-500">Phone: {sub.candidatePhone}</span>
-                                                    )}
-                                                    {sub.candidateCurrentLocation && (
-                                                        <span className="text-[11px] text-gray-500">Loc: {sub.candidateCurrentLocation}</span>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-
-                                            {/* Created At Date */}
-                                            <TableCell className="px-6 py-4 text-start whitespace-nowrap">
-                                                <div className="flex flex-col gap-0.5">
-                                                    {sub.createdAt ? (
-                                                        <>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="font-medium text-sm text-gray-900 capitalize">
+                                                                {sub.recruiter?.fullName || "-"}
+                                                            </span>
+                                                            <a href={`mailto:${sub.recruiter?.email}`} className="text-xs text-gray-500 hover:text-blue-600 hover:underline break-all">
+                                                                {sub.recruiter?.email || "-"}
+                                                            </a>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="font-medium text-sm text-gray-900 capitalize">
+                                                                {sub.candidateName}
+                                                            </span>
+                                                            <a href={`mailto:${sub.candidateEmail}`} className="text-xs text-gray-500 hover:text-blue-600 hover:underline break-all">
+                                                                {sub.candidateEmail}
+                                                            </a>
+                                                            {sub.candidatePhone && (
+                                                                <span className="text-[11px] text-gray-500">Phone: {sub.candidatePhone}</span>
+                                                            )}
+                                                            {sub.candidateCurrentLocation && (
+                                                                <span className="text-[11px] text-gray-500">Loc: {sub.candidateCurrentLocation}</span>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="px-6 py-4 text-start whitespace-nowrap border-b border-r border-neutral-200 dark:border-slate-600">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            {sub.createdAt ? (
+                                                                <>
+                                                                    <span className="text-sm text-gray-900 font-medium">
+                                                                        {formatUsDate(sub.createdAt)}
+                                                                    </span>
+                                                                    <span className="text-xs text-gray-400">
+                                                                        {formatUsTime(sub.createdAt)}
+                                                                    </span>
+                                                                </>
+                                                            ) : (
+                                                                <span className="text-sm text-gray-400 italic">-</span>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="px-6 py-4 text-start whitespace-nowrap border-b border-r border-neutral-200 dark:border-slate-600">
+                                                        <div className="flex flex-col gap-0.5" title="Submission Date">
                                                             <span className="text-sm text-gray-900 font-medium">
-                                                                {formatUsDate(sub.createdAt)}
+                                                                {formatSubmissionDate(sub.submissionDate)}
                                                             </span>
                                                             <span className="text-xs text-gray-400">
-                                                                {formatUsTime(sub.createdAt)}
+                                                                {formatSubmissionTime(sub.submissionDate, sub.createdAt)}
                                                             </span>
-                                                        </>
-                                                    ) : (
-                                                        <span className="text-sm text-gray-400 italic">-</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    {showExtendedDetails && (
+                                                        <TableCell className="px-6 py-4 text-center border-b border-r border-neutral-200 dark:border-slate-600">
+                                                            <PipelineProgress sub={sub} />
+                                                        </TableCell>
                                                     )}
-                                                </div>
-                                            </TableCell>
-
-                                            {/* Submission Date */}
-                                            <TableCell className="px-6 py-4 text-start whitespace-nowrap">
-                                                <div className="flex flex-col gap-0.5" title="Submission Date">
-                                                    <span className="text-sm text-gray-900 font-medium">
-                                                        {formatSubmissionDate(sub.submissionDate)}
-                                                    </span>
-                                                    <span className="text-xs text-gray-400">
-                                                        {formatSubmissionTime(sub.submissionDate, sub.createdAt)}
-                                                    </span>
-                                                </div>
-                                            </TableCell>
-
-                                            {/* Pipeline Progress (Replaces L1/L2/L3) */}
-                                            {showExtendedDetails && (
-                                                <TableCell className="px-6 py-4 text-center">
-                                                    <PipelineProgress sub={sub} />
-                                                </TableCell>
-                                            )}
-
-                                            {/* Status Badge */}
-                                            <TableCell className="px-6 py-4 text-center">
-                                                <span className={cn(
-                                                    "rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide inline-flex items-center justify-center",
-                                                    getBadgeStyles(sub.finalStatus)
-                                                )}>
-                                                    {sub.finalStatus || "PENDING"}
-                                                </span>
-                                            </TableCell>
-
-                                            {showExtendedDetails && (
-                                                <TableCell className="px-4 py-4 text-start w-[120px]">
-                                                    <FeedbackPopover remarks={sub.remarks} comment={sub.recruiterComment} />
-                                                </TableCell>
-                                            )}
-
-                                            {/* Action Buttons */}
-                                            <TableCell className="px-4 py-4 text-end whitespace-nowrap w-[80px]">
-                                                <div className="flex justify-end items-center">
-                                                    <EditStatusPopover sub={sub} onSaved={onUpdate} isRecruiter={isRecruiter} />
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })
+                                                    <TableCell className="px-6 py-4 text-center border-b border-r border-neutral-200 dark:border-slate-600">
+                                                        <span className={cn(
+                                                            "rounded-full px-3 py-1 text-xs font-medium uppercase tracking-wide inline-flex items-center justify-center",
+                                                            getBadgeStyles(sub.finalStatus)
+                                                        )}>
+                                                            {sub.finalStatus || "PENDING"}
+                                                        </span>
+                                                    </TableCell>
+                                                    {showExtendedDetails && (
+                                                        <TableCell className="px-4 py-4 text-start w-[120px] border-b border-r border-neutral-200 dark:border-slate-600">
+                                                            <FeedbackPopover remarks={sub.remarks} comment={sub.recruiterComment} />
+                                                        </TableCell>
+                                                    )}
+                                                    <TableCell className="px-4 py-4 text-end whitespace-nowrap w-[80px] border-b border-neutral-200 dark:border-slate-600">
+                                                        <div className="flex justify-end items-center">
+                                                            <EditStatusPopover sub={sub} onSaved={onUpdate} isRecruiter={isRecruiter} />
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            </React.Fragment>
+                                        );
+                                    });
+                                })()
                             )}
                         </TableBody>
                     </Table>
                 </div>
-            </div>
+            </div >
 
             {/* Pagination Controls */}
-            {totalPages > 1 && (
-                <div className="flex items-center justify-between px-2 pt-2">
-                    <p className="text-sm text-gray-500">
-                        Showing <span className="font-medium text-gray-900">{Math.min((currentPage - 1) * itemsPerPage + 1, sortedSubmissions.length)}</span> to <span className="font-medium text-gray-900">{Math.min(currentPage * itemsPerPage, sortedSubmissions.length)}</span> of <span className="font-medium text-gray-900">{sortedSubmissions.length}</span> results
-                    </p>
-                    <div className="flex items-center gap-1">
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 border-gray-200 text-gray-600 hover:bg-gray-50"
-                            onClick={() => handlePageChange(1)}
-                            disabled={currentPage === 1}
-                        >
-                            <ChevronsLeft className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 border-gray-200 text-gray-600 hover:bg-gray-50"
-                            onClick={() => handlePageChange(currentPage - 1)}
-                            disabled={currentPage === 1}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <div className="flex items-center gap-1 px-1">
-                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                let pageNum;
-                                if (totalPages <= 5) {
-                                    pageNum = i + 1;
-                                } else if (currentPage <= 3) {
-                                    pageNum = i + 1;
-                                } else if (currentPage >= totalPages - 2) {
-                                    pageNum = totalPages - 4 + i;
-                                } else {
-                                    pageNum = currentPage - 2 + i;
-                                }
+            {
+                totalPages > 1 && (
+                    <div className="flex items-center justify-between px-2 pt-2">
+                        <p className="text-sm text-gray-500">
+                            Showing <span className="font-medium text-gray-900">{Math.min((currentPage - 1) * itemsPerPage + 1, sortedSubmissions.length)}</span> to <span className="font-medium text-gray-900">{Math.min(currentPage * itemsPerPage, sortedSubmissions.length)}</span> of <span className="font-medium text-gray-900">{sortedSubmissions.length}</span> results
+                        </p>
+                        <div className="flex items-center gap-1">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 border-gray-200 text-gray-600 hover:bg-gray-50"
+                                onClick={() => handlePageChange(1)}
+                                disabled={currentPage === 1}
+                            >
+                                <ChevronsLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 border-gray-200 text-gray-600 hover:bg-gray-50"
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1}
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <div className="flex items-center gap-1 px-1">
+                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                    let pageNum;
+                                    if (totalPages <= 5) {
+                                        pageNum = i + 1;
+                                    } else if (currentPage <= 3) {
+                                        pageNum = i + 1;
+                                    } else if (currentPage >= totalPages - 2) {
+                                        pageNum = totalPages - 4 + i;
+                                    } else {
+                                        pageNum = currentPage - 2 + i;
+                                    }
 
-                                return (
-                                    <Button
-                                        key={pageNum}
-                                        variant={currentPage === pageNum ? "default" : "outline"}
-                                        size="sm"
-                                        className={cn(
-                                            "h-8 w-8 text-xs",
-                                            currentPage === pageNum
-                                                ? "bg-blue-600 hover:bg-blue-700 text-white border-0"
-                                                : "border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                                        )}
-                                        onClick={() => handlePageChange(pageNum)}
-                                    >
-                                        {pageNum}
-                                    </Button>
-                                );
-                            })}
+                                    return (
+                                        <Button
+                                            key={pageNum}
+                                            variant={currentPage === pageNum ? "default" : "outline"}
+                                            size="sm"
+                                            className={cn(
+                                                "h-8 w-8 text-xs",
+                                                currentPage === pageNum
+                                                    ? "bg-blue-600 hover:bg-blue-700 text-white border-0"
+                                                    : "border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                            )}
+                                            onClick={() => handlePageChange(pageNum)}
+                                        >
+                                            {pageNum}
+                                        </Button>
+                                    );
+                                })}
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 border-gray-200 text-gray-600 hover:bg-gray-50"
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 border-gray-200 text-gray-600 hover:bg-gray-50"
+                                onClick={() => handlePageChange(totalPages)}
+                                disabled={currentPage === totalPages}
+                            >
+                                <ChevronsRight className="h-4 w-4" />
+                            </Button>
                         </div>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 border-gray-200 text-gray-600 hover:bg-gray-50"
-                            onClick={() => handlePageChange(currentPage + 1)}
-                            disabled={currentPage === totalPages}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 border-gray-200 text-gray-600 hover:bg-gray-50"
-                            onClick={() => handlePageChange(totalPages)}
-                            disabled={currentPage === totalPages}
-                        >
-                            <ChevronsRight className="h-4 w-4" />
-                        </Button>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }

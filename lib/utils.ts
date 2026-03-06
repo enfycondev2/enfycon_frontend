@@ -5,23 +5,31 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatUsDate(dateString: string | Date): string {
+export function formatUsDate(dateString: string | Date | null | undefined): string {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "-";
+
   return new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     month: "short",
     day: "numeric",
     year: "numeric"
-  }).format(new Date(dateString));
+  }).format(date);
 }
 
-export function formatUsTime(dateString: string | Date): string {
+export function formatUsTime(dateString: string | Date | null | undefined): string {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "-";
+
   return new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     hour: "numeric",
     minute: "numeric",
     second: "2-digit",
     timeZoneName: "short"
-  }).format(new Date(dateString));
+  }).format(date);
 }
 
 export function getGreeting(): string {

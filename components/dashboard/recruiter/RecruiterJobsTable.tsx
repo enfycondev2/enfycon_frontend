@@ -215,22 +215,10 @@ export default function RecruiterJobsTable({
     }, [jobs, amFilter, clientFilter, recruiterFilter, timeFilter, dateFilter, searchQuery]);
 
     const sortedJobs = useMemo(() => {
-        const now = new Date();
-        const todayDateStr = new Intl.DateTimeFormat('en-US', {
-            timeZone: 'America/New_York',
-            year: 'numeric',
-            month: 'numeric',
-            day: 'numeric'
-        }).format(now);
+        const today = formatUsDate(new Date());
 
         const isTodayGroup = (job: Job) => {
-            const jobDateStr = new Intl.DateTimeFormat('en-US', {
-                timeZone: 'America/New_York',
-                year: 'numeric',
-                month: 'numeric',
-                day: 'numeric'
-            }).format(new Date(job.createdAt));
-            return jobDateStr === todayDateStr || job.requirementType === 'CFR_EXTENDED';
+            return formatUsDate(job.createdAt) === today || job.requirementType === 'CFR_EXTENDED';
         };
 
         return [...filteredJobs].sort((a, b) => {
@@ -563,10 +551,10 @@ export default function RecruiterJobsTable({
                                                 </TableRow>
                                             )}
                                             {showPastHeader && (
-                                                <TableRow className="bg-neutral-100/50 dark:bg-slate-800/50 hover:bg-neutral-100/50 dark:hover:bg-slate-800/50">
-                                                    <TableCell colSpan={8} className="py-2 px-0">
+                                                <TableRow className="bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50/50 dark:hover:bg-red-950/20 shadow-sm">
+                                                    <TableCell colSpan={8} className="py-2 px-0 border-b border-red-100 dark:border-red-900/30">
                                                         <div className="sticky left-0 px-4 w-max">
-                                                            <span className="text-sm font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">Past Jobs</span>
+                                                            <span className="text-sm font-bold text-red-700 dark:text-red-400 uppercase tracking-widest">Past Jobs</span>
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
