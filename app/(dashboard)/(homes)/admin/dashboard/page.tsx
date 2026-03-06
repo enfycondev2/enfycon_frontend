@@ -14,6 +14,8 @@ import { Suspense } from "react";
 import { auth } from "@/auth";
 import { getGreeting } from "@/lib/utils";
 import { serverApiClient } from "@/lib/serverApiClient";
+import ManagerPerformanceTable from "./components/manager-performance-table";
+import PodPerformanceTable from "./components/pod-performance-table";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard | enfySync",
@@ -21,7 +23,23 @@ export const metadata: Metadata = {
 };
 
 interface JobRow {
-  status?: string;
+  id: string;
+  status: string;
+  accountManager?: {
+    id: string;
+    fullName: string;
+    email: string;
+  };
+  pod?: {
+    id: string;
+    name: string;
+  };
+  requirementType?: string;
+  submissionRequired?: number;
+  submissionDone?: number;
+  createdAt: string;
+  updatedAt: string;
+  noOfPositions?: number;
 }
 
 interface SubmissionRow {
@@ -51,7 +69,8 @@ async function getJobs(): Promise<JobRow[]> {
     const response = await serverApiClient("/jobs", { cache: "no-store" });
     if (!response.ok) return [];
     const data = await response.json();
-    return Array.isArray(data) ? data : [];
+    const arr = Array.isArray(data) ? data : data?.data;
+    return Array.isArray(arr) ? arr : [];
   } catch {
     return [];
   }
@@ -167,6 +186,19 @@ export default async function DashboardPage() {
       </Suspense>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 mt-6">
+        {/* Performance Tables - Added as per USER_REQUEST */}
+        <div className="xl:col-span-12">
+          <Suspense fallback={<LoadingSkeleton />}>
+            <ManagerPerformanceTable jobs={jobs} />
+          </Suspense>
+        </div>
+
+        {/* <div className="xl:col-span-12">
+          <Suspense fallback={<LoadingSkeleton />}>
+            <PodPerformanceTable jobs={jobs} />
+          </Suspense>
+        </div> */}
+
         <div className="xl:col-span-12 2xl:col-span-6">
           <Suspense fallback={<LoadingSkeleton />}>
             <SalesStaticCard
