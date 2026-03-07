@@ -5,7 +5,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { Bell, CircleCheck, Info, AlertTriangle } from "lucide-react";
+import { Bell, CircleCheck, Info, AlertTriangle, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { formatDistanceToNow, isValid } from "date-fns";
@@ -21,6 +21,8 @@ const NotificationDropdown = () => {
         return <CircleCheck className="text-green-500" />;
       case "WARNING":
         return <AlertTriangle className="text-yellow-500" />;
+      case "NEW_MESSAGE":
+        return <MessageSquare className="text-primary" />;
       default:
         return <Bell className="text-gray-500" />;
     }
@@ -34,6 +36,8 @@ const NotificationDropdown = () => {
         return "bg-green-100 dark:bg-green-600/25";
       case "WARNING":
         return "bg-yellow-100 dark:bg-yellow-600/25";
+      case "NEW_MESSAGE":
+        return "bg-primary/10 dark:bg-primary/25";
       default:
         return "bg-gray-100 dark:bg-gray-700";
     }
@@ -87,7 +91,7 @@ const NotificationDropdown = () => {
                 notifications.map((n) => (
                   <Link
                     key={n.id}
-                    href={n.data?.jobId ? getJobPath(n.data.jobId) : "#"}
+                    href={n.type === "NEW_MESSAGE" ? "/chat" : (n.data?.jobId ? getJobPath(n.data.jobId) : "#")}
                     onClick={() => markAsRead(n.id)}
                     className={cn(
                       "flex px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 justify-between gap-3 border-b border-gray-100 dark:border-slate-700/50 last:border-0 transition-colors",
