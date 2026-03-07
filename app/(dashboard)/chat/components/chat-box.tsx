@@ -1,595 +1,183 @@
-import { Button } from '@/components/ui/button';
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useChat } from "@/contexts/ChatContext";
+import { useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     Command,
     CommandEmpty,
     CommandGroup,
     CommandInput,
     CommandItem,
-    CommandList,
+    CommandList
 } from "@/components/ui/command";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuTrigger,
+    DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Input } from '@/components/ui/input';
-import { Label } from "@/components/ui/label";
-import { Textarea } from '@/components/ui/textarea';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from '@/lib/utils';
-import { Ban, CircleX, EllipsisVertical, ImageIcon, LinkIcon, Phone, Send, Settings, User, Video } from 'lucide-react';
-import Image, { StaticImageData } from 'next/image';
-import Link from 'next/link';
-import React, { useEffect, useRef, useState } from 'react';
-
-import ChatImage1 from '@/public/assets/images/chat/1.png';
-import ChatImage10 from '@/public/assets/images/chat/10.png';
-import ChatImage11 from '@/public/assets/images/chat/11.png';
-import ChatImage2 from '@/public/assets/images/chat/2.png';
-import ChatImage3 from '@/public/assets/images/chat/3.png';
-import ChatImage4 from '@/public/assets/images/chat/4.png';
-import ChatImage5 from '@/public/assets/images/chat/5.png';
-import ChatImage6 from '@/public/assets/images/chat/6.png';
-import ChatImage7 from '@/public/assets/images/chat/7.png';
-import ChatImage8 from '@/public/assets/images/chat/8.png';
-import ChatImage9 from '@/public/assets/images/chat/9.png';
-
-type ChatItem = {
-    id: number;
-    name: string;
-    message: string;
-    time: string;
-    unreadCount: number;
-    imgSrc: StaticImageData | string;
-    isActive?: boolean;
-};
-
-const chatList: ChatItem[] = [
-    {
-        id: 1,
-        name: "Kathryn Murphy",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage1, isActive: true
-    },
-    {
-        id: 2,
-        name: "James Michael",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage2, isActive: true
-    },
-    {
-        id: 3,
-        name: "Russell Lucas",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage3
-    },
-    {
-        id: 4,
-        name: "Caleb Bradley",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage4
-    },
-    {
-        id: 5,
-        name: "Bobby Roy",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage5, isActive: true
-    },
-    {
-        id: 6,
-        name: "Vincent Liam",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage6, isActive: true
-    },
-    {
-        id: 7,
-        name: "Randy Mason",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage7, isActive: true
-    },
-    {
-        id: 8,
-        name: "Albert Wayne",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage8, isActive: true
-    },
-    {
-        id: 9,
-        name: "Elijah Willie",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage9, isActive: true
-    },
-    {
-        id: 10,
-        name: "Kathryn Murphy",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage10, isActive: true
-    },
-    {
-        id: 11,
-        name: "James Michael",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage1
-    },
-    {
-        id: 12,
-        name: "Russell Lucas",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage2
-    },
-    {
-        id: 13,
-        name: "Caleb Bradley",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage3
-    },
-    {
-        id: 14,
-        name: "Bobby Roy",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage4, isActive: true
-    },
-    {
-        id: 15,
-        name: "Vincent Liam",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage5, isActive: true
-    },
-    {
-        id: 16,
-        name: "Randy Mason",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage6, isActive: true
-    },
-    {
-        id: 17,
-        name: "Albert Wayne",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage7, isActive: true
-    },
-    {
-        id: 18,
-        name: "Elijah Willie",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage8, isActive: true
-    },
-    {
-        id: 19,
-        name: "Kathryn Murphy",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage9
-    },
-    {
-        id: 20,
-        name: "James Michael",
-        message: "hey! there i'm...",
-        time: "12:30 PM",
-        unreadCount: 8,
-        imgSrc: ChatImage10
-    },
-];
-
-type PrevChatMessage = {
-    id: number;
-    sender: "me" | "other";
-    text: string;
-    time: string;
-    avatar?: StaticImageData | string;
-};
-
-const prevDataData: PrevChatMessage[] = [
-    {
-        id: 1,
-        sender: "other",
-        text: "Hi There!",
-        time: "6:30 pm",
-        avatar: ChatImage11,
-    },
-    {
-        id: 2,
-        sender: "me",
-        text: "Hello! Nice to meet you! How are you dear..??",
-        time: "6:31 pm",
-    },
-    {
-        id: 3,
-        sender: "other",
-        text: "I am very well. How about you.??",
-        time: "6:32 pm",
-        avatar: ChatImage11,
-    },
-    {
-        id: 4,
-        sender: "me",
-        text: "I am also very well. So, How is going on your study.??",
-        time: "6:33 pm",
-    },
-    {
-        id: 5,
-        sender: "other",
-        text: "My study is going nice. Some day ago I have given my final exam. My result also published.",
-        time: "6:34 pm",
-        avatar: ChatImage11,
-    },
-    {
-        id: 6,
-        sender: "me",
-        text: "Oh great! How is your result??",
-        time: "6:35 pm",
-    },
-    {
-        id: 7,
-        sender: "other",
-        text: "I have got Golden A+ in the examination.",
-        time: "6:36 pm",
-        avatar: ChatImage11,
-    },
-    {
-        id: 8,
-        sender: "me",
-        text: "Wow!! such a good news.",
-        time: "6:37 pm",
-    },
-];
-
+import { Button } from "@/components/ui/button";
+import { EllipsisVertical, Settings, User } from "lucide-react";
+import userImg from "@/public/assets/images/user.png";
+import ChatWindow from "@/components/chat/ChatWindow";
+import { format } from "date-fns";
 
 const ChatBox = () => {
+    const {
+        chatUsers,
+        activeChatId,
+        setActiveChatId,
+        onlineUsers,
+        typingUsers
+    } = useChat();
+    const { data: session } = useSession();
+    const searchParams = useSearchParams();
+    const [searchTerm, setSearchTerm] = useState("");
 
-    const [prevData, setPrevData] = useState<PrevChatMessage[]>(prevDataData);
-    const [message, setMessage] = useState("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const userIdParam = searchParams.get("userId");
 
-    const chatContainerRef = useRef<HTMLDivElement | null>(null);
     useEffect(() => {
-        if (chatContainerRef.current) {
-            chatContainerRef.current.scrollTo({
-                top: chatContainerRef.current.scrollHeight,
-                behavior: "smooth",
-            });
-
+        if (userIdParam) {
+            setActiveChatId(userIdParam);
         }
-    }, [prevData]);
+    }, [userIdParam, setActiveChatId]);
 
+    const filteredUsers = chatUsers.filter((u) =>
+        u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
-    const handleSubmitMessage = (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true)
-        if (!message.trim()) return;
+    const sortedUsers = [...filteredUsers].sort((a, b) => {
+        const aOnline = onlineUsers.has(a.keycloakId) ? 1 : 0;
+        const bOnline = onlineUsers.has(b.keycloakId) ? 1 : 0;
+        return bOnline - aOnline;
+    });
 
-        // Current time 
-        const now = new Date();
-        let hours = now.getHours();
-        const minutes = now.getMinutes();
-        const ampm = hours >= 12 ? "PM" : "AM";
-        hours = hours % 12 || 12;
-
-        setPrevData((prev) => [
-            ...prev,
-            {
-                id: prev.length + 1,
-                sender: "me",
-                text: message,
-                time: `${hours}:${minutes.toString().padStart(2, "0")} ${ampm}`,
-            },
-        ]);
-
-        setMessage("")
-        setTimeout(() => {
-            setIsSubmitting(false)
-        }, 500);
-    }
+    const displayName = session?.user?.name || "User";
 
     return (
-        <div className="chat-wrapper grid grid-cols-1 md:grid-cols-12 gap-6">
-            <div className="card border-0 overflow-hidden !p-0 col-span-12 md:col-span-4 xl:col-span-3">
-                <div className="flex items-center justify-between gap-2 px-5 pt-5 pb-4">
+        <div className="chat-wrapper grid grid-cols-1 md:grid-cols-12 gap-6 h-[calc(100vh-260px)] min-h-0 overflow-hidden">
+            {/* Sidebar / User List */}
+            <div className={cn(
+                "card shadow-sm border-0 overflow-hidden !p-0 md:col-span-4 xl:col-span-3 bg-white dark:bg-slate-900 flex flex-col h-full",
+                activeChatId ? "hidden md:flex" : "flex"
+            )}>
+                <div className="flex items-center justify-between gap-2 px-5 pt-5 pb-4 border-b border-neutral-100 dark:border-slate-800">
                     <div className="flex items-center gap-4">
-                        <div className="">
-                            <Image src={ChatImage1} alt="image" width={40} height={40} />
+                        <div className="relative">
+                            <Avatar className="w-10 h-10">
+                                <AvatarImage src={session?.user?.image || userImg.src} />
+                                <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">
+                                    {displayName.substring(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                            </Avatar>
+                            <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" />
                         </div>
                         <div className="">
-                            <h6 className="text-base mb-0">Kathryn Murphy</h6>
-                            <p className="mb-0 text-neutral-500 dark:text-neutral-100">Available</p>
+                            <h6 className="text-base font-bold mb-0 leading-tight">{displayName}</h6>
+                            <p className="mb-0 text-[11px] text-neutral-500 dark:text-neutral-400">Available</p>
                         </div>
                     </div>
 
                     <DropdownMenu>
-                        <DropdownMenuTrigger>
-                            <EllipsisVertical width={20} className='text-neutral-500 dark:text-neutral-100' />
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-neutral-500 dark:text-neutral-400">
+                                <EllipsisVertical width={20} />
+                            </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                            <DropdownMenuItem className='text-neutral-600 dark:text-neutral-100'>
-                                <User width={18} className='text-neutral-600 dark:text-neutral-100' />
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem className='text-neutral-600 dark:text-neutral-200'>
+                                <User width={18} className='mr-2' />
                                 Profile
                             </DropdownMenuItem>
-                            <DropdownMenuItem className='text-neutral-600 dark:text-neutral-100'>
-                                <Settings width={18} className='text-neutral-600 dark:text-neutral-100' />
-                                Profile
+                            <DropdownMenuItem className='text-neutral-600 dark:text-neutral-200'>
+                                <Settings width={18} className='mr-2' />
+                                Settings
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
 
-                <Command>
-                    <div className="border-t border-neutral-200">
-                        <CommandInput placeholder="Search user..." className='' />
+                <Command className="bg-transparent flex-1">
+                    <div className="border-b border-neutral-100 dark:border-slate-800">
+                        <CommandInput
+                            placeholder="Search people..."
+                            className="h-12"
+                            value={searchTerm}
+                            onValueChange={setSearchTerm}
+                        />
                     </div>
-                    <CommandList className='max-h-[580px]'>
-                        <CommandEmpty>No user name found.</CommandEmpty>
+                    <CommandList className='flex-1 max-h-none h-[calc(100vh-370px)] scroll-sm overflow-y-auto'>
+                        <CommandEmpty>No users found.</CommandEmpty>
                         <CommandGroup className='p-0'>
-                            {chatList.map(({ id, name, message, time, unreadCount, imgSrc, isActive }) => (
-                                <CommandItem
-                                    key={id}
-                                    value={name}
-                                    className='p-0'
-                                >
-                                    <Link
-                                        key={id}
-                                        href="#"
-                                        className={`flex items-center justify-between gap-2 cursor-pointer hover:bg-neutral-50 dark:hover:bg-slate-700 px-6 py-2.5 w-full ${isActive ? "active" : ""}`}
+                            {sortedUsers.map((user) => {
+                                const isUserOnline = onlineUsers.has(user.keycloakId);
+                                const isUserTyping = typingUsers.has(user.keycloakId);
+                                const isActive = activeChatId === user.id;
+
+                                return (
+                                    <CommandItem
+                                        key={user.id}
+                                        value={user.fullName}
+                                        onSelect={() => setActiveChatId(user.id)}
+                                        className={cn(
+                                            "p-0 transition-colors",
+                                            isActive ? "bg-primary/5 dark:bg-primary/10" : ""
+                                        )}
                                     >
-                                        <div className="flex items-center gap-2">
-                                            <div className="img">
-                                                <Image src={imgSrc} alt={`${name} image`} width={40} height={40} />
-                                            </div>
-                                            <div className="info">
-                                                <h6 className="text-sm mb-1 line-clamp-1">{name}</h6>
-                                                <p className="mb-0 text-xs line-clamp-1">{message}</p>
-                                            </div>
-                                        </div>
-                                        <div className="shrink-0 text-end">
-                                            <p className="mb-0 text-neutral-400 text-xs lh-1">{time}</p>
-                                            {unreadCount > 0 && (
-                                                <span className="w-4 h-4 text-xs rounded-full bg-yellow-500 text-white inline-flex items-center justify-center">
-                                                    {unreadCount}
-                                                </span>
+                                        <div
+                                            className={cn(
+                                                "flex items-center justify-between gap-2 cursor-pointer hover:bg-neutral-50 dark:hover:bg-slate-800 px-5 py-3 w-full border-b border-neutral-50 dark:border-slate-800/50",
+                                                isActive && "bg-neutral-50 dark:bg-slate-800"
                                             )}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="relative">
+                                                    <Avatar className="w-10 h-10 shadow-sm border border-neutral-100 dark:border-slate-800">
+                                                        <AvatarFallback className="bg-neutral-100 dark:bg-slate-800 text-neutral-600 dark:text-neutral-400 font-bold text-xs">
+                                                            {user.fullName.substring(0, 2).toUpperCase()}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    {isUserOnline && (
+                                                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-900 rounded-full shadow-sm" />
+                                                    )}
+                                                </div>
+                                                <div className="info">
+                                                    <h6 className="text-sm font-bold mb-0.5 line-clamp-1">{user.fullName}</h6>
+                                                    <p className={cn(
+                                                        "mb-0 text-xs line-clamp-1",
+                                                        isUserTyping ? "text-primary animate-pulse font-medium" : "text-neutral-500 dark:text-neutral-400"
+                                                    )}>
+                                                        {isUserTyping ? "typing..." : user.email}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="shrink-0 text-end">
+                                                <p className="mb-0 text-neutral-400 text-[10px]">
+                                                    {isUserOnline ? "Now" : user.lastOnline ? format(new Date(user.lastOnline), "HH:mm") : ""}
+                                                </p>
+                                            </div>
                                         </div>
-                                    </Link>
-                                </CommandItem>
-                            ))}
+                                    </CommandItem>
+                                );
+                            })}
                         </CommandGroup>
                     </CommandList>
                 </Command>
-
-
             </div>
 
-
-
-
-
-
-
-
-
-
-
-            <div className=" col-span-12 md:col-span-8 xl:col-span-9">
-                <div className="card border-0 overflow-hidden !p-0 flex flex-col">
-                    <div className="flex items-center justify-between gap-2  px-6 py-2.5 active border-b border-neutral-200 dark:border-neutral-600">
-                        <div className="flex items-center gap-2">
-                            <div className="img">
-                                <Image src={ChatImage11} alt="image" width={40} height={40} />
-                            </div>
-                            <div className="info">
-                                <h6 className="text-base mb-0">Kathryn Murphy</h6>
-                                <p className="mb-0 text-neutral-500 dark:text-neutral-100">Available</p>
-                            </div>
-                        </div>
-                        <div className="action inline-flex items-center gap-3">
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button type="button" className="text-xl text-neutral-600 dark:text-neutral-200 flex !p-0 bg-transparent hover:bg-transparent">
-                                        <Phone width={20} className='text-neutral-500 dark:text-neutral-100' />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Audio Call</p>
-                                </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button type="button" className="text-xl text-neutral-600 dark:text-neutral-200 flex !p-0 bg-transparent hover:bg-transparent">
-                                        <Video width={20} className='text-neutral-500 dark:text-neutral-100' />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Video Call</p>
-                                </TooltipContent>
-                            </Tooltip>
-
-                            <DropdownMenu>
-                                <DropdownMenuTrigger>
-                                    <EllipsisVertical width={20} className='text-neutral-500 dark:text-neutral-100' />
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                    <DropdownMenuItem className='text-neutral-600 dark:text-neutral-100'>
-                                        <CircleX width={20} className='text-neutral-500 dark:text-neutral-100' />
-                                        All Clear
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className='text-neutral-600 dark:text-neutral-100'>
-                                        <Ban width={20} className='text-neutral-500 dark:text-neutral-100' />
-                                        Block
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-
-                        </div>
-                    </div>
-
-                    <div
-                        ref={chatContainerRef}
-                        className="chat-message-list max-h-[568px] overflow-y-auto flex flex-col p-6 gap-6">
-                        {prevData.map((msg) =>
-                            msg.sender === "other" ? (
-                                <div
-                                    key={msg.id}
-                                    className="max-w-[700px] duration-500 text-neutral-900 flex items-end gap-3"
-                                >
-                                    {msg.avatar && (
-                                        <Image
-                                            src={msg.avatar}
-                                            alt="avatar"
-                                            className="avatar-lg object-cover rounded-full"
-                                            width={40}
-                                            height={40}
-                                        />
-                                    )}
-                                    <div className="bg-neutral-50 dark:bg-slate-800 dark:text-white rounded-2xl rounded-es-none p-5">
-                                        <p className="mb-3">{msg.text}</p>
-                                        <p className="chat-time mb-0 text-xs text-end text-neutral-500 dark:text-neutral-100">
-                                            <span>{msg.time}</span>
-                                        </p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div
-                                    key={msg.id}
-                                    className="max-w-[700px] duration-500 ms-auto text-white"
-                                >
-                                    <div className="bg-primary rounded-2xl rounded-ee-none p-5">
-                                        <p className="mb-3">{msg.text}</p>
-                                        <p className="chat-time mb-0 text-xs">
-                                            <span>{msg.time}</span>
-                                        </p>
-                                    </div>
-                                </div>
-                            )
-                        )}
-                    </div>
-
-                    <form
-                        className="chat-message-box flex items-center justify-between py-4 border-t border-neutral-200 dark:border-neutral-600 mt-auto px-3"
-                        onSubmit={handleSubmitMessage}
-                    >
-                        <Textarea
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            className={cn(
-                                `border-0 focus:border-0 grow bg-white dark:bg-transparent 
-                                focus:outline-none focus:ring-0 py-2 px-3 focus-visible:ring-0 
-                                resize-none shadow-none h-5`
-                            )}
-                            autoComplete="off"
-                            name="chatMessage"
-                            placeholder="Write message"
-                            required
-                        />
-
-
-                        <div className="chat-message-box-action flex items-center gap-4">
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Label
-                                        htmlFor="addAttachment"
-                                        className="text-xl flex !p-0 bg-transparent hover:bg-transparent cursor-pointer"
-                                    >
-                                        <LinkIcon
-                                            width={20}
-                                            className="text-neutral-500 dark:text-neutral-100 hover:text-primary"
-                                        />
-                                        <Input type="file" id="addAttachment" hidden />
-                                    </Label>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Add Attachment</p>
-                                </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Label
-                                        htmlFor="addImage"
-                                        className="text-xl flex !p-0 bg-transparent hover:bg-transparent cursor-pointer"
-                                    >
-                                        <ImageIcon
-                                            width={20}
-                                            className="text-neutral-500 dark:text-neutral-100 hover:text-primary"
-                                        />
-                                        <Input type="file" id="addImage" hidden />
-                                    </Label>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Add Image</p>
-                                </TooltipContent>
-                            </Tooltip>
-
-
-
-                            <Button
-                                type="submit"
-                                className="rounded-lg inline-flex items-center gap-1"
-                            >
-                                {
-                                    isSubmitting ? "Sending" : "Send"
-                                }
-                                <Send width={20} />
-                            </Button>
-                        </div>
-                    </form>
-
-                </div>
+            <div className={cn(
+                "col-span-12 md:col-span-8 xl:col-span-9 bg-white dark:bg-slate-900 rounded-2xl shadow-sm flex flex-col h-full overflow-hidden",
+                !activeChatId ? "hidden md:flex" : "flex"
+            )}>
+                <ChatWindow showBackButton={true} onBack={() => setActiveChatId(null)} />
             </div>
-        </div >
+        </div>
     );
 };
 
 export default ChatBox;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,9 +1,11 @@
 import { ModeToggle } from '../shared/mode-toggle';
+import { Button } from '../ui/button';
 import ProfileDropdown from '../shared/profile-dropdown';
 import { SidebarTrigger } from '../ui/sidebar';
 import NotificationDropdown from './../shared/notification-dropdown';
 import EstOfficeClock from '../shared/est-office-clock';
-import ChatDrawer from '../chat/ChatDrawer';
+import Link from 'next/link';
+import { Mail } from 'lucide-react';
 
 const Header = () => {
     return (
@@ -14,7 +16,14 @@ const Header = () => {
             <div className="flex items-center gap-3">
                 <EstOfficeClock />
                 <ModeToggle />
-                <ChatDrawer />
+                <Link href="/chat">
+                    <Button
+                        size="icon"
+                        className="rounded-[50%] text-neutral-900 sm:w-10 sm:h-10 w-8 h-8 bg-gray-200/75 hover:bg-slate-200 focus-visible:ring-0 dark:bg-slate-700 dark:hover:bg-slate-600 border-0 cursor-pointer"
+                    >
+                        <Mail className="w-5 h-5" />
+                    </Button>
+                </Link>
                 <NotificationDropdown />
 
                 <ProfileDropdown />
