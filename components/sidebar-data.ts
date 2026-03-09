@@ -8,6 +8,7 @@ import {
   MessageCircleMore,
   StickyNote,
   UsersRound,
+  Mail
 } from "lucide-react";
 
 export const getSidebarData = (role: string) => {
@@ -49,6 +50,13 @@ export const getSidebarData = (role: string) => {
           icon: MessageCircleMore,
         },
       ],
+    },{
+       label: "Application",
+    },
+    {
+      title: "Chat",
+      url: "/admin/dashboard/chats",
+      icon: MessageCircleMore,
     },
   ];
 

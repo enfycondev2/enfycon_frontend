@@ -204,11 +204,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
 
             socket.on("receive_message", (message: Message) => {
-                // If message is for/from current active chat, add it
+                // 1. Update messages list
                 setMessages((prev) => {
-                    // Avoid duplicates
                     if (prev.some(m => m.id === message.id)) return prev;
-
                     if (
                         (message.senderId === activeChatId || message.receiverId === activeChatId) ||
                         (message.senderId === session?.user?.id || message.receiverId === session?.user?.id)
@@ -218,17 +216,30 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     return prev;
                 });
 
-                // 2. Play sound if not from me
+                // 2. Reorder chat users to bring the active one to top
+                setChatUsers((prev) => {
+                    const otherId = message.senderId === session?.user?.id ? message.receiverId : message.senderId;
+                    const userIndex = prev.findIndex(u => u.id === otherId);
+                    if (userIndex > -1) {
+                        const newUsers = [...prev];
+                        const [user] = newUsers.splice(userIndex, 1);
+                        return [user, ...newUsers];
+                    }
+                    return prev;
+                });
+
+                // 3. Play sound if not from me
                 if (message.senderId !== session?.user?.id) {
                     playChatSound();
                 }
 
-                // Show notification if not in active chat
+                // 4. Show notification if not in active chat
                 if (message.senderId !== activeChatId && message.senderId !== session?.user?.id) {
                     const sender = chatUsers.find(u => u.id === message.senderId);
                     toast(`New message from ${sender?.fullName || 'someone'}`, { icon: '💬' });
                 }
             });
+
 
             return () => {
                 socket.off("online_users_list");
@@ -248,8 +259,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 content,
                 senderDbId: session.user.id
             });
+
+            // Move this user to top of chatUsers immediately
+            setChatUsers((prev) => {
+                const userIndex = prev.findIndex(u => u.id === receiverId);
+                if (userIndex > -1) {
+                    const newUsers = [...prev];
+                    const [user] = newUsers.splice(userIndex, 1);
+                    return [user, ...newUsers];
+                }
+                return prev;
+            });
         }
     }, [socket, session?.user?.id]);
+
 
     const setTyping = useCallback((receiverKeycloakId: string, isTyping: boolean) => {
         if (socket) {

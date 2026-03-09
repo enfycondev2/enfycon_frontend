@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useChat } from "@/contexts/ChatContext";
-import { useSearchParams } from "next/navigation";
+
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -35,16 +35,7 @@ const ChatBox = () => {
         typingUsers
     } = useChat();
     const { data: session } = useSession();
-    const searchParams = useSearchParams();
     const [searchTerm, setSearchTerm] = useState("");
-
-    const userIdParam = searchParams.get("userId");
-
-    useEffect(() => {
-        if (userIdParam) {
-            setActiveChatId(userIdParam);
-        }
-    }, [userIdParam, setActiveChatId]);
 
     const filteredUsers = chatUsers.filter((u) =>
         u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||

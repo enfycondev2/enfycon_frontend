@@ -23,9 +23,7 @@ import {
     EllipsisVertical,
     ImageIcon,
     LinkIcon,
-    Phone,
     Send,
-    Video,
     ArrowLeft,
     User
 } from "lucide-react";
@@ -38,9 +36,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 interface ChatWindowProps {
     showBackButton?: boolean;
     onBack?: () => void;
+    showCloseButton?: boolean;
+    onClose?: () => void;
 }
 
-export default function ChatWindow({ showBackButton, onBack }: ChatWindowProps) {
+export default function ChatWindow({ showBackButton, onBack, showCloseButton, onClose }: ChatWindowProps) {
     const {
         chatUsers,
         messages,
@@ -113,7 +113,7 @@ export default function ChatWindow({ showBackButton, onBack }: ChatWindowProps) 
     }
 
     return (
-        <div className="card border-0 overflow-hidden !p-0 flex flex-col h-full bg-white dark:bg-slate-900">
+        <div className="card border-0 overflow-hidden !p-0 flex flex-col h-full bg-[#efeae2] dark:bg-slate-900">
             <div className="flex items-center justify-between gap-2 px-6 py-3 border-b border-neutral-100 dark:border-slate-800 shrink-0">
                 <div className="flex items-center gap-3">
                     {showBackButton && (
@@ -144,26 +144,6 @@ export default function ChatWindow({ showBackButton, onBack }: ChatWindowProps) 
                     </div>
                 </div>
                 <div className="action inline-flex items-center gap-3">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-neutral-500 dark:text-neutral-400">
-                                <Phone width={18} />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Audio Call</p>
-                        </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-neutral-500 dark:text-neutral-400">
-                                <Video width={18} />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Video Call</p>
-                        </TooltipContent>
-                    </Tooltip>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -182,12 +162,23 @@ export default function ChatWindow({ showBackButton, onBack }: ChatWindowProps) 
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
+
+                    {showCloseButton && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={onClose}
+                            className="text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-slate-800 rounded-full"
+                        >
+                            <CircleX width={18} />
+                        </Button>
+                    )}
                 </div>
             </div>
 
             <div
                 ref={chatContainerRef}
-                className="chat-message-list flex-1 min-h-0 overflow-y-auto flex flex-col p-6 gap-6 scroll-sm"
+                className="chat-message-list flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col p-6 gap-6 scroll-sm"
             >
                 {messages.map((msg, i) => {
                     const isMe = msg.senderId === session?.user?.id;
@@ -207,15 +198,15 @@ export default function ChatWindow({ showBackButton, onBack }: ChatWindowProps) 
                                 </Avatar>
                             )}
                             <div className={cn(
-                                "p-4 shadow-sm",
+                                "p-4 shadow-sm relative",
                                 isMe
-                                    ? "bg-primary rounded-2xl rounded-ee-none"
-                                    : "bg-neutral-50 dark:bg-slate-800 dark:text-white rounded-2xl rounded-es-none border border-neutral-100 dark:border-slate-800"
+                                    ? "bg-[#d9fdd3] text-neutral-900 rounded-2xl rounded-ee-none border border-[#bedbb8]"
+                                    : "bg-white dark:bg-slate-800 dark:text-white rounded-2xl rounded-es-none border border-neutral-200 dark:border-slate-800"
                             )}>
                                 <p className="mb-2 text-sm leading-relaxed break-words">{msg.content}</p>
                                 <p className={cn(
                                     "chat-time mb-0 text-[10px] text-end opacity-70",
-                                    isMe ? "text-white" : "text-neutral-500 dark:text-neutral-400"
+                                    isMe ? "text-neutral-500" : "text-neutral-500 dark:text-neutral-400"
                                 )}>
                                     <span>{format(new Date(msg.createdAt || Date.now()), "HH:mm")}</span>
                                 </p>
