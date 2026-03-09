@@ -32,6 +32,7 @@ import { useSession } from "next-auth/react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ConfirmationDialog } from "@/components/shared/confirmation-dialog";
 
 interface ChatWindowProps {
     showBackButton?: boolean;
@@ -50,15 +51,36 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
         typingUsers,
         sendMessage,
         markAsRead,
-        setTyping
+        setTyping,
+        deleteMessages,
+        clearHistory,
+        blockUser,
+        unblockUser
     } = useChat();
     const { data: session } = useSession();
     const [messageInput, setMessageInput] = useState("");
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
+    const [confirmDialog, setConfirmDialog] = useState<{
+        isOpen: boolean;
+        title: string;
+        description: string;
+        onConfirm: () => void;
+        variant: "default" | "destructive";
+    }>({
+        isOpen: false,
+        title: "",
+        description: "",
+        onConfirm: () => { },
+        variant: "default"
+    });
     const chatContainerRef = useRef<HTMLDivElement | null>(null);
 
     const activeUser = chatUsers.find((u) => u.id === activeChatId);
     const isOnline = activeUser ? onlineUsers.has(activeUser.keycloakId) : false;
     const isTyping = activeUser ? typingUsers.has(activeUser.keycloakId) : false;
+    const isBlocked = activeUser?.isBlockedByMe;
+    const hasBlockedMe = activeUser?.hasBlockedMe;
 
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -78,7 +100,7 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
     // Typing signal
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     useEffect(() => {
-        if (!activeUser || !messageInput.trim()) {
+        if (!activeUser || !messageInput.trim() || isBlocked || hasBlockedMe) {
             if (activeUser) setTyping(activeUser.keycloakId, false);
             return;
         }
@@ -90,15 +112,72 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
         return () => {
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         };
-    }, [messageInput, activeUser, setTyping]);
+    }, [messageInput, activeUser, setTyping, isBlocked, hasBlockedMe]);
 
     const handleSubmitMessage = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!messageInput.trim() || !activeChatId || !activeUser) return;
+        if (!messageInput.trim() || !activeChatId || !activeUser || isBlocked || hasBlockedMe) return;
 
         sendMessage(activeChatId, activeUser.keycloakId, messageInput);
         setMessageInput("");
         setTyping(activeUser.keycloakId, false);
+    };
+
+    const toggleMessageSelection = (id: string) => {
+        setSelectedMessageIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const handleDeleteSelected = () => {
+        if (selectedMessageIds.size === 0) return;
+        setConfirmDialog({
+            isOpen: true,
+            title: "Delete Messages",
+            description: `Are you sure you want to delete ${selectedMessageIds.size} selected messages? This action cannot be undone.`,
+            variant: "destructive",
+            onConfirm: async () => {
+                await deleteMessages(Array.from(selectedMessageIds));
+                setSelectedMessageIds(new Set());
+                setIsSelectionMode(false);
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+            }
+        });
+    };
+
+    const handleClearChat = () => {
+        if (!activeChatId) return;
+        setConfirmDialog({
+            isOpen: true,
+            title: "Clear Chat History",
+            description: "Are you sure you want to clear all messages in this chat? This will remove all messages for you.",
+            variant: "destructive",
+            onConfirm: async () => {
+                await clearHistory(activeChatId);
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+            }
+        });
+    };
+
+    const toggleBlock = async () => {
+        if (!activeChatId || !activeUser) return;
+        if (isBlocked) {
+            await unblockUser(activeChatId);
+        } else {
+            setConfirmDialog({
+                isOpen: true,
+                title: "Block User",
+                description: `Are you sure you want to block ${activeUser.fullName}? They will no longer be able to send you messages.`,
+                variant: "destructive",
+                onConfirm: async () => {
+                    await blockUser(activeChatId);
+                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                }
+            });
+        }
     };
 
     if (!activeChatId || !activeUser) {
@@ -114,7 +193,7 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
 
     return (
         <div className="card border-0 overflow-hidden !p-0 flex flex-col h-full bg-[#efeae2] dark:bg-slate-900">
-            <div className="flex items-center justify-between gap-2 px-6 py-3 border-b border-neutral-100 dark:border-slate-800 shrink-0">
+            <div className="flex items-center justify-between gap-2 px-6 py-3 border-b border-neutral-100 dark:border-slate-800 shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-10">
                 <div className="flex items-center gap-3">
                     {showBackButton && (
                         <Button
@@ -143,22 +222,64 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
                         </p>
                     </div>
                 </div>
-                <div className="action inline-flex items-center gap-3">
+                <div className="action inline-flex items-center gap-2">
+                    {isSelectionMode ? (
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-neutral-500">{selectedMessageIds.size} selected</span>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-600 hover:bg-red-50 px-2 h-8"
+                                onClick={handleDeleteSelected}
+                            >
+                                Delete
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="px-2 h-8 text-neutral-500"
+                                onClick={() => {
+                                    setIsSelectionMode(false);
+                                    setSelectedMessageIds(new Set());
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    ) : (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-neutral-500 px-2 h-8"
+                            onClick={() => setIsSelectionMode(true)}
+                        >
+                            Select
+                        </Button>
+                    )}
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-neutral-500 dark:text-neutral-400">
+                            <Button variant="ghost" size="icon" className="text-neutral-500 dark:text-neutral-400 w-8 h-8 rounded-full">
                                 <EllipsisVertical width={18} />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem className="text-neutral-600 dark:text-neutral-200">
-                                <CircleX width={18} className="mr-2" />
+                        <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                                className="text-neutral-600 dark:text-neutral-200 cursor-pointer"
+                                onClick={handleClearChat}
+                            >
+                                <CircleX width={16} className="mr-2" />
                                 All Clear
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-neutral-600 dark:text-neutral-200">
-                                <Ban width={18} className="mr-2" />
-                                Block
+                            <DropdownMenuItem
+                                className={cn(
+                                    "cursor-pointer",
+                                    isBlocked ? "text-green-600" : "text-red-600 dark:text-red-400"
+                                )}
+                                onClick={toggleBlock}
+                            >
+                                <Ban width={16} className="mr-2" />
+                                {isBlocked ? "Unblock User" : "Block User"}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -168,7 +289,7 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
                             variant="ghost"
                             size="icon"
                             onClick={onClose}
-                            className="text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-slate-800 rounded-full"
+                            className="text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-slate-800 rounded-full w-8 h-8"
                         >
                             <CircleX width={18} />
                         </Button>
@@ -180,33 +301,87 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
                 ref={chatContainerRef}
                 className="chat-message-list flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col p-6 gap-6 scroll-sm"
             >
+                {messages.length === 0 && (
+                    <div className="flex flex-col items-center justify-center flex-1 opacity-40">
+                        <div className="p-3 bg-white/50 rounded-full mb-2">
+                            <Send width={24} className="text-neutral-400" />
+                        </div>
+                        <p className="text-xs">No messages yet. Say hi!</p>
+                    </div>
+                )}
                 {messages.map((msg, i) => {
                     const isMe = msg.senderId === session?.user?.id;
+                    const isSelected = selectedMessageIds.has(msg.id);
                     return (
                         <div
                             key={msg.id || i}
                             className={cn(
-                                "max-w-[85%] flex items-end gap-3",
-                                isMe ? "ms-auto text-white" : "text-neutral-900"
+                                "max-w-[85%] flex items-end gap-3 transition-all duration-200",
+                                isMe ? "ms-auto text-white flex-row-reverse" : "text-neutral-900",
+                                isSelectionMode && "cursor-pointer"
                             )}
+                            onClick={() => isSelectionMode && toggleMessageSelection(msg.id)}
                         >
+                            {isSelectionMode && (
+                                <div className={cn(
+                                    "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors mb-2 shrink-0",
+                                    isSelected ? "bg-primary border-primary" : "border-neutral-300 bg-white"
+                                )}>
+                                    {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
+                                </div>
+                            )}
                             {!isMe && (
-                                <Avatar className="w-8 h-8 rounded-full">
-                                    <AvatarFallback className="bg-neutral-100 dark:bg-slate-800 text-neutral-600 dark:text-neutral-400 text-[10px] font-bold">
+                                <Avatar className="w-8 h-8 rounded-full mb-1">
+                                    <AvatarFallback className="bg-neutral-200 dark:bg-slate-800 text-neutral-600 dark:text-neutral-400 text-[10px] font-bold">
                                         {activeUser.fullName.substring(0, 2).toUpperCase()}
                                     </AvatarFallback>
                                 </Avatar>
                             )}
                             <div className={cn(
-                                "p-4 shadow-sm relative",
+                                "p-3 shadow-sm relative group transition-all duration-200",
                                 isMe
                                     ? "bg-[#d9fdd3] text-neutral-900 rounded-2xl rounded-ee-none border border-[#bedbb8]"
-                                    : "bg-white dark:bg-slate-800 dark:text-white rounded-2xl rounded-es-none border border-neutral-200 dark:border-slate-800"
+                                    : "bg-white dark:bg-slate-800 dark:text-white rounded-2xl rounded-es-none border border-neutral-200 dark:border-slate-800",
+                                isSelected && "ring-2 ring-primary ring-offset-2 scale-[1.02]"
                             )}>
-                                <p className="mb-2 text-sm leading-relaxed break-words">{msg.content}</p>
+                                {!isSelectionMode && (
+                                    <div className={cn(
+                                        "absolute top-1 opacity-0 group-hover:opacity-100 transition-opacity z-10",
+                                        isMe ? "right-full mr-1" : "left-full ml-1"
+                                    )}>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="w-6 h-6 rounded-full hover:bg-black/5 dark:hover:bg-white/5">
+                                                    <EllipsisVertical width={12} className="text-neutral-400" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align={isMe ? "end" : "start"} className="min-w-[80px]">
+                                                <DropdownMenuItem
+                                                    className="text-xs text-red-500 cursor-pointer"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setConfirmDialog({
+                                                            isOpen: true,
+                                                            title: "Delete Message",
+                                                            description: "Are you sure you want to delete this message?",
+                                                            variant: "destructive",
+                                                            onConfirm: async () => {
+                                                                await deleteMessages([msg.id]);
+                                                                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                                                            }
+                                                        });
+                                                    }}
+                                                >
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
+                                )}
+                                <p className="mb-1 text-sm leading-relaxed break-words">{msg.content}</p>
                                 <p className={cn(
-                                    "chat-time mb-0 text-[10px] text-end opacity-70",
-                                    isMe ? "text-neutral-500" : "text-neutral-500 dark:text-neutral-400"
+                                    "chat-time mb-0 text-[9px] text-end opacity-60 font-medium",
+                                    isMe ? "text-neutral-600" : "text-neutral-500 dark:text-neutral-400"
                                 )}>
                                     <span>{format(new Date(msg.createdAt || Date.now()), "HH:mm")}</span>
                                 </p>
@@ -216,73 +391,87 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
                 })}
             </div>
 
-            <form
-                className="chat-message-box flex items-center justify-between py-4 border-t border-neutral-100 dark:border-slate-800 shrink-0 px-4 bg-white dark:bg-slate-900"
-                onSubmit={handleSubmitMessage}
-            >
-                <Textarea
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    className={cn(
-                        "border-0 focus:border-0 grow bg-white dark:bg-transparent focus:outline-none focus:ring-0 py-2 px-3 focus-visible:ring-0 resize-none shadow-none h-10 min-h-[40px] max-h-[120px] scroll-sm"
-                    )}
-                    autoComplete="off"
-                    name="chatMessage"
-                    placeholder="Write message"
-                    required
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSubmitMessage(e as any);
-                        }
-                    }}
-                />
-
-                <div className="chat-message-box-action flex items-center gap-3 ml-2">
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Label
-                                htmlFor="addAttachment"
-                                className="p-2 bg-transparent hover:bg-neutral-50 dark:hover:bg-slate-800 rounded-full cursor-pointer transition-colors"
+            <div className="shrink-0">
+                {(isBlocked || hasBlockedMe) ? (
+                    <div className="py-4 px-6 bg-red-50 border-t border-red-100 flex flex-col items-center justify-center gap-1">
+                        <p className="text-xs font-semibold text-red-600">
+                            {isBlocked ? "You have blocked this contact." : "You have been blocked by this contact."}
+                        </p>
+                        {isBlocked && (
+                            <Button
+                                variant="link"
+                                size="sm"
+                                className="h-auto p-0 text-xs text-red-700 underline"
+                                onClick={toggleBlock}
                             >
-                                <LinkIcon
-                                    width={18}
-                                    className="text-neutral-500 dark:text-neutral-400 hover:text-primary"
-                                />
-                                <Input type="file" id="addAttachment" className="hidden" />
-                            </Label>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Add Attachment</p>
-                        </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Label
-                                htmlFor="addImage"
-                                className="p-2 bg-transparent hover:bg-neutral-50 dark:hover:bg-slate-800 rounded-full cursor-pointer transition-colors"
-                            >
-                                <ImageIcon
-                                    width={18}
-                                    className="text-neutral-500 dark:text-neutral-400 hover:text-primary"
-                                />
-                                <Input type="file" id="addImage" className="hidden" />
-                            </Label>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Add Image</p>
-                        </TooltipContent>
-                    </Tooltip>
-
-                    <Button
-                        type="submit"
-                        className="rounded-xl flex items-center gap-2 h-10 px-4 bg-primary hover:bg-primary/90 transition-all shadow-sm"
+                                Unblock to send messages
+                            </Button>
+                        )}
+                    </div>
+                ) : (
+                    <form
+                        className="chat-message-box flex items-center justify-between py-4 border-t border-neutral-100 dark:border-slate-800 px-4 bg-white dark:bg-slate-900"
+                        onSubmit={handleSubmitMessage}
                     >
-                        <span>Send</span>
-                        <Send width={16} />
-                    </Button>
-                </div>
-            </form>
+                        <Textarea
+                            value={messageInput}
+                            onChange={(e) => setMessageInput(e.target.value)}
+                            className={cn(
+                                "border-0 focus:border-0 grow bg-white dark:bg-transparent focus:outline-none focus:ring-0 py-2 px-3 focus-visible:ring-0 resize-none shadow-none h-10 min-h-[40px] max-h-[120px] scroll-sm"
+                            )}
+                            autoComplete="off"
+                            name="chatMessage"
+                            placeholder="Write message"
+                            required
+                            disabled={isSelectionMode}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSubmitMessage(e as any);
+                                }
+                            }}
+                        />
+
+                        <div className="chat-message-box-action flex items-center gap-2 ml-2">
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Label
+                                        htmlFor="addAttachment"
+                                        className="p-2 bg-transparent hover:bg-neutral-50 dark:hover:bg-slate-800 rounded-full cursor-pointer transition-colors"
+                                    >
+                                        <LinkIcon
+                                            width={18}
+                                            className="text-neutral-500 dark:text-neutral-400 hover:text-primary"
+                                        />
+                                        <Input type="file" id="addAttachment" className="hidden" />
+                                    </Label>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Add Attachment</p>
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <Button
+                                type="submit"
+                                disabled={!messageInput.trim() || isSelectionMode}
+                                className="rounded-xl flex items-center justify-center w-10 h-10 p-0 bg-primary hover:bg-primary/90 transition-all shadow-sm shrink-0"
+                            >
+                                <Send width={18} />
+                            </Button>
+                        </div>
+                    </form>
+                )}
+            </div>
+
+            <ConfirmationDialog
+                isOpen={confirmDialog.isOpen}
+                onClose={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmDialog.onConfirm}
+                title={confirmDialog.title}
+                description={confirmDialog.description}
+                variant={confirmDialog.variant}
+                confirmText="Confirm"
+            />
         </div>
     );
 }

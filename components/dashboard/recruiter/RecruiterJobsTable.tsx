@@ -35,7 +35,7 @@ import { Input } from "@/components/ui/input";
 import { useSession } from "next-auth/react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { TeamMember } from "./RecruiterAssignCell";
+import RecruiterAssignCell, { TeamMember } from "./RecruiterAssignCell";
 import JobSubmissionDialog from "./JobSubmissionDialog";
 import { apiClient } from "@/lib/apiClient";
 
@@ -461,7 +461,9 @@ export default function RecruiterJobsTable({
                             <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
                                 Account Manager
                             </TableHead>
-
+                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
+                                Recruiters
+                            </TableHead>
                             <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
                                 Created Date
                             </TableHead>
@@ -477,7 +479,7 @@ export default function RecruiterJobsTable({
                         {currentJobs.length === 0 ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={8}
+                                    colSpan={9}
                                     className="h-24 text-center text-muted-foreground italic"
                                 >
                                     No jobs found.
@@ -524,7 +526,7 @@ export default function RecruiterJobsTable({
                                         <React.Fragment key={job.id}>
                                             {showTodayHeader && (
                                                 <TableRow className="bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20">
-                                                    <TableCell colSpan={8} className="py-2 px-0">
+                                                    <TableCell colSpan={9} className="py-2 px-0">
                                                         <div className="sticky left-0 px-4 flex items-center gap-2 w-max">
                                                             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                                                             <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">Today's Jobs</span>
@@ -534,7 +536,7 @@ export default function RecruiterJobsTable({
                                             )}
                                             {showNewSubHeader && (
                                                 <TableRow className="bg-emerald-100/10 dark:bg-emerald-900/5 hover:bg-emerald-100/10 dark:hover:bg-emerald-900/5 border-0">
-                                                    <TableCell colSpan={8} className="py-1 px-0 border-b border-emerald-50 dark:border-emerald-900/20 text-start">
+                                                    <TableCell colSpan={9} className="py-1 px-0 border-b border-emerald-50 dark:border-emerald-900/20 text-start">
                                                         <div className="sticky left-0 px-6 w-max">
                                                             <span className="text-[11px] font-bold text-emerald-600/80 dark:text-emerald-500/80 uppercase tracking-widest italic">New Requirements</span>
                                                         </div>
@@ -543,7 +545,7 @@ export default function RecruiterJobsTable({
                                             )}
                                             {showCfrExtSubHeader && (
                                                 <TableRow className="bg-amber-100/10 dark:bg-amber-900/5 hover:bg-amber-100/10 dark:hover:bg-amber-900/5 border-0">
-                                                    <TableCell colSpan={8} className="py-1 px-0 border-b border-amber-50 dark:border-amber-900/20 text-start">
+                                                    <TableCell colSpan={9} className="py-1 px-0 border-b border-amber-50 dark:border-amber-900/20 text-start">
                                                         <div className="sticky left-0 px-6 w-max">
                                                             <span className="text-[11px] font-bold text-amber-600/80 dark:text-amber-500/80 uppercase tracking-widest italic">Requirement Extensions (CFR)</span>
                                                         </div>
@@ -552,7 +554,7 @@ export default function RecruiterJobsTable({
                                             )}
                                             {showPastHeader && (
                                                 <TableRow className="bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50/50 dark:hover:bg-red-950/20 shadow-sm">
-                                                    <TableCell colSpan={8} className="py-2 px-0 border-b border-red-100 dark:border-red-900/30">
+                                                    <TableCell colSpan={9} className="py-2 px-0 border-b border-red-100 dark:border-red-900/30">
                                                         <div className="sticky left-0 px-4 w-max">
                                                             <span className="text-sm font-bold text-red-700 dark:text-red-400 uppercase tracking-widest">Past Jobs</span>
                                                         </div>
@@ -609,6 +611,19 @@ export default function RecruiterJobsTable({
                                                         <span className="font-medium text-sm">{job.accountManager?.fullName || "N/A"}</span>
                                                         <span className="text-[10px] text-muted-foreground">{job.accountManager?.email}</span>
                                                     </div>
+                                                </TableCell>
+                                                <TableCell className="py-3 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
+                                                    <RecruiterAssignCell
+                                                        jobId={job.id}
+                                                        assignedRecruiters={job.assignedRecruiters || []}
+                                                        teamMembers={teamMembers}
+                                                        token={token}
+                                                        canEdit={isPodLead || roles.includes('ADMIN') || roles.includes('DELIVERY_HEAD')}
+                                                        onSuccess={() => {
+                                                            if (onRefresh) onRefresh();
+                                                            else router.refresh();
+                                                        }}
+                                                    />
                                                 </TableCell>
 
                                                 <TableCell className="py-3 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">

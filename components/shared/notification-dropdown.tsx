@@ -16,6 +16,7 @@ const NotificationDropdown = () => {
   const getIcon = (type: string) => {
     switch (type) {
       case "NEW_JOB":
+      case "JOB_ASSIGNMENT":
         return <Info className="text-primary" />;
       case "SUCCESS":
         return <CircleCheck className="text-green-500" />;
@@ -31,6 +32,7 @@ const NotificationDropdown = () => {
   const getIconBg = (type: string) => {
     switch (type) {
       case "NEW_JOB":
+      case "JOB_ASSIGNMENT":
         return "bg-blue-100 dark:bg-primary/25";
       case "SUCCESS":
         return "bg-green-100 dark:bg-green-600/25";

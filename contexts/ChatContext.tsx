@@ -21,6 +21,8 @@ interface ChatUser {
     keycloakId: string;
     roles: string[];
     lastOnline?: string;
+    isBlockedByMe?: boolean;
+    hasBlockedMe?: boolean;
 }
 
 interface ChatContextType {
@@ -33,6 +35,10 @@ interface ChatContextType {
     sendMessage: (receiverId: string, receiverKeycloakId: string, content: string) => void;
     markAsRead: (senderId: string) => void;
     setTyping: (receiverKeycloakId: string, isTyping: boolean) => void;
+    deleteMessages: (messageIds: string[]) => Promise<void>;
+    clearHistory: (otherUserId: string) => Promise<void>;
+    blockUser: (targetUserId: string) => Promise<void>;
+    unblockUser: (targetUserId: string) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType>({
@@ -45,6 +51,10 @@ const ChatContext = createContext<ChatContextType>({
     sendMessage: () => { },
     markAsRead: () => { },
     setTyping: () => { },
+    deleteMessages: async () => { },
+    clearHistory: async () => { },
+    blockUser: async () => { },
+    unblockUser: async () => { },
 });
 
 export const useChat = () => useContext(ChatContext);
@@ -293,6 +303,78 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [session?.user?.accessToken]);
 
+    const deleteMessages = useCallback(async (messageIds: string[]) => {
+        if (session?.user?.accessToken && messageIds.length > 0) {
+            try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/messages`, {
+                    method: 'DELETE',
+                    headers: {
+                        Authorization: `Bearer ${session.user.accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ messageIds })
+                });
+                if (res.ok) {
+                    setMessages(prev => prev.filter(m => !messageIds.includes(m.id)));
+                }
+            } catch (err) {
+                console.error("Failed to delete messages:", err);
+            }
+        }
+    }, [session?.user?.accessToken]);
+
+    const clearHistory = useCallback(async (otherUserId: string) => {
+        if (session?.user?.accessToken) {
+            try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/history/${otherUserId}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${session.user.accessToken}` },
+                });
+                if (res.ok) {
+                    if (activeChatId === otherUserId) {
+                        setMessages([]);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to clear chat history:", err);
+            }
+        }
+    }, [session?.user?.accessToken, activeChatId]);
+
+    const blockUser = useCallback(async (targetUserId: string) => {
+        if (session?.user?.accessToken) {
+            try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/block/${targetUserId}`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${session.user.accessToken}` },
+                });
+                if (res.ok) {
+                    setChatUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, isBlockedByMe: true } : u));
+                    toast.success("User blocked");
+                }
+            } catch (err) {
+                console.error("Failed to block user:", err);
+            }
+        }
+    }, [session?.user?.accessToken]);
+
+    const unblockUser = useCallback(async (targetUserId: string) => {
+        if (session?.user?.accessToken) {
+            try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/block/${targetUserId}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${session.user.accessToken}` },
+                });
+                if (res.ok) {
+                    setChatUsers(prev => prev.map(u => u.id === targetUserId ? { ...u, isBlockedByMe: false } : u));
+                    toast.success("User unblocked");
+                }
+            } catch (err) {
+                console.error("Failed to unblock user:", err);
+            }
+        }
+    }, [session?.user?.accessToken]);
+
     return (
         <ChatContext.Provider value={{
             onlineUsers,
@@ -303,7 +385,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setActiveChatId,
             sendMessage,
             markAsRead,
-            setTyping
+            setTyping,
+            deleteMessages,
+            clearHistory,
+            blockUser,
+            unblockUser
         }}>
             {children}
         </ChatContext.Provider>
