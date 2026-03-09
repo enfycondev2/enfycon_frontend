@@ -137,7 +137,7 @@ const NotificationDropdown = () => {
               )}
             </div>
 
-            {notifications.length > 0 && (
+            {/* {notifications.length > 0 && (
               <div className="text-center py-3 px-4 border-t border-gray-100 dark:border-slate-700">
                 <Link
                   href="/notifications"
@@ -146,7 +146,7 @@ const NotificationDropdown = () => {
                   View All Notifications
                 </Link>
               </div>
-            )}
+            )} */}
           </div>
         </div>
       </DropdownMenuContent>
