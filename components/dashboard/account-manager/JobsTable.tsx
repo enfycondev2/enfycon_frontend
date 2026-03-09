@@ -980,13 +980,16 @@ export default function JobsTable({
                                                         {job.requirementType === "CFR" && (
                                                             <div className="flex flex-col gap-1">
                                                                 <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border w-fit bg-red-50 text-red-700 border-red-200">Carry Forward</span>
-                                                                {showCfrExtend && <CfrExtendButton jobId={job.id} onSuccess={onRefresh} />}
+                                                                {showCfrExtend && <CfrExtendButton jobId={job.id} currentType={job.requirementType} onSuccess={onRefresh} />}
                                                             </div>
                                                         )}
                                                         {job.requirementType === "CFR_EXTENDED" && (
-                                                            <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border w-fit bg-amber-50 text-amber-700 border-amber-200 whitespace-nowrap">
-                                                                CFR Ext · {job.cfrDaysRemaining ?? 0}d left
-                                                            </span>
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border w-fit bg-amber-50 text-amber-700 border-amber-200 whitespace-nowrap">
+                                                                    CFR Ext · {job.cfrDaysRemaining ?? 0}d left
+                                                                </span>
+                                                                {showCfrExtend && <CfrExtendButton jobId={job.id} currentType={job.requirementType} onSuccess={onRefresh} />}
+                                                            </div>
                                                         )}
                                                         {!["NEW", "CFR", "CFR_EXTENDED"].includes(job.requirementType) && (
                                                             <span className="text-[8px] capitalize text-neutral-500">{(job.requirementType || "").replace(/_/g, " ").toLowerCase()}</span>
