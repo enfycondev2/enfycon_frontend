@@ -46,6 +46,7 @@ interface Pod {
     submissionRate?: number;
     filteredJobsCount?: number;
     lastActivityAt?: string;
+    isAvailableForAssignment?: boolean;
 }
 
 interface PodsTableProps {
@@ -253,12 +254,25 @@ export default function PodsTable({
                                         }`}
                                 >
                                     <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start font-medium capitalize">
-                                        <Link
-                                            href={`${basePath}/${pod.id}`}
-                                            className="hover:text-primary hover:underline transition-colors"
-                                        >
-                                            {pod.name.toLowerCase()}
-                                        </Link>
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className={`shrink-0 h-2.5 w-2.5 rounded-full ${pod.isAvailableForAssignment !== false
+                                                    ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.65)]"
+                                                    : "bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.55)]"
+                                                    }`}
+                                                title={
+                                                    pod.isAvailableForAssignment !== false
+                                                        ? "Available for job assignment"
+                                                        : "Not available for assignment"
+                                                }
+                                            />
+                                            <Link
+                                                href={`${basePath}/${pod.id}`}
+                                                className="hover:text-primary hover:underline transition-colors"
+                                            >
+                                                {pod.name.toLowerCase()}
+                                            </Link>
+                                        </div>
                                     </TableCell>
                                     <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
                                         <div className="flex flex-col">

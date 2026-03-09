@@ -228,6 +228,7 @@ export default async function AdminPodsDashboardPage() {
         ((podBuckets.get(pod.name || "Unnamed Pod")?.subDone || 0) /
           (podBuckets.get(pod.name || "Unnamed Pod")?.subReq || 1)) * 100
       ),
+      isAvailableForAssignment: (pod as any).isAvailableForAssignment !== false,
     }))
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 

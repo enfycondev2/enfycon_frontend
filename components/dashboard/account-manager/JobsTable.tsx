@@ -242,7 +242,7 @@ export default function JobsTable({
     const [sortBy, setSortBy] = useState<string>("date-desc");
 
     // Modal states (unused now - kept for safety, remove after verification)
-    const [availablePods, setAvailablePods] = useState<{ id: string, name: string }[]>([]);
+    const [availablePods, setAvailablePods] = useState<{ id: string, name: string, isAvailable?: boolean }[]>([]);
 
     useEffect(() => {
         if (showPod) {
@@ -253,12 +253,17 @@ export default function JobsTable({
                     return fallback.ok ? fallback.json() : [];
                 })
                 .then(data => {
+                    const mapPod = (p: any) => ({
+                        id: p.id,
+                        name: p.name,
+                        isAvailable: p.isAvailableForAssignment !== false,
+                    });
                     if (Array.isArray(data)) {
-                        setAvailablePods(data.map((p: any) => ({ id: p.id, name: p.name })));
+                        setAvailablePods(data.map(mapPod));
                     } else if (data && Array.isArray(data.items)) {
-                        setAvailablePods(data.items.map((p: any) => ({ id: p.id, name: p.name })));
+                        setAvailablePods(data.items.map(mapPod));
                     } else if (data && Array.isArray(data.data)) {
-                        setAvailablePods(data.data.map((p: any) => ({ id: p.id, name: p.name })));
+                        setAvailablePods(data.data.map(mapPod));
                     }
                 })
                 .catch(console.error);

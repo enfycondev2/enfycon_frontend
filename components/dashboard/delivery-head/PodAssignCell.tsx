@@ -24,6 +24,7 @@ import { useChat } from "@/contexts/ChatContext";
 export interface PodData {
     id: string;
     name: string;
+    isAvailable?: boolean;
 }
 
 interface PodAssignCellProps {
@@ -276,6 +277,7 @@ export default function PodAssignCell({
                         ) : (
                             filteredPods.map((pod) => {
                                 const isSelected = selected.has(pod.id);
+                                const available = pod.isAvailable !== false; // default to available if not specified
                                 return (
                                     <button
                                         key={pod.id}
@@ -286,9 +288,20 @@ export default function PodAssignCell({
                                             : ""
                                             }`}
                                     >
+                                        {/* Availability indicator */}
+                                        <span
+                                            className={`shrink-0 h-2 w-2 rounded-full ${available
+                                                ? "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.6)]"
+                                                : "bg-rose-500 shadow-[0_0_5px_rgba(244,63,94,0.5)]"
+                                                }`}
+                                            title={available ? "Available" : "No recruiters assigned"}
+                                        />
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-medium text-neutral-800 dark:text-slate-100 truncate leading-tight">
                                                 {pod.name}
+                                            </p>
+                                            <p className={`text-[10px] font-medium ${available ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400"}`}>
+                                                {available ? "Available" : "No recruiters"}
                                             </p>
                                         </div>
                                         {/* Checkbox */}

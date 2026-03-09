@@ -9,6 +9,18 @@ import ResetPodsButton from "@/components/dashboard/delivery-head/ResetPodsButto
 
 export const dynamic = 'force-dynamic';
 
+async function getJobs() {
+    try {
+        const response = await serverApiClient("/jobs", { cache: "no-store" });
+        if (!response.ok) return [];
+        const data = await response.json();
+        const jobs = Array.isArray(data) ? data : (data?.data ?? data?.content ?? data?.jobs ?? []);
+        return Array.isArray(jobs) ? jobs : [];
+    } catch {
+        return [];
+    }
+}
+
 async function getPods() {
     try {
         const response = await serverApiClient("/pods/all", {
@@ -32,7 +44,51 @@ async function getPods() {
 }
 
 export default async function DeliveryHeadPodsPage() {
-    const pods = await getPods();
+    const [pods, jobs] = await Promise.all([getPods(), getJobs()]);
+
+    const norm = (value?: string) => (value || "").trim().toUpperCase();
+    const podIdSet = new Set(pods.map((pod: any) => pod.id));
+    const podBuckets = new Map<string, { positions: number; subReq: number; subDone: number }>();
+
+    for (const job of jobs) {
+        const linkedPods = new Map<string, string>();
+        if (job.pod?.id && job.pod?.name) linkedPods.set(job.pod.id, job.pod.name);
+        (job.pods || []).forEach((p: any) => linkedPods.set(p.id, p.name));
+
+        const linkedPodIds = new Set([
+            ...Array.from(linkedPods.keys()),
+            ...(job.podIds || []),
+        ]);
+
+        if (linkedPods.size === 0 && linkedPodIds.size > 0) {
+            linkedPodIds.forEach((id) => {
+                const pod = pods.find((p: any) => p.id === id);
+                if (pod) linkedPods.set(pod.id, pod.name);
+            });
+        }
+
+        if (linkedPods.size === 0) continue;
+
+        linkedPods.forEach((podName, podId) => {
+            if (!podIdSet.has(podId)) return;
+            const current = podBuckets.get(podName) || { positions: 0, subReq: 0, subDone: 0 };
+            current.positions += (job.positions || job.noOfPositions || 1);
+            current.subReq += (job.submissionRequired || 0);
+            current.subDone += (job.submissionDone || 0);
+            podBuckets.set(podName, current);
+        });
+    }
+
+    const podsForTable = pods.map((pod: any) => ({
+        ...pod,
+        totalPositions: podBuckets.get(pod.name)?.positions || 0,
+        submissionRequired: podBuckets.get(pod.name)?.subReq || 0,
+        submissionDone: podBuckets.get(pod.name)?.subDone || 0,
+        submissionRate: Math.round(
+            ((podBuckets.get(pod.name)?.subDone || 0) /
+                (podBuckets.get(pod.name)?.subReq || 1)) * 100
+        ),
+    }));
 
     return (
         <>
@@ -53,7 +109,7 @@ export default async function DeliveryHeadPodsPage() {
                     </div>
                 </div>
 
-                <PodsTable pods={pods} />
+                <PodsTable pods={podsForTable} />
             </div>
         </>
     );
