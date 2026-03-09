@@ -107,6 +107,10 @@ interface JobsTableProps {
     showEstCreatedDateTime?: boolean;
     showCfrExtend?: boolean;
     onRefresh?: () => void;
+    /** When true, disables internal client-side pagination — the parent manages pages via the API */
+    serverPaginated?: boolean;
+    /** Total count from the server (used for display only when serverPaginated=true) */
+    serverTotal?: number;
 }
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" | "warning" | "success" | "info" }> = {
@@ -212,7 +216,9 @@ export default function JobsTable({
     showFilters = false,
     showEstCreatedDateTime = false,
     showCfrExtend = false,
-    onRefresh
+    onRefresh,
+    serverPaginated = false,
+    serverTotal,
 }: JobsTableProps) {
     console.log("[JobsTable] Rendered with", jobsProp?.length, "jobs");
     const jobs: Job[] = Array.isArray(jobsProp) ? jobsProp : [];
@@ -417,12 +423,13 @@ export default function JobsTable({
     const estDateFormatter = { format: (date: Date) => formatUsDate(date) };
     const estTimeFormatter = { format: (date: Date) => formatUsTime(date) };
 
-    const totalPages = Math.ceil(sortedJobs.length / itemsPerPage);
+    const totalPages = serverPaginated ? 1 : Math.ceil(sortedJobs.length / itemsPerPage);
 
     const currentJobs = useMemo(() => {
+        if (serverPaginated) return sortedJobs; // show all — parent controls pages
         const startIndex = (currentPage - 1) * itemsPerPage;
         return sortedJobs.slice(startIndex, startIndex + itemsPerPage);
-    }, [sortedJobs, currentPage]);
+    }, [sortedJobs, currentPage, serverPaginated]);
 
     const handlePageChange = (page: number) => {
         if (page >= 1 && page <= totalPages) {
@@ -1062,8 +1069,8 @@ export default function JobsTable({
                 </Table>
             </div>
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
+            {/* Pagination Controls — hidden when parent owns pagination */}
+            {!serverPaginated && totalPages > 1 && (
                 <div className="flex items-center justify-between px-2">
                     <p className="text-sm text-muted-foreground italic">
                         Showing <span className="font-medium">{Math.min((currentPage - 1) * itemsPerPage + 1, sortedJobs.length)}</span> to <span className="font-medium">{Math.min(currentPage * itemsPerPage, sortedJobs.length)}</span> of <span className="font-medium">{sortedJobs.length}</span> {sortedJobs.length === jobs.length ? "jobs" : "filtered jobs"}

@@ -1,33 +1,12 @@
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import { auth } from "@/auth";
-import JobsTable from "@/components/dashboard/account-manager/JobsTable";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Link from "next/link";
-import { serverApiClient } from "@/lib/serverApiClient";
+import AccountManagerJobsClient from "./AccountManagerJobsClient";
 
-async function getJobs() {
-    try {
-        const response = await serverApiClient("/jobs?my=true", {
-            cache: 'no-store',
-        });
+export const dynamic = "force-dynamic";
 
-        if (!response.ok) {
-            console.error("Failed to fetch jobs. Status:", response.status);
-            return [];
-        }
-
-        const data = await response.json();
-        return Array.isArray(data?.data) ? data.data : [];
-    } catch (error) {
-        console.error("Error fetching jobs:", error);
-        return [];
-    }
-}
-
-export default async function AccountManagerJobsPage() {
-    const jobs = await getJobs();
-
+export default function AccountManagerJobsPage() {
     return (
         <>
             <DashboardBreadcrumb title="My Posted Jobs" text="Job Management" />
@@ -44,8 +23,7 @@ export default async function AccountManagerJobsPage() {
                         </Link>
                     </Button>
                 </div>
-
-                <JobsTable jobs={jobs} showPod={true} showEstCreatedDateTime={true} />
+                <AccountManagerJobsClient />
             </div>
         </>
     );
