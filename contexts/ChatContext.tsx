@@ -32,6 +32,9 @@ interface ChatContextType {
     chatUsers: ChatUser[];
     activeChatId: string | null;
     setActiveChatId: (id: string | null) => void;
+    isDrawerOpen: boolean;
+    setIsDrawerOpen: (isOpen: boolean) => void;
+    openChatWithUser: (userId: string) => void;
     sendMessage: (receiverId: string, receiverKeycloakId: string, content: string) => void;
     markAsRead: (senderId: string) => void;
     setTyping: (receiverKeycloakId: string, isTyping: boolean) => void;
@@ -48,6 +51,9 @@ const ChatContext = createContext<ChatContextType>({
     chatUsers: [],
     activeChatId: null,
     setActiveChatId: () => { },
+    isDrawerOpen: false,
+    setIsDrawerOpen: () => { },
+    openChatWithUser: () => { },
     sendMessage: () => { },
     markAsRead: () => { },
     setTyping: () => { },
@@ -68,6 +74,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [messages, setMessages] = useState<Message[]>([]);
     const [chatUsers, setChatUsers] = useState<ChatUser[]>([]);
     const [activeChatId, setActiveChatId] = useState<string | null>(null);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    const openChatWithUser = useCallback((userId: string) => {
+        setActiveChatId(userId);
+        setIsDrawerOpen(true);
+    }, []);
 
     const playChatSound = async () => {
         try {
@@ -383,6 +395,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             chatUsers,
             activeChatId,
             setActiveChatId,
+            isDrawerOpen,
+            setIsDrawerOpen,
+            openChatWithUser,
             sendMessage,
             markAsRead,
             setTyping,

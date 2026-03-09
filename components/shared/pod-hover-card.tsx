@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/hover-card";
 import { apiClient } from "@/lib/apiClient";
 import { Crown, Users } from "lucide-react";
+import { useChat } from "@/contexts/ChatContext";
 
 interface PodHoverCardProps {
     podId: string;
@@ -17,6 +18,7 @@ interface PodHoverCardProps {
 }
 
 export function PodHoverCard({ podId, podName, initialMembers, children }: PodHoverCardProps) {
+    const { openChatWithUser } = useChat();
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [podDetails, setPodDetails] = useState<any>(null);
@@ -60,13 +62,24 @@ export function PodHoverCard({ podId, podName, initialMembers, children }: PodHo
                     {!loading && podLead && (
                         <div className="flex items-start gap-1.5 pt-0.5 border-t border-neutral-100 dark:border-slate-700">
                             <Crown className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
-                            <div className="flex flex-col min-w-0">
+                            <div className="flex flex-col min-w-0 flex-1">
                                 <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-0.5">Pod Lead</span>
-                                <span className="text-xs font-medium text-neutral-700 dark:text-neutral-200 truncate">
-                                    {podLead.fullName || podLead.email}
-                                </span>
+                                <div
+                                    className="flex items-center gap-1 group/lead text-neutral-700 dark:text-neutral-200 cursor-pointer"
+                                    onClick={(e) => {
+                                        if (podLead.id) {
+                                            e.stopPropagation();
+                                            e.preventDefault();
+                                            openChatWithUser(podLead.id);
+                                        }
+                                    }}
+                                >
+                                    <span className="text-xs font-medium truncate group-hover/lead:text-primary transition-colors">
+                                        {podLead.fullName || podLead.email?.split('@')[0]}
+                                    </span>
+                                </div>
                                 {podLead.fullName && (
-                                    <span className="text-[10px] text-neutral-400 truncate">{podLead.email}</span>
+                                    <span className="text-[10px] text-neutral-400 truncate mt-0.5 flex-1">{podLead.email}</span>
                                 )}
                             </div>
                         </div>
@@ -74,6 +87,35 @@ export function PodHoverCard({ podId, podName, initialMembers, children }: PodHo
                     {!loading && !error && podDetails && !podLead && (
                         <p className="text-xs text-neutral-400 italic border-t border-neutral-100 dark:border-slate-700 pt-1.5">No pod lead assigned</p>
                     )}
+
+                    {/* Recruiters List */}
+                    {!loading && !error && podDetails && podDetails.recruiters && podDetails.recruiters.length > 0 && (
+                        <div className="flex flex-col gap-1.5 pt-1.5 border-t border-neutral-100 dark:border-slate-700">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">Recruiters</span>
+                            {podDetails.recruiters.map((recruiter: any) => (
+                                <div key={recruiter.id} className="flex items-start gap-1.5 group/rec">
+                                    <div className="h-1 w-1 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                                    <div className="flex flex-col min-w-0 flex-1">
+                                        <div
+                                            className="flex items-center gap-1 text-neutral-700 dark:text-neutral-200 cursor-pointer"
+                                            onClick={(e) => {
+                                                if (recruiter.id) {
+                                                    e.stopPropagation();
+                                                    e.preventDefault();
+                                                    openChatWithUser(recruiter.id);
+                                                }
+                                            }}
+                                        >
+                                            <span className="text-xs font-medium truncate group-hover/rec:text-primary transition-colors">
+                                                {recruiter.fullName || recruiter.email?.split('@')[0]}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     {error && (
                         <p className="text-xs text-red-400 italic">{error}</p>
                     )}

@@ -21,7 +21,8 @@ import {
     Search,
     X,
     Calendar as CalendarIcon,
-    Filter
+    Filter,
+    MessageCircle
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -52,6 +53,7 @@ import { apiClient } from "@/lib/apiClient";
 import { LocationSelect } from "@/components/shared/location-select";
 import CfrExtendButton from "./CfrExtendButton";
 import { MultiSelect, Option } from "@/components/shared/multi-select";
+import { useChat } from "@/contexts/ChatContext";
 
 interface Job {
     id: string;
@@ -214,9 +216,13 @@ export default function JobsTable({
 }: JobsTableProps) {
     console.log("[JobsTable] Rendered with", jobsProp?.length, "jobs");
     const jobs: Job[] = Array.isArray(jobsProp) ? jobsProp : [];
-    const { data: session } = useSession();
     const router = useRouter();
-    const sessionRoles: string[] = ((session as any)?.user?.roles || []).map((r: string) => r?.toUpperCase?.());
+    const { data: session } = useSession();
+    const { openChatWithUser } = useChat();
+
+    // Check roles
+    const userRoles = session?.user?.roles || [];
+    const sessionRoles: string[] = userRoles.map((r: string) => r?.toUpperCase?.());
     const isAdmin = sessionRoles.includes("ADMIN");
     const isDeliveryHead = sessionRoles.includes("DELIVERY_HEAD") || sessionRoles.includes("DELIVERY-HEAD");
     const canEditByRole = isAdmin || isDeliveryHead;
@@ -657,7 +663,7 @@ export default function JobsTable({
                             {showPod && (
                                 <>
                                     <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
-                                        Assigned Pods
+                                        Pods & Recruiters
                                     </TableHead>
 
                                 </>
@@ -868,18 +874,19 @@ export default function JobsTable({
                                                                 const canEdit = (isAdmin || (canEditByRole && ownsAllAssignedPods)) && isJobActive;
 
                                                                 return (
-                                                                    <PodAssignCell
-                                                                        jobId={job.id}
-                                                                        assignedPods={resolvedAssignedPods}
-                                                                        assignedRecruiters={job.assignedRecruiters}
-                                                                        availablePods={availablePods}
-                                                                        canEdit={canEdit}
-                                                                        onSuccess={() => { if (onRefresh) onRefresh(); else router.refresh(); }}
-                                                                    />
+                                                                    <div className="flex flex-col gap-1.5">
+                                                                        <PodAssignCell
+                                                                            jobId={job.id}
+                                                                            assignedPods={resolvedAssignedPods}
+                                                                            assignedRecruiters={job.assignedRecruiters}
+                                                                            availablePods={availablePods}
+                                                                            canEdit={canEdit}
+                                                                            onSuccess={() => { if (onRefresh) onRefresh(); else router.refresh(); }}
+                                                                        />
+                                                                    </div>
                                                                 );
                                                             })()}
                                                         </TableCell>
-
                                                     </>
                                                 )}
                                                 {/* Account Manager */}

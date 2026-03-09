@@ -114,6 +114,25 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
         };
     }, [messageInput, activeUser, setTyping, isBlocked, hasBlockedMe]);
 
+    // Long press logic
+    const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const handlePressStart = (msgId: string) => {
+        if (isSelectionMode) return;
+        if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current);
+        longPressTimeoutRef.current = setTimeout(() => {
+            setIsSelectionMode(true);
+            toggleMessageSelection(msgId);
+        }, 500); // 500ms for long press
+    };
+
+    const handlePressEnd = () => {
+        if (longPressTimeoutRef.current) {
+            clearTimeout(longPressTimeoutRef.current);
+            longPressTimeoutRef.current = null;
+        }
+    };
+
     const handleSubmitMessage = (e: React.FormEvent) => {
         e.preventDefault();
         if (!messageInput.trim() || !activeChatId || !activeUser || isBlocked || hasBlockedMe) return;
@@ -223,7 +242,7 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
                     </div>
                 </div>
                 <div className="action inline-flex items-center gap-2">
-                    {isSelectionMode ? (
+                    {isSelectionMode && (
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-medium text-neutral-500">{selectedMessageIds.size} selected</span>
                             <Button
@@ -246,15 +265,6 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
                                 Cancel
                             </Button>
                         </div>
-                    ) : (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs text-neutral-500 px-2 h-8"
-                            onClick={() => setIsSelectionMode(true)}
-                        >
-                            Select
-                        </Button>
                     )}
 
                     <DropdownMenu>
@@ -321,6 +331,12 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
                                 isSelectionMode && "cursor-pointer"
                             )}
                             onClick={() => isSelectionMode && toggleMessageSelection(msg.id)}
+                            onTouchStart={() => handlePressStart(msg.id)}
+                            onTouchEnd={handlePressEnd}
+                            onTouchMove={handlePressEnd}
+                            onMouseDown={() => handlePressStart(msg.id)}
+                            onMouseUp={handlePressEnd}
+                            onMouseLeave={handlePressEnd}
                         >
                             {isSelectionMode && (
                                 <div className={cn(

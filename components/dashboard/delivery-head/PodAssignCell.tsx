@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/hover-card";
 import { apiClient } from "@/lib/apiClient";
 import { PodHoverCard } from "@/components/shared/pod-hover-card";
+import { MessageCircle } from "lucide-react";
+import { useChat } from "@/contexts/ChatContext";
 
 export interface PodData {
     id: string;
@@ -41,6 +43,7 @@ export default function PodAssignCell({
     canEdit = false,
     onSuccess,
 }: PodAssignCellProps) {
+    const { openChatWithUser } = useChat();
     const [open, setOpen] = useState(false);
     const [selected, setSelected] = useState<Set<string>>(
         new Set(assignedPods.map((p) => p.id))
@@ -49,9 +52,13 @@ export default function PodAssignCell({
     const [saving, setSaving] = useState(false);
     const [podLeads, setPodLeads] = useState<Record<string, { fullName?: string | null; email?: string }>>({});
 
-    // Fetch pod leads for assigned pods
+    // Fetch pod leads for assigned pods only if not already provided
     useEffect(() => {
         assignedPods.forEach(pod => {
+            if ((pod as any).podHead) {
+                setPodLeads(prev => ({ ...prev, [pod.id]: (pod as any).podHead }));
+                return;
+            }
             if (!podLeads[pod.id]) {
                 apiClient(`/pods/${pod.id}`)
                     .then(res => res.ok ? res.json() : null)
@@ -146,13 +153,11 @@ export default function PodAssignCell({
                 <span className="text-xs text-muted-foreground italic px-1">Unassigned</span>
             )
         ) : (
-            <button
+            <div
                 className={`flex items-center gap-1 rounded-lg px-1.5 py-1 transition-colors ${canEdit
-                    ? "hover:bg-neutral-100 dark:hover:bg-slate-700"
+                    ? "hover:bg-neutral-100 dark:hover:bg-slate-700 cursor-pointer"
                     : "cursor-default"
                     }`}
-                type="button"
-                disabled={!canEdit}
                 title={canEdit ? "Edit Assigned Pods" : "View Assigned Pod Members"}
             >
                 <div className="flex items-center gap-1">
@@ -166,9 +171,23 @@ export default function PodAssignCell({
                                     </Badge>
                                 </PodHoverCard>
                                 {lead && (
-                                    <span className="flex items-center gap-1 text-[10px] text-neutral-500 dark:text-neutral-400">
+                                    <span className="flex items-center gap-1 text-[10px] text-neutral-500 dark:text-neutral-400 group/lead">
                                         <Crown className="h-2.5 w-2.5 text-amber-500 shrink-0" />
-                                        {lead.fullName || lead.email}
+                                        {lead.fullName || lead.email?.split('@')[0]}
+                                        {(lead as any).id && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    e.preventDefault();
+                                                    openChatWithUser((lead as any).id);
+                                                }}
+                                                className="ml-0.5 text-neutral-400 hover:text-primary transition-colors opacity-0 group-hover/lead:opacity-100"
+                                                title="Message Pod Lead"
+                                            >
+                                                <MessageCircle className="h-3 w-3" />
+                                            </button>
+                                        )}
                                     </span>
                                 )}
                             </div>
@@ -200,8 +219,11 @@ export default function PodAssignCell({
                     )}
                 </div>
                 {canEdit && <ChevronDown className="h-3 w-3 text-neutral-400 ml-0.5" />}
-            </button>
+            </div>
         );
+
+    // If we only want to display for Account Manager, we can also render recruiters easily.
+    // However, PodAssignCell only displays pods natively. We will use a custom wrapper outside if needed.
 
     return (
         <Popover

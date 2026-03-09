@@ -17,8 +17,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import ChatWindow from "@/components/chat/ChatWindow";
 
 const ChatDrawer = () => {
-    const { chatUsers, onlineUsers, typingUsers, activeChatId, setActiveChatId } = useChat();
-    const [isOpen, setIsOpen] = useState(false);
+    const { chatUsers, onlineUsers, typingUsers, activeChatId, setActiveChatId, isDrawerOpen, setIsDrawerOpen } = useChat();
     const [width, setWidth] = useState(400);
     const [isResizing, setIsResizing] = useState(false);
     const sidebarRef = useRef<HTMLDivElement>(null);
@@ -67,7 +66,7 @@ const ChatDrawer = () => {
     }, [resize, stopResizing]);
 
     return (
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
             <SheetTrigger asChild>
                 <Button
                     size="icon"
@@ -102,7 +101,7 @@ const ChatDrawer = () => {
                             showBackButton={true}
                             onBack={handleBack}
                             showCloseButton={true}
-                            onClose={() => setIsOpen(false)}
+                            onClose={() => setIsDrawerOpen(false)}
                         />
                     </div>
                 ) : (
@@ -112,7 +111,7 @@ const ChatDrawer = () => {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => setIsOpen(false)}
+                                onClick={() => setIsDrawerOpen(false)}
                                 className="text-neutral-500 hover:bg-neutral-100 dark:hover:bg-slate-800 rounded-full"
                             >
                                 <ArrowLeft className="h-5 w-5 rotate-180" />
