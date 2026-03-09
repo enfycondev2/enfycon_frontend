@@ -9,9 +9,10 @@ import {
     SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, ArrowLeft } from "lucide-react";
+import { MessageSquare, ArrowLeft, Search } from "lucide-react";
 import { useChat } from "@/contexts/ChatContext";
 import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import ChatWindow from "@/components/chat/ChatWindow";
 
@@ -21,6 +22,12 @@ const ChatDrawer = () => {
     const [width, setWidth] = useState(400);
     const [isResizing, setIsResizing] = useState(false);
     const sidebarRef = useRef<HTMLDivElement>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const filteredUsers = chatUsers.filter(u =>
+        u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     const handleUserClick = (userId: string) => {
         setActiveChatId(userId);
@@ -111,14 +118,27 @@ const ChatDrawer = () => {
                                 <ArrowLeft className="h-5 w-5 rotate-180" />
                             </Button>
                         </SheetHeader>
+                        <div className="px-6 py-4 border-b border-neutral-100 dark:border-slate-800 shrink-0">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                                <Input
+                                    placeholder="Search users..."
+                                    className="pl-9 h-10 bg-neutral-50 dark:bg-slate-800 border-none rounded-xl focus-visible:ring-1 focus-visible:ring-primary/20"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                        </div>
                         <div className="flex-1 overflow-y-auto scroll-sm">
-                            {chatUsers.length === 0 ? (
+                            {filteredUsers.length === 0 ? (
                                 <div className="py-20 px-6 text-center text-neutral-500 dark:text-neutral-400">
                                     <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                                    <p className="text-base italic">No users available to chat</p>
+                                    <p className="text-base italic">
+                                        {searchQuery ? "No users match your search" : "No users available to chat"}
+                                    </p>
                                 </div>
                             ) : (
-                                chatUsers.map((u) => {
+                                filteredUsers.map((u) => {
                                     const isOnline = onlineUsers.has(u.keycloakId);
                                     const isTyping = typingUsers.has(u.keycloakId);
 
