@@ -16,6 +16,20 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import ChatWindow from "@/components/chat/ChatWindow";
 
+function formatLastSeen(lastOnline?: string): string {
+    if (!lastOnline) return 'Last seen recently';
+    const tz = 'America/New_York';
+    const date = new Date(lastOnline);
+    const now = new Date();
+    const dateET = new Date(date.toLocaleString('en-US', { timeZone: tz }));
+    const nowET = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+    const diffDays = Math.floor((nowET.getTime() - dateET.getTime()) / (1000 * 60 * 60 * 24));
+    const timeStr = date.toLocaleTimeString('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: true });
+    if (diffDays === 0) return `Last seen today at ${timeStr} ET`;
+    if (diffDays === 1) return 'Last seen yesterday';
+    return `Last seen ${diffDays} days ago`;
+}
+
 const ChatDrawer = () => {
     const { chatUsers, onlineUsers, typingUsers, activeChatId, setActiveChatId, isDrawerOpen, setIsDrawerOpen } = useChat();
     const [width, setWidth] = useState(400);
@@ -158,14 +172,21 @@ const ChatDrawer = () => {
                                                 )}
                                             </div>
                                             <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                                <h6 className="text-sm font-bold mb-1 text-neutral-900 dark:text-white truncate">
+                                                <h6 className="text-sm font-bold mb-0.5 text-neutral-900 dark:text-white truncate">
                                                     {u.fullName}
                                                 </h6>
                                                 <p className={cn(
-                                                    "mb-0 text-xs truncate",
-                                                    isTyping ? "text-primary animate-pulse font-medium" : "text-neutral-500 dark:text-neutral-400"
+                                                    "mb-0 text-xs truncate font-medium",
+                                                    isTyping
+                                                        ? "text-primary animate-pulse"
+                                                        : isOnline
+                                                            ? "text-green-500"
+                                                            : "text-neutral-400 dark:text-neutral-500"
                                                 )}>
-                                                    {isTyping ? "typing..." : u.email}
+                                                    {isTyping ? "typing..." : isOnline ? "Online" : formatLastSeen(u.lastOnline)}
+                                                </p>
+                                                <p className="mb-0 text-[11px] text-neutral-400 dark:text-neutral-500 truncate">
+                                                    {u.email}
                                                 </p>
                                             </div>
                                         </div>

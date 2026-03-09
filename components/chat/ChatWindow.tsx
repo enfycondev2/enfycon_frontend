@@ -41,6 +41,21 @@ interface ChatWindowProps {
     onClose?: () => void;
 }
 
+function formatLastSeen(lastOnline?: string): string {
+    if (!lastOnline) return 'Last seen recently';
+    const tz = 'America/New_York';
+    const date = new Date(lastOnline);
+    const now = new Date();
+    // Compare calendar days in ET, not local system time
+    const dateET = new Date(date.toLocaleString('en-US', { timeZone: tz }));
+    const nowET = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+    const diffDays = Math.floor((nowET.getTime() - dateET.getTime()) / (1000 * 60 * 60 * 24));
+    const timeStr = date.toLocaleTimeString('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: true });
+    if (diffDays === 0) return `Last seen today at ${timeStr} ET`;
+    if (diffDays === 1) return 'Last seen yesterday';
+    return `Last seen ${diffDays} days ago`;
+}
+
 export default function ChatWindow({ showBackButton, onBack, showCloseButton, onClose }: ChatWindowProps) {
     const {
         chatUsers,
@@ -237,7 +252,7 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
                             "mb-0 text-[11px] mt-0.5",
                             isTyping ? "text-primary animate-pulse font-medium" : "text-neutral-500 dark:text-neutral-400"
                         )}>
-                            {isTyping ? "typing..." : (isOnline ? "Online" : "Offline")}
+                            {isTyping ? "typing..." : (isOnline ? "Online" : formatLastSeen(activeUser?.lastOnline))}
                         </p>
                     </div>
                 </div>
@@ -399,7 +414,7 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
                                     "chat-time mb-0 text-[9px] text-end opacity-60 font-medium",
                                     isMe ? "text-neutral-600" : "text-neutral-500 dark:text-neutral-400"
                                 )}>
-                                    <span>{format(new Date(msg.createdAt || Date.now()), "HH:mm")}</span>
+                                    <span>{new Date(msg.createdAt || Date.now()).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: true })}</span>
                                 </p>
                             </div>
                         </div>

@@ -273,6 +273,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [socket, isConnected, activeChatId, session?.user?.id, chatUsers, setTypingUsers]);
 
+    // Heartbeat emitter — keeps lastOnline fresh while the tab is open.
+    // Emits every 60 s; the backend throttles DB writes to once per 5 min.
+    useEffect(() => {
+        if (!socket || !isConnected) return;
+
+        const interval = setInterval(() => {
+            socket.emit('heartbeat');
+        }, 60_000);
+
+        return () => {
+            clearInterval(interval);
+        };
+    }, [socket, isConnected]);
+
     const sendMessage = useCallback((receiverId: string, receiverKeycloakId: string, content: string) => {
         if (socket && session?.user?.id) {
             socket.emit("send_message", {

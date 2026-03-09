@@ -140,16 +140,36 @@ const ChatBox = () => {
                                                 <div className="info">
                                                     <h6 className="text-sm font-bold mb-0.5 line-clamp-1">{user.fullName}</h6>
                                                     <p className={cn(
-                                                        "mb-0 text-xs line-clamp-1",
-                                                        isUserTyping ? "text-primary animate-pulse font-medium" : "text-neutral-500 dark:text-neutral-400"
+                                                        "mb-0 text-xs line-clamp-1 font-medium",
+                                                        isUserTyping
+                                                            ? "text-primary animate-pulse"
+                                                            : isUserOnline
+                                                                ? "text-green-500"
+                                                                : "text-neutral-400 dark:text-neutral-500"
                                                     )}>
-                                                        {isUserTyping ? "typing..." : user.email}
+                                                        {isUserTyping ? "typing..." : isUserOnline ? "Online" : user.lastOnline
+                                                            ? (() => {
+                                                                const tz = 'America/New_York';
+                                                                const d = new Date(user.lastOnline);
+                                                                const dET = new Date(d.toLocaleString('en-US', { timeZone: tz }));
+                                                                const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: tz }));
+                                                                const days = Math.floor((nowET.getTime() - dET.getTime()) / 86400000);
+                                                                const t = d.toLocaleTimeString('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: true });
+                                                                if (days === 0) return `Last seen today at ${t} ET`;
+                                                                if (days === 1) return 'Last seen yesterday';
+                                                                return `Last seen ${days} days ago`;
+                                                            })()
+                                                            : 'Last seen recently'
+                                                        }
                                                     </p>
+                                                    <p className="mb-0 text-[11px] text-neutral-400 dark:text-neutral-500 line-clamp-1">{user.email}</p>
                                                 </div>
                                             </div>
                                             <div className="shrink-0 text-end">
                                                 <p className="mb-0 text-neutral-400 text-[10px]">
-                                                    {isUserOnline ? "Now" : user.lastOnline ? format(new Date(user.lastOnline), "HH:mm") : ""}
+                                                    {isUserOnline ? "Now" : user.lastOnline
+                                                        ? new Date(user.lastOnline).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: true })
+                                                        : ""}
                                                 </p>
                                             </div>
                                         </div>
