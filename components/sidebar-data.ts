@@ -8,7 +8,8 @@ import {
   MessageCircleMore,
   StickyNote,
   UsersRound,
-  Mail
+  Mail,
+  Bell
 } from "lucide-react";
 
 export const getSidebarData = (role: string) => {
@@ -48,6 +49,11 @@ export const getSidebarData = (role: string) => {
           title: "Login Media",
           url: "/admin/login-media",
           icon: MessageCircleMore,
+        },
+        {
+          title: "Live Notifications",
+          url: "/admin/dashboard/notifications",
+          icon: Bell,
         },
       ],
     },{
