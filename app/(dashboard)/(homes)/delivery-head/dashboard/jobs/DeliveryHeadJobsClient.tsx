@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { apiClient } from "@/lib/apiClient";
 import JobsTable from "@/components/dashboard/account-manager/JobsTable";
 import { Button } from "@/components/ui/button";
+import { useSocket } from "@/contexts/SocketContext";
+import { toast } from "react-hot-toast";
 import {
     ChevronLeft,
     ChevronRight,
@@ -81,6 +83,7 @@ export default function DeliveryHeadJobsClient() {
     const [meta, setMeta] = useState<PageMeta>({ total: 0, page: 1, limit: LIMIT, totalPages: 1 });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { socket } = useSocket();
 
     // Prefetch cache: pageNum → result
     const prefetchCache = useRef<Map<number, { jobs: Job[]; meta: PageMeta }>>(new Map());
@@ -164,6 +167,54 @@ export default function DeliveryHeadJobsClient() {
             }
         })();
     }, [fetchPage, prefetchPage]);
+
+    // Socket listener for real-time updates
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleNotification = async (payload: any) => {
+            if (payload.type === "NEW_JOB" && payload.data?.jobId) {
+                console.log("[DeliveryHeadJobsClient] Auto-refreshing due to NEW_JOB notification");
+
+                try {
+                    // Fetch just the new job to avoid a full page reload
+                    const res = await apiClient(`/jobs/${payload.data.jobId}`);
+                    if (res.ok) {
+                        const newJob = await res.json();
+                        // Add to the top of the current list
+                        setJobs(prevJobs => {
+                            // Avoid duplicates if we already got it
+                            if (prevJobs.some(j => j.id === newJob.id)) return prevJobs;
+                            return [newJob, ...prevJobs];
+                        });
+
+                        // Update total count
+                        setMeta(prev => ({ ...prev, total: prev.total + 1 }));
+
+                        // Clear prefetch cache so subsequent page visits get fresh data
+                        prefetchCache.current.clear();
+                        prefetchingPages.current.clear();
+
+                        toast.success("Jobs list updated with new requirement", {
+                            id: "jobs-auto-refresh",
+                            duration: 3000,
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch new job details:", error);
+                    // Fallback to full page refresh if single fetch fails
+                    prefetchCache.current.clear();
+                    prefetchingPages.current.clear();
+                    goToPage(1);
+                }
+            }
+        };
+
+        socket.on("notification", handleNotification);
+        return () => {
+            socket.off("notification", handleNotification);
+        };
+    }, [socket, goToPage]);
 
     const totalPages = meta.totalPages;
     const pageSize = meta.limit || LIMIT;
