@@ -26,6 +26,7 @@ export const metadata: Metadata = {
 
 interface JobRow {
   id: string;
+  jobCode?: string;
   status: string;
   accountManager?: {
     id: string;
@@ -46,6 +47,7 @@ interface JobRow {
 }
 
 interface SubmissionRow {
+  jobId?: string;
   l1Status?: string;
   l2Status?: string;
   l3Status?: string;
@@ -60,20 +62,48 @@ const isFinalized = (status?: string) => {
 };
 
 function getCurrentPipelineStage(submission: SubmissionRow) {
+  const finalStatus = normalizeStatus(submission.finalStatus);
+  if (finalStatus === "JOIN" || finalStatus === "JOINED") return "JOINED";
   if (isFinalized(submission.finalStatus)) return "FINALIZED";
-  if (hasStageValue(submission.l3Status)) return "FINAL";
-  if (hasStageValue(submission.l2Status)) return "L2";
-  if (hasStageValue(submission.l1Status)) return "L1";
+
+  // Check from latest to earliest stage. 
+  // If the stage is "PENDING", it means they haven't cleared it yet, so we don't count them as IN that stage.
+  // We count them in the NEXT stage if it's pending, but normally they should have cleared previous rounds.
+  // If a stage has ANY value OTHER than PENDING/REJECTED, they are AT LEAST in that stage
+  const l3 = normalizeStatus(submission.l3Status);
+  const l2 = normalizeStatus(submission.l2Status);
+  const l1 = normalizeStatus(submission.l1Status);
+
+  // Consider it "L3" if L3 has started assessing them (e.g. SCHEDULED, SELECTED)
+  if (l3 !== "" && l3 !== "PENDING" && l3 !== "REJECTED") return "L3";
+  // Consider it "L2" if L2 has started but L3 is barely pending or empty
+  if (l2 !== "" && l2 !== "PENDING" && l2 !== "REJECTED") return "L2";
+  // Consider it "L1" if L1 has started ...
+  if (l1 !== "" && l1 !== "PENDING" && l1 !== "REJECTED") return "L1";
+  
   return "UNSTAGED";
 }
 
 async function getJobs(): Promise<JobRow[]> {
   try {
-    const response = await serverApiClient("/jobs", { cache: "no-store" });
-    if (!response.ok) return [];
-    const data = await response.json();
-    const arr = Array.isArray(data) ? data : data?.data;
-    return Array.isArray(arr) ? arr : [];
+    const firstResponse = await serverApiClient("/jobs?page=1&limit=100", { cache: "no-store" });
+    if (!firstResponse.ok) return [];
+    const firstData = await firstResponse.json();
+    let allJobs = Array.isArray(firstData?.data) ? firstData.data : (Array.isArray(firstData) ? firstData : []);
+    
+    const totalPages = firstData?.totalPages || 1;
+    if (totalPages > 1) {
+      const promises = [];
+      for (let i = 2; i <= totalPages; i++) {
+        promises.push(serverApiClient(`/jobs?page=${i}&limit=100`, { cache: "no-store" }).then(res => res.json()));
+      }
+      const results = await Promise.all(promises);
+      results.forEach(res => {
+        const arr = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        allJobs = [...allJobs, ...arr];
+      });
+    }
+    return allJobs;
   } catch {
     return [];
   }
@@ -81,13 +111,28 @@ async function getJobs(): Promise<JobRow[]> {
 
 async function getSubmissions(): Promise<SubmissionRow[]> {
   try {
-    const response = await serverApiClient("/recruiter-submissions", { cache: "no-store" });
-    if (!response.ok) return [];
-    const data = await response.json();
-    const arr = Array.isArray(data)
-      ? data
-      : (data?.data || data?.submissions || []);
-    return Array.isArray(arr) ? arr : [];
+    const firstResponse = await serverApiClient("/recruiter-submissions?page=1&limit=100", { cache: "no-store" });
+    if (!firstResponse.ok) return [];
+    const firstData = await firstResponse.json();
+    let allSubmissions = Array.isArray(firstData?.data) 
+      ? firstData.data 
+      : (Array.isArray(firstData?.submissions) ? firstData.submissions : (Array.isArray(firstData) ? firstData : []));
+    
+    const totalPages = firstData?.totalPages || 1;
+    if (totalPages > 1) {
+      const promises = [];
+      for (let i = 2; i <= totalPages; i++) {
+        promises.push(serverApiClient(`/recruiter-submissions?page=${i}&limit=100`, { cache: "no-store" }).then(res => res.json()));
+      }
+      const results = await Promise.all(promises);
+      results.forEach(res => {
+        const arr = Array.isArray(res?.data) 
+          ? res.data 
+          : (Array.isArray(res?.submissions) ? res.submissions : (Array.isArray(res) ? res : []));
+        allSubmissions = [...allSubmissions, ...arr];
+      });
+    }
+    return allSubmissions;
   } catch {
     return [];
   }
@@ -110,15 +155,16 @@ export default async function DashboardPage() {
       const stage = getCurrentPipelineStage(sub);
       if (stage === "L1") acc.l1 += 1;
       if (stage === "L2") acc.l2 += 1;
-      if (stage === "FINAL") acc.final += 1;
+      if (stage === "L3") acc.l3 += 1;
+      if (stage === "JOINED") acc.joined += 1;
       return acc;
     },
-    { l1: 0, l2: 0, final: 0 }
+    { l1: 0, l2: 0, l3: 0, joined: 0 }
   );
 
   const totalSubmissions = submissions.length;
   const pipelineCoverage = totalSubmissions > 0
-    ? Math.round(((stageCounts.l1 + stageCounts.l2 + stageCounts.final) / totalSubmissions) * 100)
+    ? Math.round(((stageCounts.l1 + stageCounts.l2 + stageCounts.l3 + stageCounts.joined) / totalSubmissions) * 100)
     : 0;
   const openRatio = jobs.length > 0 ? Math.round((openJobs / jobs.length) * 100) : 0;
 
@@ -168,15 +214,26 @@ export default async function DashboardPage() {
       description: "Technical rounds scheduled",
     },
     {
-      title: "Final Rounds",
-      value: String(stageCounts.final),
+      title: "Candidates in L3",
+      value: String(stageCounts.l3),
       icon: "UsersRound",
-      iconBg: "bg-green-600",
-      gradientFrom: "from-green-600/10",
-      growth: String(stageCounts.final),
+      iconBg: "bg-indigo-600",
+      gradientFrom: "from-indigo-600/10",
+      growth: String(stageCounts.l3),
       growthIcon: "ArrowUp",
       growthColor: "text-green-600 dark:text-green-400",
-      description: "Waiting for feedback",
+      description: "Final technical rounds",
+    },
+    {
+      title: "Successfully Placed",
+      value: String(stageCounts.joined),
+      icon: "CheckCircle",
+      iconBg: "bg-green-600",
+      gradientFrom: "from-green-600/10",
+      growth: String(stageCounts.joined),
+      growthIcon: "ArrowUp",
+      growthColor: "text-green-600 dark:text-green-400",
+      description: "Successfully onboarded",
     },
   ];
 
@@ -185,7 +242,7 @@ export default async function DashboardPage() {
       <DashboardBreadcrumb title={welcomeMessage} text="Admin Dashboard" />
 
       <Suspense fallback={<LoadingSkeleton />}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-6">
           <StatCard data={adminStats} />
         </div>
       </Suspense>

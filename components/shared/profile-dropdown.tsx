@@ -10,7 +10,6 @@ import { apiClient } from "@/lib/apiClient";
 import userImg from "@/public/assets/images/user.png";
 import { ChevronDown, Mail, Settings, Sparkles, User, House, BriefcaseBusiness } from "lucide-react";
 import { useSession } from "next-auth/react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -28,6 +27,7 @@ const ProfileDropdown = () => {
   const [podTeamMembers, setPodTeamMembers] = useState<PodTeamMember[]>([]);
   const [isPodHeadVerified, setIsPodHeadVerified] = useState(false);
   const [isRoleResolved, setIsRoleResolved] = useState(false);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
   const rawRoles = [...(((session?.user as { roles?: string[] } | undefined)?.roles) || [])];
   if (isPodHeadVerified && !rawRoles.includes("POD_LEAD")) {
@@ -189,6 +189,9 @@ const ProfileDropdown = () => {
           if (authMeData.isPodHead && isMounted) {
             setIsPodHeadVerified(true);
           }
+          if (authMeData.profilePicture && isMounted) {
+            setProfilePicture(authMeData.profilePicture);
+          }
           if (isMounted) setIsRoleResolved(true);
         }
       } catch { if (isMounted) setIsRoleResolved(true); }
@@ -243,23 +246,13 @@ const ProfileDropdown = () => {
           )}
         >
           <div className="relative">
-            {session?.user?.image ? (
-              <Image
-                src={session?.user?.image}
-                className="rounded-full size-7 sm:size-8 object-cover"
-                width={40}
-                height={40}
-                alt={session?.user?.name ?? "User profile"}
-              />
-            ) : (
-              <Image
-                src={userImg}
-                className="rounded-full size-7 sm:size-8 object-cover"
-                width={40}
-                height={40}
-                alt={"User profile"}
-              />
-            )}
+            <img
+              src={profilePicture || session?.user?.image || userImg.src}
+              className="rounded-full size-7 sm:size-8 object-cover"
+              width={40}
+              height={40}
+              alt={session?.user?.name ?? "User profile"}
+            />
             <span className="absolute -bottom-0.5 -end-0.5 size-2.5 rounded-full bg-emerald-500 border border-white dark:border-slate-800" />
           </div>
 
@@ -298,7 +291,12 @@ const ProfileDropdown = () => {
         side="bottom"
         align="end"
       >
-        <div className={cn("py-3 px-4 rounded-lg flex items-center justify-between", getRoleColors(selectedRoles[0]).banner)}>
+        <div className={cn("py-3 px-4 rounded-lg flex items-center gap-3", getRoleColors(selectedRoles[0]).banner)}>
+          <img
+            src={profilePicture || session?.user?.image || userImg.src}
+            className="rounded-full size-12 object-cover flex-shrink-0 border-2 border-white dark:border-slate-700 shadow-sm"
+            alt={displayName}
+          />
           <div>
             <h6 className="text-lg text-neutral-900 dark:text-white font-semibold mb-0">
               {displayName}
