@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { Bell, Loader2, RefreshCw } from 'lucide-react';
 import { useSocket } from '@/contexts/SocketContext';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 interface NotificationUser {
     id: string;
@@ -81,7 +81,7 @@ export default function AdminNotificationsClient() {
         const handleNewAdminNotification = (newNotification: Notification) => {
             console.log("Received live admin notification:", newNotification);
             setNotifications(prev => [newNotification, ...prev]);
-            toast.info(`New System Event: ${newNotification.title}`);
+            toast(`New System Event: ${newNotification.title}`, { icon: '🔔' });
         };
 
         socket.on('admin_notification', handleNewAdminNotification);
