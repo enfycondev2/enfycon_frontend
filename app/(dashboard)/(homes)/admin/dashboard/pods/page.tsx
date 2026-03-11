@@ -9,6 +9,7 @@ import AudienceStatsChart from "@/components/charts/audience-stats-chart";
 import AnalysisDonutChart from "@/components/dashboard/admin/AnalysisDonutChart";
 import { Card, CardContent } from "@/components/ui/card";
 import PodsTable from "@/components/dashboard/delivery-head/PodsTable";
+import PodCycleStatusPanel, { type CycleStatusData } from "@/components/dashboard/delivery-head/PodCycleStatusPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -82,10 +83,20 @@ async function getPods(): Promise<PodRow[]> {
   }
 }
 
+async function getCycleStatus(): Promise<CycleStatusData | null> {
+  try {
+    const response = await serverApiClient("/pods/cycle-status", { cache: "no-store" });
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
 export default async function AdminPodsDashboardPage() {
   const session = await auth();
   const userName = session?.user?.name || "Admin";
-  const [jobs, pods] = await Promise.all([getJobs(), getPods()]);
+  const [jobs, pods, cycleStatus] = await Promise.all([getJobs(), getPods(), getCycleStatus()]);
 
   const welcomeMessage = `${getGreeting()}, ${userName}!`;
 
@@ -268,6 +279,8 @@ export default async function AdminPodsDashboardPage() {
             <StatCard data={podStats} />
           </div>
         </Suspense>
+
+        <PodCycleStatusPanel data={cycleStatus} />
 
         <Card className="border border-gray-200 dark:border-neutral-700 bg-white dark:bg-slate-800 rounded-md shadow-none">
           <CardContent className="p-6">

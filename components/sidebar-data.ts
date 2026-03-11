@@ -124,6 +124,11 @@ export const getSidebarData = (role: string) => {
           url: "/delivery-head/dashboard/pods",
           icon: Boxes,
         },
+        {
+          title: "Account Manager",
+          url: "/delivery-head/dashboard/account-manager",
+          icon: UsersRound,
+        },
       ],
     },
     {

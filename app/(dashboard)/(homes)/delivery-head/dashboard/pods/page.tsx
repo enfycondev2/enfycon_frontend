@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { serverApiClient } from "@/lib/serverApiClient";
 import ResetPodsButton from "@/components/dashboard/delivery-head/ResetPodsButton";
+import PodCycleStatusPanel, { type CycleStatusData } from "@/components/dashboard/delivery-head/PodCycleStatusPanel";
 
 export const dynamic = 'force-dynamic';
 
@@ -43,8 +44,18 @@ async function getPods() {
     }
 }
 
+async function getCycleStatus(): Promise<CycleStatusData | null> {
+    try {
+        const response = await serverApiClient("/pods/cycle-status", { cache: 'no-store' });
+        if (!response.ok) return null;
+        return response.json();
+    } catch {
+        return null;
+    }
+}
+
 export default async function DeliveryHeadPodsPage() {
-    const [pods, jobs] = await Promise.all([getPods(), getJobs()]);
+    const [pods, jobs, cycleStatus] = await Promise.all([getPods(), getJobs(), getCycleStatus()]);
 
     const norm = (value?: string) => (value || "").trim().toUpperCase();
     const podIdSet = new Set(pods.map((pod: any) => pod.id));
@@ -110,6 +121,10 @@ export default async function DeliveryHeadPodsPage() {
                 </div>
 
                 <PodsTable pods={podsForTable} />
+
+                <div className="mt-6">
+                    <PodCycleStatusPanel data={cycleStatus} />
+                </div>
             </div>
         </>
     );

@@ -21,6 +21,7 @@ interface ChatUser {
     keycloakId: string;
     roles: string[];
     lastOnline?: string;
+    profilePicture?: string | null;
     isBlockedByMe?: boolean;
     hasBlockedMe?: boolean;
 }
