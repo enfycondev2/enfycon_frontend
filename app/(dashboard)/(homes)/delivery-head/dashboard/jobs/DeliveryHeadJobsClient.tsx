@@ -239,6 +239,21 @@ export default function DeliveryHeadJobsClient() {
         goToPage(currentPage);
     };
 
+    /** Silently patch one job in state after an edit — no loading flicker */
+    const handleJobUpdated = useCallback(async (jobId: string) => {
+        try {
+            const res = await apiClient(`/jobs/${jobId}`);
+            if (!res.ok) return;
+            const updated = await res.json();
+            setJobs(prev => prev.map(j => j.id === updated.id ? updated : j));
+            // Invalidate prefetch cache so next page nav gets fresh data
+            prefetchCache.current.clear();
+            prefetchingPages.current.clear();
+        } catch {
+            // Silently ignore — the old row stays visible which is fine
+        }
+    }, []);
+
     return (
         <div className="space-y-4">
             {isLoading ? (
@@ -263,6 +278,7 @@ export default function DeliveryHeadJobsClient() {
                     serverPaginated={false}
                     serverTotal={meta.total}
                     onRefresh={handleRefresh}
+                    onJobUpdated={handleJobUpdated}
                 />
             )}
 

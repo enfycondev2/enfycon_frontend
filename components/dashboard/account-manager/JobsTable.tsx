@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
     Table,
     TableBody,
@@ -22,8 +22,22 @@ import {
     X,
     Calendar as CalendarIcon,
     Filter,
-    MessageCircle
+    MessageCircle,
+    MoreHorizontal,
+    RefreshCw,
+    RotateCcw,
 } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import {
     Select,
@@ -107,6 +121,8 @@ interface JobsTableProps {
     showEstCreatedDateTime?: boolean;
     showCfrExtend?: boolean;
     onRefresh?: () => void;
+    /** Called with the saved job's ID after an inline edit — lets the parent silently patch just that row */
+    onJobUpdated?: (jobId: string) => void;
     /** When true, disables internal client-side pagination — the parent manages pages via the API */
     serverPaginated?: boolean;
     /** Total count from the server (used for display only when serverPaginated=true) */
@@ -142,6 +158,146 @@ const formatVisaType = (visaType?: string) =>
     parseVisaTypes(visaType)
         .map((value) => visaOptions.find((option) => option.value === value)?.label || value.replace(/_/g, " "))
         .join(", ");
+
+/**
+ * InlineExtendMenu
+ * Sticky-right bubble menu (⋮) for DH / Admin to extend or re-extend a CFR job.
+ * - CFR job:          Extend button  (1–5 days)
+ * - CFR_EXTENDED job: Re-extend  (0 = revert, 1–4 days)
+ * - Other types:      dots button dims to ~20% opacity so column stays consistent
+ */
+function InlineExtendMenu({
+    jobId,
+    requirementType,
+    onSuccess,
+}: {
+    jobId: string;
+    requirementType?: string;
+    onSuccess?: () => void;
+}) {
+    const isCfr = requirementType === "CFR";
+    const isExtended = requirementType === "CFR_EXTENDED";
+    const [loading, setLoading] = useState(false);
+    const router = useRouter();
+
+    const applyExtension = async (days: number) => {
+        setLoading(true);
+        try {
+            const body =
+                days === 0
+                    ? { requirementType: "CFR" }
+                    : { requirementType: "CFR_EXTENDED", cfrExtensionDays: days };
+
+            const res = await apiClient(`/jobs/${jobId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err?.message || "Request failed");
+            }
+
+            if (days === 0) {
+                toast.success("Job reverted to CFR — submissions blocked");
+            } else {
+                toast.success(`CFR extended by ${days} day${days > 1 ? "s" : ""}`);
+            }
+
+            if (onSuccess) onSuccess();
+        } catch (e: any) {
+            toast.error(e.message || "Action failed");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!isCfr && !isExtended) {
+        // Show a dimmed placeholder so the column is always the same width
+        return (
+            <button
+                disabled
+                className="h-7 w-7 flex items-center justify-center rounded opacity-20 cursor-default"
+                aria-hidden="true"
+            >
+                <MoreHorizontal className="h-4 w-4 text-neutral-400" />
+            </button>
+        );
+    }
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                        "h-7 w-7",
+                        loading && "opacity-50 pointer-events-none",
+                        isCfr
+                            ? "text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                            : "text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:hover:bg-violet-900/20"
+                    )}
+                    title={isCfr ? "Extend CFR" : "Re-extend CFR"}
+                >
+                    <MoreHorizontal className="h-4 w-4" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="bottom" className="w-52">
+                <DropdownMenuLabel className="text-xs font-semibold">
+                    {isCfr ? "Extend CFR" : "Re-extend / Revert CFR"}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {isCfr && (
+                    <>
+                        <p className="text-[10px] text-muted-foreground px-2 pb-1">
+                            Extend by how many days?
+                        </p>
+                        {[1, 2, 3, 4, 5].map((d) => (
+                            <DropdownMenuItem
+                                key={d}
+                                onClick={() => applyExtension(d)}
+                                disabled={loading}
+                                className="gap-2 cursor-pointer"
+                            >
+                                <RefreshCw className="h-3.5 w-3.5 text-amber-500" />
+                                Extend {d} day{d > 1 ? "s" : ""}
+                            </DropdownMenuItem>
+                        ))}
+                    </>
+                )}
+                {isExtended && (
+                    <>
+                        <p className="text-[10px] text-muted-foreground px-2 pb-1">
+                            Select new duration (0 = revert to CFR)
+                        </p>
+                        <DropdownMenuItem
+                            onClick={() => applyExtension(0)}
+                            disabled={loading}
+                            className="gap-2 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                        >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Revert to CFR
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {[1, 2, 3, 4].map((d) => (
+                            <DropdownMenuItem
+                                key={d}
+                                onClick={() => applyExtension(d)}
+                                disabled={loading}
+                                className="gap-2 cursor-pointer"
+                            >
+                                <RefreshCw className="h-3.5 w-3.5 text-violet-500" />
+                                Re-extend {d} day{d > 1 ? "s" : ""}
+                            </DropdownMenuItem>
+                        ))}
+                    </>
+                )}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}
 
 function JobStatusSelect({ job, onRefresh }: { job: Job; onRefresh?: () => void }) {
     const [status, setStatus] = useState(job.status);
@@ -217,6 +373,7 @@ export default function JobsTable({
     showEstCreatedDateTime = false,
     showCfrExtend = false,
     onRefresh,
+    onJobUpdated,
     serverPaginated = false,
     serverTotal,
 }: JobsTableProps) {
@@ -231,7 +388,8 @@ export default function JobsTable({
     const sessionRoles: string[] = userRoles.map((r: string) => r?.toUpperCase?.());
     const isAdmin = sessionRoles.includes("ADMIN");
     const isDeliveryHead = sessionRoles.includes("DELIVERY_HEAD") || sessionRoles.includes("DELIVERY-HEAD");
-    const canEditByRole = isAdmin || isDeliveryHead;
+    const isAccountManager = sessionRoles.includes("ACCOUNT_MANAGER") || sessionRoles.includes("ACCOUNT-MANAGER");
+    const canEditByRole = isAdmin || isDeliveryHead || isAccountManager;
     const [currentPage, setCurrentPage] = useState(1);
     const [podFilter, setPodFilter] = useState<string>("all");
     const [amFilter, setAmFilter] = useState<string>("all");
@@ -453,10 +611,13 @@ export default function JobsTable({
         setCurrentPage(1);
     };
 
-    // Inline editing state
+    // Inline editing state (used by showActions column only)
     const [editingJobId, setEditingJobId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Partial<Job>>({});
     const [isSaving, setIsSaving] = useState(false);
+
+    // Popup edit dialog state (used by ⋮ sticky column)
+    const [editDialogJob, setEditDialogJob] = useState<Job | null>(null);
 
     const startEdit = (job: Job) => {
         setEditingJobId(job.id);
@@ -494,14 +655,26 @@ export default function JobsTable({
             }
             toast.success("Job updated successfully");
             setEditingJobId(null);
-            if (onRefresh) onRefresh();
-            else router.refresh();
+            refreshJob(jobId);
         } catch (error: any) {
             toast.error(error.message || "Something went wrong");
         } finally {
             setIsSaving(false);
         }
     };
+
+    /**
+     * Silently patches a single job row after any inline action.
+     * Calls onJobUpdated if the parent supports silent patching,
+     * otherwise falls back to onRefresh (full re-fetch).
+     */
+    const refreshJob = useCallback((jobId: string) => {
+        if (onJobUpdated) {
+            onJobUpdated(jobId);
+        } else if (onRefresh) {
+            onRefresh();
+        }
+    }, [onJobUpdated, onRefresh]);
 
     const ef = (field: keyof Job) => (e: React.ChangeEvent<HTMLInputElement>) =>
         setEditForm(prev => ({ ...prev, [field]: e.target.value }));
@@ -727,13 +900,18 @@ export default function JobsTable({
                                     Actions
                                 </TableHead>
                             )}
+                            {canEditByRole && (
+                                <TableHead className="sticky right-0 z-20 bg-slate-100/95 dark:bg-slate-700/95 text-base px-4 h-12 border-b border-l border-neutral-200 dark:border-slate-600 text-center w-12 min-w-[48px] shadow-[-1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[-1px_0_0_0_rgba(71,85,105,1)]">
+                                    <Edit2 className="h-3.5 w-3.5 mx-auto text-neutral-400" />
+                                </TableHead>
+                            )}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {currentJobs.length === 0 ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0)}
+                                    colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)}
                                     className="h-24 text-center text-muted-foreground italic"
                                 >
                                     No jobs found.
@@ -787,7 +965,7 @@ export default function JobsTable({
                                         <React.Fragment key={job.id}>
                                             {showTodayHeader && (
                                                 <TableRow className="bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20">
-                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0)} className="py-2 px-0">
+                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)} className="py-2 px-0">
                                                         <div className="sticky left-0 px-4 flex items-center gap-2 w-max">
                                                             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                                                             <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">Today's Jobs</span>
@@ -797,7 +975,7 @@ export default function JobsTable({
                                             )}
                                             {showNewSubHeader && (
                                                 <TableRow className="bg-emerald-100/10 dark:bg-emerald-900/5 hover:bg-emerald-100/10 dark:hover:bg-emerald-900/5 border-0">
-                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0)} className="py-1 px-0 border-b border-emerald-50 dark:border-emerald-900/20 text-start">
+                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)} className="py-1 px-0 border-b border-emerald-50 dark:border-emerald-900/20 text-start">
                                                         <div className="sticky left-0 px-6 w-max">
                                                             <span className="text-[10px] font-bold text-emerald-600/80 dark:text-emerald-500/80 uppercase tracking-widest italic">New Requirements</span>
                                                         </div>
@@ -806,7 +984,7 @@ export default function JobsTable({
                                             )}
                                             {showCfrExtSubHeader && (
                                                 <TableRow className="bg-amber-100/10 dark:bg-amber-900/5 hover:bg-amber-100/10 dark:hover:bg-amber-900/5 border-0">
-                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0)} className="py-1 px-0 border-b border-amber-50 dark:border-amber-900/20 text-start">
+                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)} className="py-1 px-0 border-b border-amber-50 dark:border-amber-900/20 text-start">
                                                         <div className="sticky left-0 px-6 w-max">
                                                             <span className="text-[10px] font-bold text-amber-600/80 dark:text-amber-500/80 uppercase tracking-widest italic">Requirement Extensions (CFR)</span>
                                                         </div>
@@ -815,7 +993,7 @@ export default function JobsTable({
                                             )}
                                             {showPastHeader && (
                                                 <TableRow className="bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50/50 dark:hover:bg-red-950/20 shadow-sm border-0">
-                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0)} className="py-2 px-0 border-b border-red-100 dark:border-red-900/30">
+                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)} className="py-2 px-0 border-b border-red-100 dark:border-red-900/30">
                                                         <div className="sticky left-0 px-4 w-max">
                                                             <span className="text-sm font-bold text-red-700 dark:text-red-400 uppercase tracking-widest">Past Jobs</span>
                                                         </div>
@@ -852,12 +1030,22 @@ export default function JobsTable({
                                                                     <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-600 border-emerald-200">New</span>
                                                                 )}
                                                                 {job.requirementType === "CFR" && (
-                                                                    <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border bg-rose-50 text-rose-600 border-rose-200">CFR</span>
+                                                                    <>
+                                                                        <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border bg-rose-50 text-rose-600 border-rose-200">CFR</span>
+                                                                        {showCfrExtend && canEditByRole && (
+                                                                            <CfrExtendButton jobId={job.id} currentType={job.requirementType} onSuccess={() => refreshJob(job.id)} />
+                                                                        )}
+                                                                    </>
                                                                 )}
                                                                 {job.requirementType === "CFR_EXTENDED" && (
-                                                                    <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-200">
-                                                                        CFR Ext {job.cfrDaysRemaining !== undefined ? `· ${job.cfrDaysRemaining}d left` : ""}
-                                                                    </span>
+                                                                    <>
+                                                                        <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-200">
+                                                                            CFR Ext {job.cfrDaysRemaining !== undefined ? `· ${job.cfrDaysRemaining}d left` : ""}
+                                                                        </span>
+                                                                        {showCfrExtend && canEditByRole && (
+                                                                            <CfrExtendButton jobId={job.id} currentType={job.requirementType} onSuccess={() => refreshJob(job.id)} />
+                                                                        )}
+                                                                    </>
                                                                 )}
                                                                 {job.urgency && (
                                                                     <span className={`text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${job.urgency === "HOT" ? "bg-red-50 text-red-600 border-red-200" :
@@ -881,9 +1069,8 @@ export default function JobsTable({
                                                                             : job.pod ? [job.pod] : [];
 
                                                                 const myPodIds = new Set(availablePods.map(p => p.id));
-                                                                const ownsAllAssignedPods = resolvedAssignedPods.every((p) => myPodIds.has(p.id));
                                                                 const isJobActive = job.status !== "CLOSED" && job.status !== "FILLED";
-                                                                const canEdit = (isAdmin || (canEditByRole && ownsAllAssignedPods)) && isJobActive;
+                                                                const canEdit = (isAdmin || isDeliveryHead) && isJobActive;
 
                                                                 return (
                                                                     <div className="flex flex-col gap-1.5">
@@ -893,7 +1080,7 @@ export default function JobsTable({
                                                                             assignedRecruiters={job.assignedRecruiters}
                                                                             availablePods={availablePods}
                                                                             canEdit={canEdit}
-                                                                            onSuccess={() => { if (onRefresh) onRefresh(); else router.refresh(); }}
+                                                                            onSuccess={() => refreshJob(job.id)}
                                                                         />
                                                                     </div>
                                                                 );
@@ -985,7 +1172,7 @@ export default function JobsTable({
                                                         {job.requirementType === "CFR" && (
                                                             <div className="flex flex-col gap-1">
                                                                 <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border w-fit bg-red-50 text-red-700 border-red-200">Carry Forward</span>
-                                                                {showCfrExtend && <CfrExtendButton jobId={job.id} currentType={job.requirementType} onSuccess={onRefresh} />}
+                                                                {showCfrExtend && <CfrExtendButton jobId={job.id} currentType={job.requirementType} onSuccess={() => refreshJob(job.id)} />}
                                                             </div>
                                                         )}
                                                         {job.requirementType === "CFR_EXTENDED" && (
@@ -993,7 +1180,7 @@ export default function JobsTable({
                                                                 <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border w-fit bg-amber-50 text-amber-700 border-amber-200 whitespace-nowrap">
                                                                     CFR Ext · {job.cfrDaysRemaining ?? 0}d left
                                                                 </span>
-                                                                {showCfrExtend && <CfrExtendButton jobId={job.id} currentType={job.requirementType} onSuccess={onRefresh} />}
+                                                                {showCfrExtend && <CfrExtendButton jobId={job.id} currentType={job.requirementType} onSuccess={() => refreshJob(job.id)} />}
                                                             </div>
                                                         )}
                                                         {!["NEW", "CFR", "CFR_EXTENDED"].includes(job.requirementType) && (
@@ -1038,7 +1225,7 @@ export default function JobsTable({
                                                 {/* Status */}
                                                 <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-center">
                                                     <div className="flex justify-center">
-                                                        <JobStatusSelect job={job} onRefresh={onRefresh} />
+                                                        <JobStatusSelect job={job} onRefresh={() => refreshJob(job.id)} />
                                                     </div>
                                                 </TableCell>
                                                 {/* Actions */}
@@ -1065,6 +1252,37 @@ export default function JobsTable({
                                                                 </>
                                                             )}
                                                         </div>
+                                                    </TableCell>
+                                                )}
+                                                {/* Sticky-right ⋮ menu for DH & Admin */}
+                                                {canEditByRole && (
+                                                    <TableCell
+                                                        className={cn(
+                                                            "sticky right-0 z-30 py-2 px-2 border-b border-l border-neutral-200 dark:border-slate-600 text-center w-12 min-w-[48px] shadow-[-1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[-1px_0_0_0_rgba(71,85,105,1)]",
+                                                            stickyBgClass
+                                                        )}
+                                                    >
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-7 w-7 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 dark:hover:bg-slate-700"
+                                                                    title="Actions"
+                                                                >
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" side="bottom" className="w-40">
+                                                                <DropdownMenuItem
+                                                                    onClick={() => setEditDialogJob(job)}
+                                                                    className="gap-2 cursor-pointer"
+                                                                >
+                                                                    <Edit2 className="h-3.5 w-3.5 text-amber-500" />
+                                                                    Edit job
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     </TableCell>
                                                 )}
                                             </TableRow>
@@ -1149,6 +1367,21 @@ export default function JobsTable({
                     </div>
                 </div>
             )}
+            {/* Job edit popup dialog */}
+            <JobEditDialog
+                job={editDialogJob as any}
+                isOpen={!!editDialogJob}
+                onClose={() => setEditDialogJob(null)}
+                onSuccess={() => {
+                    const savedId = editDialogJob?.id;
+                    setEditDialogJob(null);
+                    if (savedId && onJobUpdated) {
+                        onJobUpdated(savedId);
+                    } else if (onRefresh) {
+                        onRefresh();
+                    }
+                }}
+            />
         </div>
     );
 }
