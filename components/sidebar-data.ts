@@ -58,57 +58,6 @@ export const getSidebarData = (role: string) => {
       url: "/admin/dashboard/chats",
       icon: MessageCircleMore,
     },
-    {
-      label: "Finance & Accounting",
-    },
-    {
-      title: "Finance Menu",
-      url: "#",
-      icon: ChartPie,
-      isActive: true,
-      items: [
-        {
-          title: "Finance Dashboard",
-          url: "/finance",
-          icon: ChartPie,
-        },
-        {
-          title: "Consultant Roster",
-          url: "/finance/roster",
-          icon: ClipboardList,
-        },
-        {
-          title: "All Consultants",
-          url: "/finance/consultants",
-          icon: UsersRound,
-        },
-        {
-          title: "Full Onboard",
-          url: "/finance/candidate-onboard",
-          icon: StickyNote,
-        },
-        {
-          title: "Assign Projects",
-          url: "/finance/projects",
-          icon: Boxes,
-        },
-        {
-          title: "Log Hours",
-          url: "/finance/hours",
-          icon: Component,
-        },
-        {
-          title: "Invoices",
-          url: "/finance/invoices",
-          icon: StickyNote,
-        },
-        {
-          title: "Payments",
-          url: "/finance/payments",
-          icon: BriefcaseBusiness,
-        },
-      ],
-    },
   ];
 
   const accountManagerNav = [
