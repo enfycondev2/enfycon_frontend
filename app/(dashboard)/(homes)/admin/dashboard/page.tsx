@@ -138,10 +138,25 @@ async function getSubmissions(): Promise<SubmissionRow[]> {
   }
 }
 
+async function getPerformanceTrends(interval: string = "daily"): Promise<any[]> {
+  try {
+    const response = await serverApiClient(`/dashboard/admin/performance-trends?interval=${interval}`, { cache: "no-store" });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return Array.isArray(data?.data) ? data.data : [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function DashboardPage() {
   const session = await auth();
   const userName = session?.user?.name || "User";
-  const [jobs, submissions] = await Promise.all([getJobs(), getSubmissions()]);
+  const [jobs, submissions, performanceTrends] = await Promise.all([
+    getJobs(),
+    getSubmissions(),
+    getPerformanceTrends("daily")
+  ]);
 
   const welcomeMessage = `${getGreeting()}, ${userName}!`;
 
@@ -251,7 +266,7 @@ export default async function DashboardPage() {
         {/* Performance Tables - Added as per USER_REQUEST */}
         <div className="xl:col-span-12">
           <Suspense fallback={<LoadingSkeleton />}>
-            <DatewiseSubmissionTable jobs={jobs} />
+            <DatewiseSubmissionTable jobs={jobs} initialTrends={performanceTrends} />
           </Suspense>
         </div>
 

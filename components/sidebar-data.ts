@@ -55,6 +55,11 @@ export const getSidebarData = (role: string) => {
           url: "/admin/dashboard/notifications",
           icon: Bell,
         },
+        {
+          title: "Users Management",
+          url: "/admin/dashboard/users",
+          icon: UsersRound,
+        },
       ],
     },{
        label: "Application",
