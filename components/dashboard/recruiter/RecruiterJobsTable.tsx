@@ -630,10 +630,25 @@ export default function RecruiterJobsTable({
                                                         teamMembers={teamMembers}
                                                         token={token}
                                                         canEdit={isPodLead || roles.includes('ADMIN') || roles.includes('DELIVERY_HEAD')}
+                                                        variant="popover"
+                                                        onSuccess={() => {
+                                                            if (onRefresh) onRefresh();
+                                                            else router.refresh();
+                                                        }}
+                                                    />
+                                                    
+                                                    {/* Hidden dialog variant for action menu trigger */}
+                                                    <RecruiterAssignCell
+                                                        jobId={job.id}
+                                                        assignedRecruiters={job.assignedRecruiters || []}
+                                                        teamMembers={teamMembers}
+                                                        token={token}
+                                                        canEdit={isPodLead || roles.includes('ADMIN') || roles.includes('DELIVERY_HEAD')}
+                                                        variant="dialog"
+                                                        triggerMode="none"
                                                         open={assigningJobId === job.id}
                                                         onOpenChange={(open) => {
-                                                            if (open) setAssigningJobId(job.id);
-                                                            else if (assigningJobId === job.id) setAssigningJobId(null);
+                                                            if (!open && assigningJobId === job.id) setAssigningJobId(null);
                                                         }}
                                                         onSuccess={() => {
                                                             if (onRefresh) onRefresh();

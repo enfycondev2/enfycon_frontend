@@ -7,6 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -29,7 +34,8 @@ interface RecruiterAssignCellProps {
     token: string;
     canEdit?: boolean;
     onSuccess?: () => void;
-    triggerMode?: "default" | "icon";
+    triggerMode?: "button" | "icon" | "none";
+    variant?: "popover" | "dialog";
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
 }
@@ -63,11 +69,12 @@ export default function RecruiterAssignCell({
     assignedRecruiters,
     teamMembers,
     token,
-    canEdit = false,
-    onSuccess,
-    triggerMode = "default",
+    canEdit,
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange,
+    onSuccess,
+    triggerMode = "button",
+    variant = "popover",
 }: RecruiterAssignCellProps) {
     const [internalOpen, setInternalOpen] = useState(false);
     
@@ -225,137 +232,148 @@ export default function RecruiterAssignCell({
         </button>
     );
 
-    const finalTrigger = triggerMode === "icon" ? iconTrigger : trigger;
+    const finalTrigger = triggerMode === "none" ? null : (triggerMode === "icon" ? iconTrigger : trigger);
+
+    const content = (
+        <>
+            {/* Header */}
+            <div className="flex items-center justify-between px-3 pr-10 py-2.5 bg-neutral-50 dark:bg-slate-800 border-b border-neutral-200 dark:border-slate-600">
+                <span className="text-xs font-semibold text-neutral-600 dark:text-slate-300 uppercase tracking-wider">
+                    Assign Recruiters
+                </span>
+                {selected.size > 0 && (
+                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5 shrink-0">
+                        {selected.size} selected
+                    </Badge>
+                )}
+            </div>
+
+            {/* Search - only show if more than 6 members */}
+            {teamMembers.length > 6 && (
+                <div className="px-3 py-2 border-b border-neutral-100 dark:border-slate-700">
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
+                        <Input
+                            placeholder="Search team members..."
+                            className="pl-8 h-8 text-xs bg-white dark:bg-slate-900 border-neutral-200 dark:border-slate-600 focus-visible:ring-blue-500"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            autoFocus
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Member list */}
+            <div className="max-h-[320px] overflow-y-auto py-1 scrollbar-thin scrollbar-thumb-neutral-200 dark:scrollbar-thumb-slate-700">
+                {filteredMembers.length === 0 ? (
+                    <p className="text-xs text-neutral-400 text-center py-6">
+                        No members found
+                    </p>
+                ) : (
+                    filteredMembers.map((member) => {
+                        const isSelected = selected.has(member.id);
+                        return (
+                            <button
+                                key={member.id}
+                                type="button"
+                                onClick={() => toggleMember(member.id)}
+                                className={`w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-neutral-50 dark:hover:bg-slate-700/60 ${isSelected
+                                    ? "bg-blue-50/60 dark:bg-blue-900/20"
+                                    : ""
+                                    }`}
+                            >
+                                {/* Avatar */}
+                                <span
+                                    className={`inline-flex shrink-0 items-center justify-center h-7 w-7 rounded-full text-[10px] font-bold ${getAvatarColor(member.id)}`}
+                                >
+                                    {getInitials(member.fullName, member.email)}
+                                </span>
+                                {/* Name + email */}
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-neutral-800 dark:text-slate-100 truncate leading-tight">
+                                        {member.fullName || "Unknown"}
+                                    </p>
+                                    <p className="text-[10px] text-neutral-400 truncate leading-tight">
+                                        {member.email}
+                                    </p>
+                                </div>
+                                {/* Checkbox */}
+                                <div className={`flex items-center justify-center h-4 w-4 rounded border transition-colors ${isSelected ? "bg-blue-600 border-blue-600 text-white" : "border-neutral-300 dark:border-slate-600"}`}>
+                                    {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
+                                </div>
+                            </button>
+                        );
+                    })
+                )}
+            </div>
+
+            {/* Footer / Actions */}
+            <div className="flex items-center justify-between px-3 py-2.5 bg-neutral-50 dark:bg-slate-800/50 border-t border-neutral-200 dark:border-slate-600">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-[11px] h-8 px-2 text-neutral-500 hover:text-neutral-700"
+                    onClick={() => setSelected(new Set())}
+                >
+                    Clear all
+                </Button>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-[11px] h-8 px-3"
+                        onClick={() => setOpen(false)}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        size="sm"
+                        className="text-[11px] h-8 px-4 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                        disabled={!hasChanges || saving}
+                        onClick={handleSave}
+                    >
+                        {saving ? (
+                            <>
+                                <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
+                                Saving...
+                            </>
+                        ) : (
+                            "Save"
+                        )}
+                    </Button>
+                </div>
+            </div>
+        </>
+    );
+
+    if (variant === "dialog") {
+        return (
+            <Dialog open={open} onOpenChange={setOpen}>
+                {finalTrigger && <DialogTrigger asChild>{finalTrigger}</DialogTrigger>}
+                <DialogContent
+                    className="max-w-md p-0 overflow-hidden border-none shadow-2xl"
+                >
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>Assign Recruiters</DialogTitle>
+                        <DialogDescription>Select team members to assign to this job.</DialogDescription>
+                    </DialogHeader>
+                    {content}
+                </DialogContent>
+            </Dialog>
+        );
+    }
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>{finalTrigger}</DialogTrigger>
-            <DialogContent
-                className="max-w-md p-0 overflow-hidden border-none shadow-2xl"
-                onPointerDownOutside={(e) => {
-                    // Prevent accidental closure if needed, but Dialog is usually very stable
-                }}
+        <Popover open={open} onOpenChange={setOpen}>
+            {finalTrigger && <PopoverTrigger asChild>{finalTrigger}</PopoverTrigger>}
+            <PopoverContent
+                className="w-72 p-0 shadow-xl border border-neutral-200 dark:border-slate-600 rounded-xl overflow-hidden"
+                align="start"
+                side="bottom"
             >
-                <DialogHeader className="sr-only">
-                    <DialogTitle>Assign Recruiters</DialogTitle>
-                    <DialogDescription>Select team members to assign to this job.</DialogDescription>
-                </DialogHeader>
-                {/* Header */}
-                <div className="flex items-center justify-between px-3 pr-10 py-2.5 bg-neutral-50 dark:bg-slate-800 border-b border-neutral-200 dark:border-slate-600">
-                    <span className="text-xs font-semibold text-neutral-600 dark:text-slate-300 uppercase tracking-wider">
-                        Assign Recruiters
-                    </span>
-                    {selected.size > 0 && (
-                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 shrink-0">
-                            {selected.size} selected
-                        </Badge>
-                    )}
-                </div>
-
-                {/* Search - only show if more than 6 members */}
-                {teamMembers.length > 6 && (
-                    <div className="px-3 py-2 border-b border-neutral-100 dark:border-slate-700">
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
-                            <Input
-                                placeholder="Search team members..."
-                                className="pl-8 h-8 text-xs bg-white dark:bg-slate-900 border-neutral-200 dark:border-slate-600 focus-visible:ring-blue-500"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                autoFocus
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {/* Member list */}
-                <div className="max-h-[320px] overflow-y-auto py-1 scrollbar-thin scrollbar-thumb-neutral-200 dark:scrollbar-thumb-slate-700">
-                    {filteredMembers.length === 0 ? (
-                        <p className="text-xs text-neutral-400 text-center py-6">
-                            No members found
-                        </p>
-                    ) : (
-                        filteredMembers.map((member) => {
-                            const isSelected = selected.has(member.id);
-                            return (
-                                <button
-                                    key={member.id}
-                                    type="button"
-                                    onClick={() => toggleMember(member.id)}
-                                    className={`w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-neutral-50 dark:hover:bg-slate-700/60 ${isSelected
-                                        ? "bg-blue-50/60 dark:bg-blue-900/20"
-                                        : ""
-                                        }`}
-                                >
-                                    {/* Avatar */}
-                                    <span
-                                        className={`inline-flex shrink-0 items-center justify-center h-7 w-7 rounded-full text-[10px] font-bold ${getAvatarColor(member.id)}`}
-                                    >
-                                        {getInitials(member.fullName, member.email)}
-                                    </span>
-                                    {/* Name + email */}
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-neutral-800 dark:text-slate-100 truncate leading-tight">
-                                            {member.fullName || "Unknown"}
-                                        </p>
-                                        <p className="text-[10px] text-neutral-400 truncate leading-tight">
-                                            {member.email}
-                                        </p>
-                                    </div>
-                                    {/* Checkbox */}
-                                    <span
-                                        className={`shrink-0 flex items-center justify-center h-4 w-4 rounded border transition-colors ${isSelected
-                                            ? "bg-blue-600 border-blue-600"
-                                            : "border-neutral-300 dark:border-slate-500"
-                                            }`}
-                                    >
-                                        {isSelected && (
-                                            <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
-                                        )}
-                                    </span>
-                                </button>
-                            );
-                        })
-                    )}
-                </div>
-
-                {/* Footer / Actions */}
-                <div className="flex items-center justify-between px-3 py-2.5 bg-neutral-50 dark:bg-slate-800/50 border-t border-neutral-200 dark:border-slate-600">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-[11px] h-8 px-2 text-neutral-500 hover:text-neutral-700"
-                        onClick={() => setSelected(new Set())}
-                    >
-                        Clear all
-                    </Button>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-[11px] h-8 px-3"
-                            onClick={() => setOpen(false)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            size="sm"
-                            className="text-[11px] h-8 px-4 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                            disabled={!hasChanges || saving}
-                            onClick={handleSave}
-                        >
-                            {saving ? (
-                                <>
-                                    <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
-                                    Saving...
-                                </>
-                            ) : (
-                                "Save"
-                            )}
-                        </Button>
-                    </div>
-                </div>
-            </DialogContent>
-        </Dialog>
+                {content}
+            </PopoverContent>
+        </Popover>
     );
 }
