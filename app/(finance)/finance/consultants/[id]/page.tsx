@@ -6,6 +6,7 @@ import Link from "next/link";
 import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet, financePatch, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import { apiClient } from "@/lib/apiClient";
 
 const STATUS_OPTIONS = ["ACTIVE", "INACTIVE", "ENDED", "ON_HOLD"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -352,6 +353,48 @@ function AddContractForm({ projects, onCreated }: { projects: any[]; onCreated: 
     );
 }
 
+const STEPS = ["Consultant Info", "Billing & Rates"];
+
+function StepIndicator({ current, steps }: { current: number; steps: string[] }) {
+    return (
+        <div className="flex items-center gap-0 mb-8">
+            {steps.map((label, i) => {
+                const done = i < current;
+                const active = i === current;
+                return (
+                    <div key={i} className="flex items-center flex-1 last:flex-none">
+                        <div className="flex flex-col items-center">
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all
+                                ${done ? "bg-violet-600 border-violet-600 text-white" : active ? "border-violet-600 bg-white text-violet-600" : "border-gray-300 bg-white text-gray-400"}`}>
+                                {done ? (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                                ) : i + 1}
+                            </div>
+                            <span className={`mt-1 text-xs font-medium whitespace-nowrap ${active ? "text-violet-600" : done ? "text-violet-500" : "text-gray-400"}`}>{label}</span>
+                        </div>
+                        {i < steps.length - 1 && (
+                            <div className={`h-0.5 flex-1 mx-2 mb-4 transition-all ${done ? "bg-violet-500" : "bg-gray-200"}`} />
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: React.ReactNode }) {
+    return (
+        <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">{label}</label>
+            {children}
+            {hint && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
+        </div>
+    );
+}
+
+const inputCls = "w-full border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2.5 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm transition";
+const selectCls = `${inputCls} cursor-pointer`;
+
 // ─── Main Detail ──────────────────────────────────────────────────────────────
 function ConsultantDetailContent() {
     const { id } = useParams<{ id: string }>();
@@ -360,7 +403,19 @@ function ConsultantDetailContent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [editing, setEditing] = useState(false);
-    const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", status: "" });
+    const [editStep, setEditStep] = useState(0);
+    const [editForm, setEditForm] = useState<any>({
+        name: "", email: "", phone: "", status: "",
+        immigrationStatus: "", engagementType: "",
+        recruiterId: "", accountManagerId: "", podHeadId: "", jobCode: "",
+        c2cVendorName: "", c2cContactPerson: "", c2cContactEmail: "",
+        c2cAddress: "", c2cPhoneFax: "", clientPaymentTermsDays: "30", c2cProjectStartDate: ""
+    });
+    const [billingForm, setBillingForm] = useState<any>({
+        clientName: "", endClientName: "", startDate: "", endDate: "",
+        billingRate: "", payRate: "", currency: "USD", paymentTermsDays: "30"
+    });
+
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState("");
     const [showLogHours, setShowLogHours] = useState(false);
@@ -376,18 +431,134 @@ function ConsultantDetailContent() {
         try {
             const res = await financeGet(`finance/consultants/${id}`);
             setData(res);
-            setEditForm({ name: res.name, email: res.email, phone: res.phone ?? "", status: res.status });
+            setEditForm({
+                name: res.name, email: res.email, phone: res.phone ?? "", status: res.status,
+                immigrationStatus: res.immigrationStatus ?? "",
+                engagementType: res.engagementType ?? "",
+                recruiterId: res.recruiterId ?? "",
+                accountManagerId: res.accountManagerId ?? "",
+                podHeadId: res.podHeadId ?? "",
+                c2cVendorName: res.c2cVendorName ?? "",
+                c2cContactPerson: res.c2cContactPerson ?? "",
+                c2cContactEmail: res.c2cContactEmail ?? "",
+                c2cAddress: res.c2cAddress ?? "",
+                c2cPhoneFax: res.c2cPhoneFax ?? "",
+                clientPaymentTermsDays: res.clientPaymentTermsDays ? String(res.clientPaymentTermsDays) : "30",
+                c2cProjectStartDate: res.c2cProjectStartDate ? new Date(res.c2cProjectStartDate).toISOString().slice(0, 10) : ""
+            });
+
+            const activeProject = res.projects?.find((p: any) => p.status === "ACTIVE") ?? res.projects?.[0];
+            const contract = activeProject?.contracts?.[0];
+
+            setBillingForm({
+                clientName: activeProject?.clientName ?? "",
+                endClientName: activeProject?.endClientName ?? "",
+                startDate: activeProject?.startDate ? new Date(activeProject.startDate).toISOString().slice(0, 10) : "",
+                endDate: activeProject?.endDate ? new Date(activeProject.endDate).toISOString().slice(0, 10) : "",
+                billingRate: contract ? String(Number(contract.billRate)) : "",
+                payRate: contract ? String(Number(contract.payRate)) : "",
+                currency: contract?.currency ?? "USD",
+                paymentTermsDays: contract?.paymentTermsDays ? String(contract.paymentTermsDays) : "30"
+            });
+
+            // Try to fetch submission if possible - for now we'll just use default/blank or from res if we had it
+            // Based on recruiter-submissions service, we don't have a direct "by consultant" search but we can filter by recruiter.
+            // For now, we'll keep it as is or pull from a separate call if needed.
         } catch (err: any) { setError(err.message); }
         finally { setLoading(false); }
     }
 
     useEffect(() => { load(); }, [id]);
 
-    async function handleSave(e: React.FormEvent) {
+    async function handleSaveStep1(e: React.FormEvent) {
         e.preventDefault();
         setSaving(true); setSaveError("");
-        try { await financePatch(`finance/consultants/${id}`, editForm); setEditing(false); await load(); }
-        catch (err: any) { setSaveError(err.message); }
+        try {
+            const payload = { ...editForm };
+            const jobCodeToSubmit = payload.jobCode;
+            delete payload.jobCode;
+            
+            // Clean up engagement fields if not C2C, avoiding empty string validation errors
+            if (payload.engagementType !== "C2C") {
+                payload.c2cVendorName = null;
+                payload.c2cContactPerson = null;
+                payload.c2cContactEmail = null;
+                payload.c2cAddress = null;
+                payload.c2cPhoneFax = null;
+                payload.c2cProjectStartDate = null;
+            } else {
+                if (payload.c2cContactEmail === "") payload.c2cContactEmail = null;
+                if (payload.c2cProjectStartDate === "") payload.c2cProjectStartDate = null;
+                else payload.c2cProjectStartDate = new Date(payload.c2cProjectStartDate).toISOString();
+            }
+            
+            if (payload.clientPaymentTermsDays) payload.clientPaymentTermsDays = parseInt(payload.clientPaymentTermsDays, 10);
+            else payload.clientPaymentTermsDays = 0;
+            
+            // Convert empty strings to null for optional references
+            if (payload.podHeadId === "") payload.podHeadId = null;
+            if (payload.phone === "") payload.phone = null;
+            if (payload.immigrationStatus === "") payload.immigrationStatus = null;
+            if (payload.engagementType === "") payload.engagementType = null;
+
+            await financePatch(`finance/consultants/${id}`, payload);
+
+            if (jobCodeToSubmit?.trim()) {
+                try {
+                    await financePost(`finance/consultants/${id}/job-submission`, {
+                        jobCode: jobCodeToSubmit.trim(),
+                        candidateCurrentLocation: "N/A",
+                        submissionDate: new Date().toISOString()
+                    });
+                } catch (err) {
+                    console.error("Optional job submission failed", err);
+                }
+            }
+
+            setEditStep(1);
+        } catch (err: any) { setSaveError(err.message); }
+        finally { setSaving(false); }
+    }
+
+    // Helper for apiClient since it might be named differently in this scope or needs import
+    // Actually, I should check how apiClient is imported in this file. It's not yet.
+    // I'll add it to the imports if needed, but wait, the original file uses financePost.
+    // Onboarding used apiClient. I'll stick to what works.
+
+    async function handleSaveStep3(e: React.FormEvent) {
+        e.preventDefault();
+        setSaving(true); setSaveError("");
+        try {
+            const activeProject = data.projects?.find((p: any) => p.status === "ACTIVE") ?? data.projects?.[0];
+            let projectId = activeProject?.id;
+
+            const projectPayload: any = {
+                consultantId: id,
+                clientName: billingForm.clientName,
+                startDate: new Date(billingForm.startDate).toISOString()
+            };
+            if (billingForm.endClientName) projectPayload.endClientName = billingForm.endClientName;
+            if (billingForm.endDate) projectPayload.endDate = new Date(billingForm.endDate).toISOString();
+
+            if (projectId) {
+                await financePatch(`finance/projects/${projectId}`, projectPayload);
+            } else {
+                const res = await financePost("finance/projects", projectPayload);
+                projectId = res.id ?? res.data?.id;
+            }
+
+            await financePost("finance/contracts", {
+                projectId,
+                billRate: parseFloat(billingForm.billingRate),
+                payRate: parseFloat(billingForm.payRate),
+                currency: billingForm.currency,
+                paymentTermsDays: parseInt(billingForm.paymentTermsDays, 10)
+            });
+
+            setEditing(false);
+            setEditStep(0);
+            await load();
+        } catch (err: any) { setSaveError(err.message); }
         finally { setSaving(false); }
     }
 
@@ -419,6 +590,158 @@ function ConsultantDetailContent() {
     const projects: any[] = data.projects ?? [];
     const allInvoices = projects.flatMap((p: any) => (p.invoices ?? []).map((inv: any) => ({ ...inv, projectName: p.clientName ?? "Project" })));
 
+    if (editing) {
+        return (
+            <>
+                <DashboardBreadcrumb title={`Edit ${data.name}`} text={`Finance / Consultants / ${data.name} / Edit`} />
+                <div className="max-w-3xl mx-auto py-4">
+                    <StepIndicator current={editStep} steps={STEPS} />
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-100 dark:border-gray-700 overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-violet-50 to-white dark:from-violet-900/20 dark:to-gray-800 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center font-bold text-sm">{editStep + 1}</div>
+                                <div>
+                                    <h2 className="font-bold text-gray-800 dark:text-white">{STEPS[editStep]}</h2>
+                                    <p className="text-xs text-gray-400">Update the consultant&apos;s details in 2 easy steps</p>
+                                </div>
+                            </div>
+                            <button onClick={() => { setEditing(false); setEditStep(0); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            {editStep === 0 && (
+                                <form onSubmit={handleSaveStep1} className="space-y-5">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <Field label="Full Name *">
+                                            <input required className={inputCls} value={editForm.name} onChange={(e) => setEditForm((f: any) => ({ ...f, name: e.target.value }))} />
+                                        </Field>
+                                        <Field label="Email Address *">
+                                            <input required type="email" className={inputCls} value={editForm.email} onChange={(e) => setEditForm((f: any) => ({ ...f, email: e.target.value }))} />
+                                        </Field>
+                                        <Field label="Phone">
+                                            <input type="tel" className={inputCls} value={editForm.phone} onChange={(e) => setEditForm((f: any) => ({ ...f, phone: e.target.value }))} />
+                                        </Field>
+                                        <Field label="Status">
+                                            <select className={selectCls} value={editForm.status} onChange={(e) => setEditForm((f: any) => ({ ...f, status: e.target.value }))}>
+                                                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
+                                            </select>
+                                        </Field>
+                                        <Field label="Immigration Status">
+                                            <select className={selectCls} value={editForm.immigrationStatus} onChange={(e) => setEditForm((f: any) => ({ ...f, immigrationStatus: e.target.value }))}>
+                                                <option value="">— Select —</option>
+                                                {["H1B", "OPT", "GC", "US_CITIZEN", "TN", "CPT"].map((v) => <option key={v} value={v}>{v.replace("_", " ")}</option>)}
+                                            </select>
+                                        </Field>
+                                        <Field label="Engagement Type">
+                                            <select className={selectCls} value={editForm.engagementType} onChange={(e) => setEditForm((f: any) => ({ ...f, engagementType: e.target.value }))}>
+                                                <option value="">— Select —</option>
+                                                {["W2", "C2C", "1099"].map((v) => <option key={v} value={v}>{v}</option>)}
+                                            </select>
+                                        </Field>
+                                    </div>
+                                    <div className="border-t border-gray-100 dark:border-gray-700 pt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <Field label="Job Code (Optional)" hint="Link to a job submission">
+                                            <input className={inputCls} placeholder="e.g. JOB-001" value={editForm.jobCode || ""} onChange={(e) => setEditForm((f: any) => ({ ...f, jobCode: e.target.value }))} />
+                                        </Field>
+                                        <Field label="Client Payment Terms (Days) *">
+                                            <input required type="number" min="0" className={inputCls} value={editForm.clientPaymentTermsDays} onChange={(e) => setEditForm((f: any) => ({ ...f, clientPaymentTermsDays: e.target.value }))} />
+                                        </Field>
+                                    </div>
+                                    <div className="border-t border-gray-100 dark:border-gray-700 pt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <Field label="Recruiter ID *">
+                                            <input required className={inputCls} value={editForm.recruiterId} onChange={(e) => setEditForm((f: any) => ({ ...f, recruiterId: e.target.value }))} />
+                                        </Field>
+                                        <Field label="Account Manager ID *">
+                                            <input required className={inputCls} value={editForm.accountManagerId} onChange={(e) => setEditForm((f: any) => ({ ...f, accountManagerId: e.target.value }))} />
+                                        </Field>
+                                        <Field label="Pod Head ID">
+                                            <input className={inputCls} value={editForm.podHeadId} onChange={(e) => setEditForm((f: any) => ({ ...f, podHeadId: e.target.value }))} />
+                                        </Field>
+                                    </div>
+
+                                    {editForm.engagementType === "C2C" && (
+                                        <div className="border-t border-gray-100 dark:border-gray-700 pt-5 space-y-5">
+                                            <h3 className="text-sm font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider">Agency / Vendor Details</h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-violet-50/50 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100 dark:border-violet-900/30">
+                                                <Field label="Agency / Vendor Name *">
+                                                    <input required className={inputCls} value={editForm.c2cVendorName} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cVendorName: e.target.value }))} />
+                                                </Field>
+                                                <Field label="Contact Person *">
+                                                    <input required className={inputCls} value={editForm.c2cContactPerson} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cContactPerson: e.target.value }))} />
+                                                </Field>
+                                                <Field label="Contact Email *">
+                                                    <input required type="email" className={inputCls} value={editForm.c2cContactEmail} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cContactEmail: e.target.value }))} />
+                                                </Field>
+                                                <Field label="Phone & Fax">
+                                                    <input className={inputCls} placeholder="123-456-7890" value={editForm.c2cPhoneFax} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cPhoneFax: e.target.value }))} />
+                                                </Field>
+                                                <Field label="Address">
+                                                    <input className={inputCls} value={editForm.c2cAddress} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cAddress: e.target.value }))} />
+                                                </Field>
+                                                <Field label="Vendor Assignment Start Date">
+                                                    <input type="date" className={inputCls} value={editForm.c2cProjectStartDate} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cProjectStartDate: e.target.value }))} />
+                                                </Field>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-end pt-4">
+                                        <button type="submit" disabled={saving} className="bg-violet-600 hover:bg-violet-700 text-white font-semibold px-8 py-2.5 rounded-xl transition flex items-center gap-2">
+                                            {saving ? "Saving…" : <>Next Step <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></>}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                            {editStep === 1 && (
+                                <form onSubmit={handleSaveStep3} className="space-y-5">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <Field label="Client Name *">
+                                            <input required className={inputCls} value={billingForm.clientName} onChange={(e) => setBillingForm((f: any) => ({ ...f, clientName: e.target.value }))} />
+                                        </Field>
+                                        <Field label="End Client Name">
+                                            <input className={inputCls} value={billingForm.endClientName} onChange={(e) => setBillingForm((f: any) => ({ ...f, endClientName: e.target.value }))} />
+                                        </Field>
+                                        <Field label="Project Start Date *">
+                                            <input required type="date" className={inputCls} value={billingForm.startDate} onChange={(e) => setBillingForm((f: any) => ({ ...f, startDate: e.target.value }))} />
+                                        </Field>
+                                        <Field label="Project End Date">
+                                            <input type="date" className={inputCls} value={billingForm.endDate} onChange={(e) => setBillingForm((f: any) => ({ ...f, endDate: e.target.value }))} />
+                                        </Field>
+                                        <Field label="Bill Rate ($/hr) *">
+                                            <input required type="number" step="0.01" className={inputCls} value={billingForm.billingRate} onChange={(e) => setBillingForm((f: any) => ({ ...f, billingRate: e.target.value }))} />
+                                        </Field>
+                                        <Field label="Pay Rate ($/hr) *">
+                                            <input required type="number" step="0.01" className={inputCls} value={billingForm.payRate} onChange={(e) => setBillingForm((f: any) => ({ ...f, payRate: e.target.value }))} />
+                                        </Field>
+                                        <Field label="Currency">
+                                            <select className={selectCls} value={billingForm.currency} onChange={(e) => setBillingForm((f: any) => ({ ...f, currency: e.target.value }))}>
+                                                {["USD", "CAD", "GBP", "EUR", "INR"].map((c) => <option key={c} value={c}>{c}</option>)}
+                                            </select>
+                                        </Field>
+                                        {editForm.engagementType !== "W2" && (
+                                            <Field label="Consultant Payment Terms (Days) *">
+                                                <input required type="number" className={inputCls} value={billingForm.paymentTermsDays} onChange={(e) => setBillingForm((f: any) => ({ ...f, paymentTermsDays: e.target.value }))} />
+                                            </Field>
+                                        )}
+                                    </div>
+                                    <div className="flex justify-between pt-4">
+                                        <button type="button" onClick={() => setEditStep(1)} className="text-gray-500 hover:text-gray-700 text-sm font-medium flex items-center gap-1">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Previous
+                                        </button>
+                                        <button type="submit" disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-8 py-2.5 rounded-xl transition flex items-center gap-2">
+                                            {saving ? "Saving…" : <>Finish & Save <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></>}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                            {saveError && <p className="mt-4 p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100">{saveError}</p>}
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
     return (
         <>
             <DashboardBreadcrumb title={data.name} text={`Finance / Consultants / ${data.name}`} />
@@ -426,49 +749,26 @@ function ConsultantDetailContent() {
                 {/* ── Left: Info Card ─────────────────────────────────── */}
                 <div className="xl:col-span-1 space-y-4">
                     <Card title="Consultant Info" action={
-                        <button onClick={() => setEditing(!editing)} className="text-xs text-violet-600 hover:underline">
-                            {editing ? "Cancel" : "Edit"}
+                        <button onClick={() => setEditing(true)} className="text-xs text-violet-600 hover:underline">
+                            Edit
                         </button>
                     }>
-                        {editing ? (
-                            <form onSubmit={handleSave} className="space-y-3">
-                                {[
-                                    { label: "Name", field: "name", type: "text" },
-                                    { label: "Email", field: "email", type: "email" },
-                                    { label: "Phone", field: "phone", type: "tel" },
-                                ].map(({ label, field, type }) => (
-                                    <div key={field}>
-                                        <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
-                                        <input type={type} value={(editForm as any)[field]} onChange={(e) => setEditForm(f => ({ ...f, [field]: e.target.value }))} className={iCls} />
-                                    </div>
-                                ))}
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Status</label>
-                                    <select value={editForm.status} onChange={(e) => setEditForm(f => ({ ...f, status: e.target.value }))} className={iCls}>
-                                        {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
-                                    </select>
+                        <dl className="space-y-3 text-sm">
+                            {[
+                                { label: "Name", value: data.name },
+                                { label: "Email", value: data.email },
+                                { label: "Phone", value: data.phone ?? "—" },
+                                { label: "Status", value: <StatusBadge status={data.status} /> },
+                                { label: "Recruiter", value: data.recruiter?.fullName ?? "—" },
+                                { label: "Acct Manager", value: data.accountManager?.fullName ?? "—" },
+                                { label: "Added", value: new Date(data.createdAt).toLocaleDateString() },
+                            ].map(({ label, value }) => (
+                                <div key={label} className="flex justify-between gap-2">
+                                    <dt className="text-gray-400">{label}</dt>
+                                    <dd className="font-medium text-gray-700 dark:text-gray-200 text-right">{value as any}</dd>
                                 </div>
-                                {saveError && <p className="text-red-500 text-xs">{saveError}</p>}
-                                <button type="submit" disabled={saving} className={`w-full ${btnPrimary}`}>{saving ? "Saving…" : "Save Changes"}</button>
-                            </form>
-                        ) : (
-                            <dl className="space-y-3 text-sm">
-                                {[
-                                    { label: "Name", value: data.name },
-                                    { label: "Email", value: data.email },
-                                    { label: "Phone", value: data.phone ?? "—" },
-                                    { label: "Status", value: <StatusBadge status={data.status} /> },
-                                    { label: "Recruiter", value: data.recruiter?.fullName ?? "—" },
-                                    { label: "Acct Manager", value: data.accountManager?.fullName ?? "—" },
-                                    { label: "Added", value: new Date(data.createdAt).toLocaleDateString() },
-                                ].map(({ label, value }) => (
-                                    <div key={label} className="flex justify-between gap-2">
-                                        <dt className="text-gray-400">{label}</dt>
-                                        <dd className="font-medium text-gray-700 dark:text-gray-200 text-right">{value as any}</dd>
-                                    </div>
-                                ))}
-                            </dl>
-                        )}
+                            ))}
+                        </dl>
                     </Card>
 
                     {/* Quick Action buttons */}

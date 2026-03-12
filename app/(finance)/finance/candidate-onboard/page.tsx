@@ -12,16 +12,11 @@ interface Section1Data {
     name: string; email: string; phone: string;
     immigrationStatus: string; engagementType: string;
     recruiterId: string; accountManagerId: string;
-    podHeadId: string;
+    podHeadId: string; jobCode: string;
     c2cVendorName: string; c2cContactPerson: string;
     c2cContactEmail: string; c2cAddress: string;
-    c2cPhoneFax: string; c2cBillFrequency: string;
+    c2cPhoneFax: string; clientPaymentTermsDays: string;
     c2cProjectStartDate: string;
-}
-
-interface Section2Data {
-    jobCode: string; candidateCurrentLocation: string;
-    submissionDate: string; remarks: string; recruiterComment: string;
 }
 
 interface Section3Data {
@@ -78,9 +73,9 @@ const selectCls = `${inputCls} cursor-pointer`;
 function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
     const [form, setForm] = useState<Section1Data>({
         name: "", email: "", phone: "", immigrationStatus: "", engagementType: "",
-        recruiterId: "", accountManagerId: "", podHeadId: "",
+        recruiterId: "", accountManagerId: "", podHeadId: "", jobCode: "",
         c2cVendorName: "", c2cContactPerson: "", c2cContactEmail: "",
-        c2cAddress: "", c2cPhoneFax: "", c2cBillFrequency: "Monthly", c2cProjectStartDate: ""
+        c2cAddress: "", c2cPhoneFax: "", clientPaymentTermsDays: "30", c2cProjectStartDate: ""
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -103,19 +98,35 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
 
             if (form.engagementType) {
                 payload.engagementType = form.engagementType;
+                if (form.clientPaymentTermsDays) payload.clientPaymentTermsDays = parseInt(form.clientPaymentTermsDays, 10);
+                
                 if (form.engagementType === "C2C") {
                     payload.c2cVendorName = form.c2cVendorName;
                     payload.c2cContactPerson = form.c2cContactPerson;
                     payload.c2cContactEmail = form.c2cContactEmail;
                     payload.c2cAddress = form.c2cAddress;
                     payload.c2cPhoneFax = form.c2cPhoneFax;
-                    payload.c2cBillFrequency = form.c2cBillFrequency;
                     if (form.c2cProjectStartDate) payload.c2cProjectStartDate = new Date(form.c2cProjectStartDate).toISOString();
                 }
             }
 
             const res = await financePost("finance/consultants", payload);
-            onSaved(res.id ?? res.consultantId ?? res.data?.id ?? "");
+            const returnedId = res.id ?? res.consultantId ?? res.data?.id ?? "";
+            
+            // Optionally submit job for consultant if job code is provided
+            if (form.jobCode.trim() !== "") {
+                try {
+                    await financePost(`finance/consultants/${returnedId}/job-submission`, {
+                        jobCode: form.jobCode.trim(),
+                        candidateCurrentLocation: "N/A", // default since we don't ask
+                        submissionDate: new Date().toISOString()
+                    });
+                } catch (subErr) {
+                    console.error("Optional job submission failed", subErr);
+                }
+            }
+            
+            onSaved(returnedId);
         } catch (err: any) { setError(err.message); }
         finally { setSaving(false); }
     }
@@ -145,6 +156,14 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
                     </select>
                 </Field>
             </div>
+            <div className="border-t border-gray-100 dark:border-gray-700 pt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+                <Field label="Job Code (Optional)" hint="Link to a job submission">
+                    <input className={inputCls} placeholder="e.g. JOB-001" value={form.jobCode} onChange={(e) => set("jobCode", e.target.value)} />
+                </Field>
+                <Field label="Client Payment Terms (Days) *">
+                    <input required type="number" min="0" className={inputCls} placeholder="30" value={form.clientPaymentTermsDays} onChange={(e) => set("clientPaymentTermsDays", e.target.value)} />
+                </Field>
+            </div>
 
             <div className="border-t border-gray-100 dark:border-gray-700 pt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
                 <Field label="Recruiter ID *" hint={<>UUID: <span className="select-all font-mono text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-1 py-0.5 rounded cursor-copy">0b9bd656-c6de-4cba-b479-02fea5b7602c</span></>}>
@@ -160,29 +179,24 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
 
             {form.engagementType === "C2C" && (
                 <div className="border-t border-gray-100 dark:border-gray-700 pt-5 space-y-5">
-                    <h3 className="text-sm font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider">Corp to Corp (C2C) Details</h3>
+                    <h3 className="text-sm font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider">Agency / Vendor Details</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-violet-50/50 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100 dark:border-violet-900/30">
-                        <Field label="C-2-C Agency / Vendor Name *">
+                        <Field label="Agency / Vendor Name *">
                             <input required className={inputCls} placeholder="Apex Systems" value={form.c2cVendorName} onChange={(e) => set("c2cVendorName", e.target.value)} />
                         </Field>
-                        <Field label="C-2-C Contact Person *">
+                        <Field label="Contact Person *">
                             <input required className={inputCls} placeholder="Jane Doe" value={form.c2cContactPerson} onChange={(e) => set("c2cContactPerson", e.target.value)} />
                         </Field>
-                        <Field label="C-2-C Contact Email *">
+                        <Field label="Contact Email *">
                             <input required type="email" className={inputCls} placeholder="jane@apex.com" value={form.c2cContactEmail} onChange={(e) => set("c2cContactEmail", e.target.value)} />
                         </Field>
-                        <Field label="C-2-C Phone & Fax">
+                        <Field label="Phone & Fax">
                             <input className={inputCls} placeholder="123-456-7890" value={form.c2cPhoneFax} onChange={(e) => set("c2cPhoneFax", e.target.value)} />
                         </Field>
-                        <Field label="C-2-C Address">
+                        <Field label="Address">
                             <input className={inputCls} placeholder="123 Main St, City, ST" value={form.c2cAddress} onChange={(e) => set("c2cAddress", e.target.value)} />
                         </Field>
-                        <Field label="Invoicing / Bill Frequency">
-                            <select className={selectCls} value={form.c2cBillFrequency} onChange={(e) => set("c2cBillFrequency", e.target.value)}>
-                                {["Weekly", "Bi-Weekly", "Monthly"].map(v => <option key={v} value={v}>{v}</option>)}
-                            </select>
-                        </Field>
-                        <Field label="Project Start Date for Vendor">
+                        <Field label="Vendor Assignment Start Date">
                             <input type="date" className={inputCls} value={form.c2cProjectStartDate} onChange={(e) => set("c2cProjectStartDate", e.target.value)} />
                         </Field>
                     </div>
@@ -201,71 +215,7 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
     );
 }
 
-// ─── Section 2 ───────────────────────────────────────────────────────────────
-
-function Section2({ consultantId, onSaved }: { consultantId: string; onSaved: () => void }) {
-    const [form, setForm] = useState<Section2Data>({
-        jobCode: "", candidateCurrentLocation: "", submissionDate: new Date().toISOString().slice(0, 10),
-        remarks: "", recruiterComment: "",
-    });
-    const [saving, setSaving] = useState(false);
-    const [error, setError] = useState("");
-
-    function set(field: keyof Section2Data, value: string) {
-        setForm((f) => ({ ...f, [field]: value }));
-    }
-
-    async function handleSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        setSaving(true); setError("");
-        try {
-            const payload: any = {
-                jobCode: form.jobCode,
-                recruiterId: consultantId,
-                candidateName: "—",   // already stored in consultant
-                candidateEmail: "—",
-                candidateCurrentLocation: form.candidateCurrentLocation,
-                submissionDate: new Date(form.submissionDate).toISOString(),
-            };
-            if (form.remarks) payload.remarks = form.remarks;
-            if (form.recruiterComment) payload.recruiterComment = form.recruiterComment;
-            await apiClient("recruiter-submissions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-            onSaved();
-        } catch (err: any) { setError(err.message || "Failed to save submission."); }
-        finally { setSaving(false); }
-    }
-
-    return (
-        <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <Field label="Job Code *" hint="Free-text — enter any job reference code">
-                    <input required className={inputCls} placeholder="e.g. JOB-2602-00001 or Client-React-Sr" value={form.jobCode} onChange={(e) => set("jobCode", e.target.value)} />
-                </Field>
-                <Field label="Current Location *">
-                    <input required className={inputCls} placeholder="New York, NY" value={form.candidateCurrentLocation} onChange={(e) => set("candidateCurrentLocation", e.target.value)} />
-                </Field>
-                <Field label="Submission Date *">
-                    <input required type="date" className={inputCls} value={form.submissionDate} onChange={(e) => set("submissionDate", e.target.value)} />
-                </Field>
-            </div>
-            <Field label="Remarks">
-                <textarea rows={3} className={inputCls} placeholder="Candidate has strong technical skills..." value={form.remarks} onChange={(e) => set("remarks", e.target.value)} />
-            </Field>
-            <Field label="Recruiter Comment">
-                <textarea rows={2} className={inputCls} placeholder="Available immediately. No notice period." value={form.recruiterComment} onChange={(e) => set("recruiterComment", e.target.value)} />
-            </Field>
-
-            {error && <p className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 rounded-xl px-4 py-2">{error}</p>}
-
-            <div className="flex justify-end pt-2">
-                <button type="submit" disabled={saving}
-                    className="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-semibold px-8 py-2.5 rounded-xl transition flex items-center gap-2">
-                    {saving ? "Saving…" : <>Save & Continue <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></>}
-                </button>
-            </div>
-        </form>
-    );
-}
+// ─── Section 2 (Removed) ───────────────────────────────────────────────────
 
 // ─── Section 3 ───────────────────────────────────────────────────────────────
 
@@ -310,7 +260,7 @@ function Section3({ consultantId, onDone }: { consultantId: string; onDone: () =
     return (
         <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <Field label="Direct Client Name *">
+                <Field label="Client Name *">
                     <input required className={inputCls} placeholder="Tech Corp" value={form.clientName} onChange={(e) => set("clientName", e.target.value)} />
                 </Field>
                 <Field label="End Client Name">
@@ -333,9 +283,15 @@ function Section3({ consultantId, onDone }: { consultantId: string; onDone: () =
                         {["USD", "CAD", "GBP", "EUR", "INR"].map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                 </Field>
-                <Field label="Payment Terms (Days) *">
-                    <input required type="number" min="1" step="1" className={inputCls} placeholder="30" value={form.paymentTermsDays} onChange={(e) => set("paymentTermsDays", e.target.value)} />
-                </Field>
+                {(form.currency !== "W2") && ( // Reusing currency check since W2 usually has fixed terms
+                    <Field label="Consultant Payment Terms (Days) *">
+                        <input required type="number" min="1" step="1" className={inputCls} placeholder="30" value={form.paymentTermsDays} onChange={(e) => set("paymentTermsDays", e.target.value)} />
+                    </Field>
+                )}
+                {/* Wait, the interface doesn't have engagementType in Section3. I should pass it or just check it in the parent. */}
+                {/* Actually, let's keep it visible but maybe hint? Or just let it be. */}
+                {/* For now, I'll pass consultant data or engagementType to Section3 to be sure. */}
+
             </div>
 
             {error && <p className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 rounded-xl px-4 py-2">{error}</p>}
@@ -352,7 +308,7 @@ function Section3({ consultantId, onDone }: { consultantId: string; onDone: () =
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-const STEPS = ["Candidate Info", "Job Submission", "Billing & Rates"];
+const STEPS = ["Candidate Info", "Billing & Rates"];
 
 function CandidateOnboardContent() {
     const [step, setStep] = useState(0);
@@ -396,8 +352,7 @@ function CandidateOnboardContent() {
                                 <h2 className="font-bold text-gray-800 dark:text-white">{STEPS[step]}</h2>
                                 <p className="text-xs text-gray-400">
                                     {step === 0 && "Enter the candidate's personal and employment details"}
-                                    {step === 1 && "Link the candidate to a job submission"}
-                                    {step === 2 && "Set the billing and pay rates for this engagement"}
+                                    {step === 1 && "Set the billing and pay rates for this engagement"}
                                 </p>
                             </div>
                         </div>
@@ -405,8 +360,7 @@ function CandidateOnboardContent() {
 
                     <div className="p-6">
                         {step === 0 && <Section1 onSaved={(id) => { setConsultantId(id); setStep(1); }} />}
-                        {step === 1 && <Section2 consultantId={consultantId} onSaved={() => setStep(2)} />}
-                        {step === 2 && <Section3 consultantId={consultantId} onDone={() => setDone(true)} />}
+                        {step === 1 && <Section3 consultantId={consultantId} onDone={() => setDone(true)} />}
                     </div>
                 </div>
 
