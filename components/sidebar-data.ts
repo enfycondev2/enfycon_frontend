@@ -9,8 +9,10 @@ import {
   StickyNote,
   UsersRound,
   Mail,
-  Bell
+  Bell,
+  ImageIcon
 } from "lucide-react";
+import { title } from "process";
 
 export const getSidebarData = (role: string) => {
   const adminNav = [
@@ -26,49 +28,70 @@ export const getSidebarData = (role: string) => {
           icon: House,
         },
         {
-          title: "All Jobs",
-          url: "/admin/dashboard/jobs",
-          icon: BriefcaseBusiness,
+          title: "Account Manager",
+          url: "/admin/dashboard/account-manager",
+          icon: UsersRound,
         },
         {
           title: "Pods",
           url: "/admin/dashboard/pods",
           icon: Boxes,
         },
-        {
-          title: "Account Manager",
-          url: "/admin/dashboard/account-manager",
-          icon: UsersRound,
-        },
+
         {
           title: "Recruiter",
           url: "/admin/dashboard/recruiter",
           icon: UsersRound,
         },
+
+      ],
+    },
+   
+    {
+      title: "Jobs Management",
+      url: "#",
+      icon: BriefcaseBusiness,
+      isActive: true,
+      items: [
         {
-          title: "Login Media",
-          url: "/admin/login-media",
-          icon: MessageCircleMore,
+          title: "All Jobs",
+          url: "/admin/dashboard/jobs",
+          icon: BriefcaseBusiness,
         },
         {
-          title: "Live Notifications",
-          url: "/admin/dashboard/notifications",
-          icon: Bell,
-        },
-        {
-          title: "Users Management",
-          url: "/admin/dashboard/users",
-          icon: UsersRound,
+          title: "Submitted Jobs",
+          url: "/admin/dashboard/jobs-submitted",
+          icon: ClipboardList,
         },
       ],
-    },{
-       label: "Application",
+    },
+    
+    
+    
+    {
+      label: "Application",
     },
     {
       title: "Chat",
       url: "/admin/dashboard/chats",
       icon: MessageCircleMore,
     },
+    {
+      title:"Change Login Image",
+      url:"/admin/login-media",
+      icon: ImageIcon,
+    },
+    {
+      title:"Live Notification",
+      url:"/admin/dashboard/notifications",
+      icon: Bell,
+    },
+    {
+      title:"Users Management",
+      url:"/admin/dashboard/users",
+      icon: UsersRound,
+    }
+
   ];
 
   const accountManagerNav = [
