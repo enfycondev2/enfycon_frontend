@@ -699,7 +699,7 @@ export default function SubmittedJobsTable({
                                     Candidate Details
                                 </TableHead>
                                 <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
-                                    Created At
+                                    Job Created At
                                 </TableHead>
                                 <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
                                     Submission Date
@@ -873,13 +873,13 @@ export default function SubmittedJobsTable({
                                                     </TableCell>
                                                     <TableCell className="px-6 py-4 text-start whitespace-nowrap border-b border-r border-neutral-200 dark:border-slate-600">
                                                         <div className="flex flex-col gap-0.5">
-                                                            {sub.createdAt ? (
+                                                            {(sub.job?.createdAt || sub.createdAt) ? (
                                                                 <>
                                                                     <span className="text-sm text-gray-900 font-medium">
-                                                                        {formatUsDate(sub.createdAt)}
+                                                                        {formatUsDate(sub.job?.createdAt || sub.createdAt)}
                                                                     </span>
                                                                     <span className="text-xs text-gray-400">
-                                                                        {formatUsTime(sub.createdAt)}
+                                                                        {formatUsTime(sub.job?.createdAt || sub.createdAt)}
                                                                     </span>
                                                                 </>
                                                             ) : (
