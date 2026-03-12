@@ -12,7 +12,6 @@ import {
   Bell,
   ImageIcon
 } from "lucide-react";
-import { title } from "process";
 
 export const getSidebarData = (role: string) => {
   const adminNav = [

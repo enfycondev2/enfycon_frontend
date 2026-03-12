@@ -48,12 +48,13 @@ export default async function DeliveryHeadAccountManagerPage() {
   const welcomeMessage = `${getGreeting()}, ${userName}!`;
 
   const norm = (value?: string) => (value || "").trim().toUpperCase();
-  const amBuckets = new Map<string, { name: string; jobs: number; active: number; filled: number; blocked: number }>();
+  const amBuckets = new Map<string, { id: string; name: string; jobs: number; active: number; filled: number; blocked: number }>();
 
   for (const job of jobs) {
     const key = job.accountManager?.email || "unassigned";
     const name = job.accountManager?.fullName || job.accountManager?.email || "Unassigned";
-    const current = amBuckets.get(key) || { name, jobs: 0, active: 0, filled: 0, blocked: 0 };
+    const id = job.accountManager?.id || "";
+    const current = amBuckets.get(key) || { id, name, jobs: 0, active: 0, filled: 0, blocked: 0 };
     current.jobs += 1;
     if (norm(job.status) === "ACTIVE") current.active += 1;
     if (norm(job.status) === "FILLED") current.filled += 1;
@@ -146,12 +147,21 @@ export default async function DeliveryHeadAccountManagerPage() {
   };
 
   const getMetrics = (rows: JobRow[]) => {
-    const jobsCount = rows.length;
-    const active = rows.filter((j) => norm(j.status) === "ACTIVE").length;
-    const filled = rows.filter((j) => norm(j.status) === "FILLED").length;
-    const blocked = rows.filter((j) => norm(j.status) === "ON_HOLD" || norm(j.status) === "HOLD_BY_CLIENT").length;
-    const fillRate = jobsCount > 0 ? Math.round((filled / jobsCount) * 100) : 0;
-    return { jobs: jobsCount, active, filled, blocked, fillRate };
+    const postedJobs = rows.length;
+    const activeJobs = rows.filter((j) => norm(j.status) === "ACTIVE").length;
+    const closures = rows.filter((j) => norm(j.status) === "FILLED").length;
+    const totalPositions = rows.reduce((acc, j) => acc + (j.positions || j.noOfPositions || 0), 0);
+    const submissions = rows.reduce((acc, j) => acc + (j.submissionDone || 0), 0);
+    const closureRate = postedJobs > 0 ? Math.round((closures / postedJobs) * 100) : 0;
+    
+    return { 
+      postedJobs, 
+      activeJobs, 
+      totalPositions, 
+      submissions, 
+      closures, 
+      closureRate 
+    };
   };
 
   const jobsByAM = new Map<string, JobRow[]>();
@@ -166,6 +176,7 @@ export default async function DeliveryHeadAccountManagerPage() {
     .map(([email, v]) => {
       const amJobs = jobsByAM.get(email) || [];
       return {
+        id: v.id || email,
         email,
         name: v.name,
         metrics: {
