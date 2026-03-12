@@ -70,10 +70,6 @@ const AdminUsersManagement = () => {
                         </div>
 
                         <div className="hidden lg:block">
-                             <Button className="h-10 px-5 rounded-xl gap-2 text-sm font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-300">
-                                <Plus className="w-4 h-4" />
-                                <span>Invite Member</span>
-                             </Button>
                         </div>
                     </div>
 
@@ -82,11 +78,12 @@ const AdminUsersManagement = () => {
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                             <TabsList className="bg-neutral-100/50 dark:bg-slate-800/50 h-auto p-1 lg:p-1.5 flex gap-1 w-fit rounded-xl">
                                 {[
-                                    { label: "Overview", value: "ALL" },
-                                    { label: "Admins", value: "ADMIN" },
-                                    { label: "Production", value: "DELIVERY_HEAD" },
-                                    { label: "Accounts", value: "ACCOUNT_MANAGER" },
-                                    { label: "Sourcing", value: "RECRUITER" }
+                                    { label: "All", value: "ALL" },
+                                    { label: "Admin", value: "ADMIN" },
+                                    { label: "Delivery Head", value: "DELIVERY_HEAD" },
+                                    { label: "Account Manager", value: "ACCOUNT_MANAGER" },
+                                    { label: "Recruiter", value: "RECRUITER" },
+                                    { label: "Pod Head", value: "POD_LEAD" }
                                 ].map((tab) => (
                                     <TabsTrigger
                                         key={tab.value}

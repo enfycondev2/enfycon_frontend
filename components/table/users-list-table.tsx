@@ -265,7 +265,7 @@ export default function UserTable({ searchQuery, statusFilter, roleFilter }: Use
                                             "text-[9px] font-black uppercase tracking-[0.15em] mb-1",
                                             user.isActive ? "text-emerald-500" : "text-neutral-400"
                                         )}>
-                                            {user.isActive ? "Authorized" : "Revoked"}
+                                            {user.isActive ? "Active" : "Inactive"}
                                         </span>
                                         <Switch
                                             checked={user.isActive}
