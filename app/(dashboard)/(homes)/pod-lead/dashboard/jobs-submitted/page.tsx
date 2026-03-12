@@ -5,8 +5,8 @@ import { useSession } from "next-auth/react";
 import SubmittedJobsTable, { CandidateSubmission } from "@/components/dashboard/recruiter/SubmittedJobsTable";
 import { Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { apiClient } from "@/lib/apiClient";
-import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { Button } from "@/components/ui/button";
+import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 
 interface PageMeta { total: number; page: number; limit: number; totalPages: number; }
 
@@ -21,7 +21,7 @@ function extract(data: any) {
     return { submissions: Array.isArray(arr) ? arr : [], meta: { total, page, limit, totalPages } as PageMeta };
 }
 
-export default function PodLeadTeamSubmissionsPage() {
+export default function PodLeadSubmittedJobsPage() {
     const { status } = useSession();
     const [currentPage, setCurrentPage] = useState(1);
     const [submissions, setSubmissions] = useState<CandidateSubmission[]>([]);
@@ -56,7 +56,7 @@ export default function PodLeadTeamSubmissionsPage() {
         }
         setIsLoading(true); setError(null);
         const r = await fetchPage(page); setIsLoading(false);
-        if (!r) { setError("Failed to load team submissions."); return; }
+        if (!r) { setError("Failed to load submissions."); return; }
         setSubmissions(r.submissions); setMeta(r.meta); setCurrentPage(page);
         cache.current.set(page, r);
         prefetch(page + 1, r.meta.totalPages); prefetch(page - 1, r.meta.totalPages);
@@ -70,7 +70,7 @@ export default function PodLeadTeamSubmissionsPage() {
         (async () => {
             setIsLoading(true); setError(null);
             const r = await fetchPage(1); setIsLoading(false);
-            if (!r) { setError("Failed to load team submissions."); return; }
+            if (!r) { setError("Failed to load submissions."); return; }
             setSubmissions(r.submissions); setMeta(r.meta); setCurrentPage(1);
             cache.current.set(1, r);
             if (r.meta.totalPages > 1) prefetch(2, r.meta.totalPages);
@@ -92,15 +92,15 @@ export default function PodLeadTeamSubmissionsPage() {
 
     return (
         <>
-            <DashboardBreadcrumb title="Team Submitted Jobs" text="Pod Lead Dashboard" />
+            <DashboardBreadcrumb title="Submitted Jobs" text="Pod Lead Dashboard" />
             <div className="p-6 space-y-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
-                            Team Submitted Candidates
+                            Submitted Candidates
                         </h1>
                         <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                            View and track candidate submissions made by all team members in your pods.
+                            View and track the status of candidates you have submitted for various roles.
                         </p>
                     </div>
                 </div>
@@ -115,15 +115,11 @@ export default function PodLeadTeamSubmissionsPage() {
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 bg-neutral-50/50 dark:bg-slate-800/20 rounded-xl border border-neutral-200 dark:border-slate-700">
                         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                        <p className="text-sm text-neutral-500 font-medium">Loading team submissions...</p>
+                        <p className="text-sm text-neutral-500 font-medium">Loading submissions...</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        <SubmittedJobsTable
-                            submissions={submissions}
-                            isRecruiter={false}
-                            onUpdate={refresh}
-                        />
+                        <SubmittedJobsTable submissions={submissions} isRecruiter={true} onUpdate={refresh} />
 
                         {tp > 1 && (
                             <div className="flex items-center justify-between px-2">
@@ -141,16 +137,7 @@ export default function PodLeadTeamSubmissionsPage() {
                                     </Button>
                                     <div className="flex items-center gap-1">
                                         {btns.map(n => (
-                                            <Button
-                                                key={n}
-                                                variant={currentPage === n ? "default" : "outline"}
-                                                size="sm"
-                                                className="h-8 w-8 text-xs"
-                                                onClick={() => goTo(n)}
-                                                onMouseEnter={() => prefetch(n, tp)}
-                                            >
-                                                {n}
-                                            </Button>
+                                            <Button key={n} variant={currentPage === n ? "default" : "outline"} size="sm" className="h-8 w-8 text-xs" onClick={() => goTo(n)} onMouseEnter={() => prefetch(n, tp)}>{n}</Button>
                                         ))}
                                     </div>
                                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => goTo(currentPage + 1)} disabled={currentPage === tp}>

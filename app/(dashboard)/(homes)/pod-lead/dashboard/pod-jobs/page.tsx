@@ -47,11 +47,11 @@ export default async function PodLeadTeamJobsPage() {
 
     return (
         <>
-            <DashboardBreadcrumb title="Team Assigned Jobs" text="Team Management" />
+            <DashboardBreadcrumb title="Team Assigned Jobs" text="Pod Lead Dashboard" />
             <div className="p-6">
                 <RecruiterJobsTable
                     jobs={jobs}
-                    baseUrl="/recruiter/dashboard/jobs"
+                    baseUrl="/pod-lead/dashboard/jobs"
                 />
             </div>
         </>

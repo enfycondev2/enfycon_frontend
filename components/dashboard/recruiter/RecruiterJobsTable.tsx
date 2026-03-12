@@ -133,9 +133,16 @@ export default function RecruiterJobsTable({
     const filterOptions = useMemo(() => {
         const ams = new Map<string, string>();
         const clients = new Set<string>();
-        // Use teamMembers (scoped to the current pod via /pods/my-team) instead of
-        // deriving recruiters from job.assignedRecruiters, which would include
-        // recruiters from other pods when a job is assigned to multiple pods.
+
+        jobs.forEach(job => {
+            if (job.accountManager?.email) {
+                ams.set(job.accountManager.email, job.accountManager.fullName || job.accountManager.email);
+            }
+            if (job.clientName) {
+                clients.add(job.clientName);
+            }
+        });
+
         const recruiters = teamMembers
             .map(m => ({ id: m.id, name: m.fullName || m.email }))
             .sort((a, b) => a.name.localeCompare(b.name));
@@ -358,23 +365,6 @@ export default function RecruiterJobsTable({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider ml-1">Sort By</label>
-                    <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setCurrentPage(1); }}>
-                        <SelectTrigger className="w-[150px] h-10 bg-white dark:bg-slate-900 border-neutral-200 dark:border-slate-600 rounded-lg">
-                            <SelectValue placeholder="Sort By" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="date-desc">Latest Posted</SelectItem>
-                            <SelectItem value="date-asc">Oldest Posted</SelectItem>
-                            <SelectItem value="title-asc">Title (A-Z)</SelectItem>
-                            <SelectItem value="title-desc">Title (Z-A)</SelectItem>
-                            <SelectItem value="client-asc">Client (A-Z)</SelectItem>
-                            <SelectItem value="client-desc">Client (Z-A)</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider ml-1">Period</label>
                     <Select value={timeFilter} onValueChange={(v) => { setTimeFilter(v); setCurrentPage(1); }}>
                         <SelectTrigger className="w-[150px] h-10 bg-white dark:bg-slate-900 border-neutral-200 dark:border-slate-600 rounded-lg">
@@ -427,6 +417,23 @@ export default function RecruiterJobsTable({
                             />
                         </PopoverContent>
                     </Popover>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider ml-1">Sort By</label>
+                    <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setCurrentPage(1); }}>
+                        <SelectTrigger className="w-[150px] h-10 bg-white dark:bg-slate-900 border-neutral-200 dark:border-slate-600 rounded-lg">
+                            <SelectValue placeholder="Sort By" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="date-desc">Latest Posted</SelectItem>
+                            <SelectItem value="date-asc">Oldest Posted</SelectItem>
+                            <SelectItem value="title-asc">Title (A-Z)</SelectItem>
+                            <SelectItem value="title-desc">Title (Z-A)</SelectItem>
+                            <SelectItem value="client-asc">Client (A-Z)</SelectItem>
+                            <SelectItem value="client-desc">Client (Z-A)</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 {(amFilter !== "all" || clientFilter !== "all" || recruiterFilter !== "all" || timeFilter !== "all" || dateFilter?.from || searchQuery || sortBy !== "date-desc") && (

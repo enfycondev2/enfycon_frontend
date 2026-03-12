@@ -242,22 +242,22 @@ export const getSidebarData = (role: string) => {
       items: [
         {
           title: "Home",
-          url: "/recruiter/dashboard",
+          url: "/pod-lead/dashboard",
           icon: House,
         },
         {
           title: "Assigned Jobs",
-          url: "/recruiter/dashboard/jobs-assigned",
+          url: "/pod-lead/dashboard/jobs-assigned",
           icon: BriefcaseBusiness,
         },
         {
           title: "Submitted Jobs",
-          url: "/recruiter/dashboard/jobs-submitted",
+          url: "/pod-lead/dashboard/jobs-submitted",
           icon: ClipboardList,
         },
         {
           title: "Jobs in my Pods",
-          url: "/recruiter/dashboard/jobs",
+          url: "/pod-lead/dashboard/jobs",
           icon: Boxes,
         },
       ],
