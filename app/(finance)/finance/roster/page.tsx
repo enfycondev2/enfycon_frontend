@@ -6,7 +6,7 @@ import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet } from "@/lib/financeClient";
 
-const MN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 interface MonthActual {
     month: number; year: number; hours: number;
@@ -19,98 +19,120 @@ interface MonthActual {
     payoutDate: string | null; payoutRef: string | null;
 }
 
+interface Totals {
+    hours: number; revenue: number; cost: number; margin: number;
+    marginPerc: number; paidIn: number; paidOut: number;
+}
+
 interface Row {
     id: string; name: string; email: string; phone: string;
-    consultantStatus: string; clientName: string; endClientName: string | null;
+    consultantStatus: "ACTIVE" | "ENDED";
+    clientName: string; endClientName: string | null;
     projectStartDate: string | null; projectEndDate: string | null;
     recruiterName: string; accountManagerName: string;
     paymentTerm: string; paymentTermsDays: number;
     rates: { bill: number; pay: number };
     ideal: { hours: number; revenue: number; cost: number; margin: number; marginPerc: number };
+    totals: Totals;
     monthlies: MonthActual[];
 }
 
-const curr = (v: number) => `$${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+const curr = (v: number) =>
+    "$" + v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const pct = (v: number) => v.toFixed(1) + "%";
 const label = (dm: { month: number; year: number }) => `${MN[dm.month - 1]} ${dm.year}`;
+const fmtDate = (s: string | null) =>
+    s ? new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
 
-function DeadlineBadge({ m }: { m: MonthActual }) {
-    if (!m.expectedPaymentDate) return <span className="text-gray-300 text-xs">—</span>;
-    if (m.clientPaid) return (
-        <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-0.5 rounded-full text-[10px] font-semibold">
-            ✓ Received
-        </span>
-    );
-    if (m.isOverdue) return (
-        <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-2 py-0.5 rounded-full text-[10px] font-bold animate-pulse">
-            ⚠ {Math.abs(m.daysUntilDue ?? 0)}d OVERDUE
-        </span>
-    );
-    const d = m.daysUntilDue ?? 0;
-    if (d <= 7) return (
-        <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 px-2 py-0.5 rounded-full text-[10px] font-semibold">
-            ⏰ In {d}d
+// ─── Avatar ──────────────────────────────────────────────────────────────────
+const AVATAR_COLORS = [
+    "bg-violet-500","bg-blue-500","bg-emerald-500","bg-orange-500",
+    "bg-pink-500","bg-cyan-500","bg-amber-500","bg-indigo-500",
+];
+function avatarColor(name: string) {
+    let h = 0;
+    for (const c of name) h = (h << 5) - h + c.charCodeAt(0);
+    return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+function initials(name: string) {
+    const p = name.trim().split(/\s+/);
+    return (p[0]?.[0] ?? "") + (p[1]?.[0] ?? "");
+}
+
+// ─── Status Badge ─────────────────────────────────────────────────────────────
+function StatusBadge({ status }: { status: "ACTIVE" | "ENDED" }) {
+    if (status === "ACTIVE") return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+            Active
         </span>
     );
     return (
-        <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full text-[10px] font-medium">
-            📅 {new Date(m.expectedPaymentDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300">
+            <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+            Ended
         </span>
     );
 }
 
-function PayoutBadge({ m }: { m: MonthActual }) {
-    if (!m.cost && !m.consultantPaid) return <span className="text-gray-300 text-xs">—</span>;
-    if (m.consultantPaid) return (
-        <span className="inline-flex items-center gap-1 bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 px-2 py-0.5 rounded-full text-[10px] font-semibold">
-            ✓ Paid {curr(m.payoutAmount)}
-        </span>
-    );
-    return (
-        <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-0.5 rounded-full text-[10px] font-semibold">
-            ⏳ Due {curr(m.cost)}
-        </span>
-    );
-}
-
+// ─── Month cell ───────────────────────────────────────────────────────────────
 function MonthCell({ m }: { m: MonthActual }) {
+    const noData = m.hours === 0 && !m.invoiceStatus;
+    if (noData) return (
+        <td className="px-3 py-3 text-center text-gray-300 dark:text-gray-600 text-[11px]">—</td>
+    );
     return (
-        <td className="px-3 py-3 text-xs font-mono min-w-[190px] align-top">
-            {/* Hours + Revenue line */}
-            <div className={`font-bold text-sm ${m.hours > 0 ? "text-gray-800 dark:text-white" : "text-gray-300 dark:text-gray-600"}`}>
-                {m.hours > 0 ? `${m.hours}h` : "—"}
-                {m.revenue > 0 && <span className="ml-1 text-emerald-600 dark:text-emerald-400 font-bold">{curr(m.revenue)}</span>}
+        <td className="px-3 py-3 text-xs font-mono min-w-[176px] align-top space-y-2">
+            {/* Hours + Revenue */}
+            <div className="font-bold text-gray-800 dark:text-white">
+                {m.hours}h
+                <span className="ml-1 text-emerald-600 dark:text-emerald-400"> {curr(m.revenue)}</span>
             </div>
             {/* Margin */}
             {m.margin > 0 && (
-                <div className="text-indigo-600 dark:text-indigo-400 text-[10px] font-semibold mt-0.5">
+                <div className="text-indigo-600 dark:text-indigo-400 text-[10px] font-semibold">
                     ↑ {curr(m.margin)} margin
                 </div>
             )}
-            {/* Client Payment Deadline */}
-            <div className="mt-1.5 space-y-1">
-                <div className="text-[9px] uppercase font-bold text-gray-400 tracking-widest">📥 From Client</div>
-                <DeadlineBadge m={m} />
-                {m.expectedPaymentDate && !m.clientPaid && (
-                    <div className="text-[9px] text-gray-400">Due {new Date(m.expectedPaymentDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</div>
+            {/* Client pay-in */}
+            <div className="space-y-0.5">
+                <div className="text-[9px] uppercase font-bold text-gray-400 tracking-widest">📥 Pay-In</div>
+                {m.clientPaid ? (
+                    <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-0.5 rounded-full text-[10px] font-semibold">✓ Received</span>
+                ) : m.isOverdue ? (
+                    <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-2 py-0.5 rounded-full text-[10px] font-bold animate-pulse">
+                        ⚠ {Math.abs(m.daysUntilDue ?? 0)}d OVERDUE
+                    </span>
+                ) : (
+                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full text-[10px] font-medium">
+                        📅 {m.expectedPaymentDate ? fmtDate(m.expectedPaymentDate) : "Pending"}
+                    </span>
                 )}
             </div>
-            {/* Payout to Consultant */}
-            <div className="mt-1.5 space-y-1">
-                <div className="text-[9px] uppercase font-bold text-gray-400 tracking-widest">📤 To Consultant</div>
-                <PayoutBadge m={m} />
-                {m.consultantPaid && m.payoutDate && (
-                    <div className="text-[9px] text-gray-400">Paid {new Date(m.payoutDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}{m.payoutRef ? ` · ${m.payoutRef}` : ""}</div>
-                )}
+            {/* Consultant pay-out */}
+            <div className="space-y-0.5">
+                <div className="text-[9px] uppercase font-bold text-gray-400 tracking-widest">📤 Pay-Out</div>
+                {m.consultantPaid ? (
+                    <span className="inline-flex items-center gap-1 bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 px-2 py-0.5 rounded-full text-[10px] font-semibold">
+                        ✓ {curr(m.payoutAmount)}
+                    </span>
+                ) : m.cost > 0 ? (
+                    <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-0.5 rounded-full text-[10px] font-semibold">
+                        ⏳ Due {curr(m.cost)}
+                    </span>
+                ) : <span className="text-gray-300 text-[10px]">—</span>}
             </div>
         </td>
     );
 }
 
+// ─── Main content ─────────────────────────────────────────────────────────────
 function RosterContent() {
     const [rows, setRows] = useState<Row[]>([]);
     const [displayMonths, setDisplayMonths] = useState<{ month: number; year: number }[]>([]);
     const [availableMonths, setAvailableMonths] = useState<{ month: number; year: number }[]>([]);
     const [filterMonth, setFilterMonth] = useState("ALL");
+    const [filterStatus, setFilterStatus] = useState("ALL");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -131,66 +153,78 @@ function RosterContent() {
         ? displayMonths
         : displayMonths.filter(dm => `${dm.year}-${dm.month}` === filterMonth);
 
+    const filteredRows = rows.filter(r => filterStatus === "ALL" || r.consultantStatus === filterStatus);
+
     // Summary stats
-    const today = new Date();
     const overdueCount = rows.reduce((n, r) => n + r.monthlies.filter(m => m.isOverdue).length, 0);
     const pendingPayoutCount = rows.reduce((n, r) => n + r.monthlies.filter(m => m.cost > 0 && !m.consultantPaid).length, 0);
     const totalReceivable = rows.reduce((n, r) => n + r.monthlies.reduce((s, m) => s + (m.clientPaid ? 0 : m.invoiceTotal), 0), 0);
     const totalPayable = rows.reduce((n, r) => n + r.monthlies.reduce((s, m) => s + (m.consultantPaid ? 0 : m.cost), 0), 0);
+    const activeCount = rows.filter(r => r.consultantStatus === "ACTIVE").length;
+
+    // Totals footer sums
+    const grandTotals = filteredRows.reduce(
+        (agg, r) => ({
+            hours: agg.hours + r.totals.hours,
+            revenue: agg.revenue + r.totals.revenue,
+            cost: agg.cost + r.totals.cost,
+            margin: agg.margin + r.totals.margin,
+            paidIn: agg.paidIn + r.totals.paidIn,
+            paidOut: agg.paidOut + r.totals.paidOut,
+        }),
+        { hours: 0, revenue: 0, cost: 0, margin: 0, paidIn: 0, paidOut: 0 },
+    );
 
     return (
         <>
             <DashboardBreadcrumb title="Consultant Roster" text="Finance / Live Consultant Roster" />
             <div className="space-y-5">
 
-                {/* Summary Dashboard */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow">
-                        <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">Total Consultants</p>
+                {/* KPI Summary */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
+                        <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Consultants</p>
                         <p className="text-3xl font-black text-gray-800 dark:text-white mt-1">{rows.length}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{rows.filter(r => r.consultantStatus === "ACTIVE").length} active</p>
+                        <p className="text-[11px] text-emerald-500 mt-0.5 font-semibold">{activeCount} active</p>
                     </div>
-                    <div className={`rounded-2xl border p-4 shadow ${overdueCount > 0 ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700"}`}>
-                        <p className="text-xs text-red-500 uppercase tracking-widest font-bold">⚠ Overdue Invoices</p>
+                    <div className={`rounded-2xl border p-4 shadow-sm ${overdueCount > 0 ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700"}`}>
+                        <p className="text-[10px] text-red-500 uppercase tracking-widest font-bold">⚠ Overdue</p>
                         <p className={`text-3xl font-black mt-1 ${overdueCount > 0 ? "text-red-600" : "text-gray-300"}`}>{overdueCount}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">Not yet received from client</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">Invoices past due</p>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow">
-                        <p className="text-xs text-emerald-600 uppercase tracking-widest font-bold">📥 Outstanding AR</p>
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
+                        <p className="text-[10px] text-emerald-600 uppercase tracking-widest font-bold">📥 Outstanding AR</p>
                         <p className="text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-1">{curr(totalReceivable)}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">Pending from clients</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">Pending from clients</p>
                     </div>
-                    <div className={`rounded-2xl border p-4 shadow ${pendingPayoutCount > 0 ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700"}`}>
-                        <p className="text-xs text-amber-600 uppercase tracking-widest font-bold">📤 Outstanding AP</p>
+                    <div className={`rounded-2xl border p-4 shadow-sm ${pendingPayoutCount > 0 ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700"}`}>
+                        <p className="text-[10px] text-amber-600 uppercase tracking-widest font-bold">📤 Outstanding AP</p>
                         <p className="text-2xl font-black text-amber-700 dark:text-amber-400 mt-1">{curr(totalPayable)}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{pendingPayoutCount} unpaid consultant(s)</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{pendingPayoutCount} unpaid consultant(s)</p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
+                        <p className="text-[10px] text-indigo-600 uppercase tracking-widest font-bold">↑ Net Margin</p>
+                        <p className="text-2xl font-black text-indigo-700 dark:text-indigo-400 mt-1">{curr(grandTotals.margin)}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">All consultants</p>
                     </div>
                 </div>
 
-                {/* Legend */}
-                <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded-xl px-4 py-3 text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-x-6 gap-y-1">
-                    <span><span className="text-emerald-600 font-bold">✓ Received</span> = Client paid invoice</span>
-                    <span><span className="text-red-600 font-bold">⚠ OVERDUE</span> = Past due date, not received</span>
-                    <span><span className="text-orange-500 font-bold">⏰ In Xd</span> = Due within 7 days</span>
-                    <span><span className="text-violet-600 font-bold">✓ Paid</span> = Consultant payout sent</span>
-                    <span><span className="text-amber-600 font-bold">⏳ Due</span> = Consultant payout pending</span>
-                    <span><span className="text-indigo-600 font-bold">↑ Margin</span> = AR − AP for that month</span>
-                </div>
-
-                {/* Month Filter */}
+                {/* Filters */}
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                     <h2 className="font-bold text-gray-800 dark:text-white">
-                        Live Roster <span className="text-gray-400 font-normal text-sm">({rows.length} consultants)</span>
+                        Live Roster <span className="text-gray-400 font-normal text-sm">({filteredRows.length} consultants)</span>
                     </h2>
-                    <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-500">Filter:</label>
-                        <select
-                            value={filterMonth}
-                            onChange={(e) => setFilterMonth(e.target.value)}
-                            className="border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        >
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+                            className="border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
+                            <option value="ALL">All statuses</option>
+                            <option value="ACTIVE">Active only</option>
+                            <option value="ENDED">Ended only</option>
+                        </select>
+                        <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
+                            className="border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
                             <option value="ALL">All months</option>
-                            {availableMonths.map((am) => (
+                            {availableMonths.map(am => (
                                 <option key={`${am.year}-${am.month}`} value={`${am.year}-${am.month}`}>
                                     {MN[am.month - 1]} {am.year}
                                 </option>
@@ -203,55 +237,72 @@ function RosterContent() {
 
                 {loading ? (
                     <div className="flex justify-center items-center py-20">
-                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600"></div>
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-violet-600" />
                     </div>
                 ) : (
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-100 dark:border-gray-700 overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
-                                <thead className="text-[10px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 uppercase border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">
+                                <thead className="text-[10px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/80 uppercase border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">
                                     <tr>
-                                        <th className="px-4 py-3 sticky left-0 bg-gray-50 dark:bg-gray-800 z-10 min-w-[180px]">Consultant</th>
-                                        <th className="px-4 py-3 min-w-[150px]">Client</th>
-                                        <th className="px-4 py-3 min-w-[100px]">Rates</th>
-                                        <th className="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 min-w-[160px]">
-                                            Ideal (160h/mo)
+                                        <th className="px-4 py-3 sticky left-0 bg-gray-50 dark:bg-gray-800 z-10 min-w-[220px]">Consultant</th>
+                                        <th className="px-4 py-3 min-w-[170px]">Project / Client</th>
+                                        <th className="px-4 py-3 min-w-[110px]">Rates</th>
+                                        <th className="px-4 py-3 bg-indigo-50/60 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 min-w-[150px]">
+                                            Ideal 160h/mo
+                                        </th>
+                                        <th className="px-4 py-3 bg-violet-50/60 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 min-w-[150px]">
+                                            Totals (All)
                                         </th>
                                         {visibleMonths.map(dm => (
                                             <th key={`${dm.year}-${dm.month}`}
-                                                className="px-3 py-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-center min-w-[190px]">
+                                                className="px-3 py-3 bg-emerald-50/60 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-400 text-center min-w-[176px]">
                                                 {label(dm)}<br />
-                                                <span className="text-[9px] normal-case font-normal text-gray-400">Hours · AR · AP · Status</span>
+                                                <span className="text-[9px] normal-case font-normal text-gray-400">Hours · Pay-In · Pay-Out</span>
                                             </th>
                                         ))}
-                                        <th className="px-3 py-3 min-w-[80px]">Terms</th>
+                                        <th className="px-3 py-3 min-w-[70px]">Terms</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-                                    {rows.length === 0 ? (
-                                        <tr><td colSpan={5 + visibleMonths.length} className="text-center py-12 text-gray-400">No consultants found.</td></tr>
+                                <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
+                                    {filteredRows.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6 + visibleMonths.length} className="text-center py-16 text-gray-400">
+                                                No consultants found.
+                                            </td>
+                                        </tr>
                                     ) : (
-                                        rows.map((row) => (
-                                            <tr key={row.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition align-top">
+                                        filteredRows.map((row) => (
+                                            <tr key={row.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition align-top group">
                                                 {/* Consultant */}
-                                                <td className="px-4 py-3 sticky left-0 bg-white dark:bg-gray-800 z-10">
-                                                    <Link href={`/finance/consultants/${row.id}`} className="font-semibold text-gray-800 dark:text-white hover:text-violet-600 flex items-center gap-1.5">
-                                                        {row.name}
-                                                        {row.consultantStatus === "ACTIVE" && <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />}
-                                                    </Link>
-                                                    <div className="text-xs text-gray-400">{row.email}</div>
-                                                    <div className="text-[10px] text-gray-300 dark:text-gray-600 mt-0.5">Rep: {row.recruiterName}</div>
+                                                <td className="px-4 py-3 sticky left-0 bg-white dark:bg-gray-800 z-10 group-hover:bg-gray-50/60 dark:group-hover:bg-gray-800/40">
+                                                    <div className="flex items-start gap-2.5">
+                                                        <div className={`${avatarColor(row.name)} text-white rounded-full w-9 h-9 shrink-0 flex items-center justify-center text-xs font-bold shadow-sm`}>
+                                                            {initials(row.name).toUpperCase()}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <Link href={`/finance/roster/${row.id}`} className="font-semibold text-gray-800 dark:text-white hover:text-violet-600 dark:hover:text-violet-400 leading-tight block">
+                                                                {row.name}
+                                                            </Link>
+                                                            <div className="text-[11px] text-gray-400 truncate">{row.email}</div>
+                                                            <div className="mt-1">
+                                                                <StatusBadge status={row.consultantStatus} />
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </td>
-                                                {/* Client */}
+                                                {/* Client / Project */}
                                                 <td className="px-4 py-3">
-                                                    <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">{row.clientName}</div>
-                                                    {row.endClientName && <div className="text-[10px] text-gray-400">End: {row.endClientName}</div>}
+                                                    <div className="font-semibold text-gray-700 dark:text-gray-200 text-sm leading-tight">{row.clientName}</div>
+                                                    {row.endClientName && (
+                                                        <div className="text-[11px] text-gray-400 mt-0.5">End: {row.endClientName}</div>
+                                                    )}
                                                     <div className="text-[10px] text-gray-400 mt-0.5">AM: {row.accountManagerName}</div>
                                                     {row.projectStartDate && (
                                                         <div className="text-[10px] text-blue-500 mt-1 font-medium">
-                                                            📅 {new Date(row.projectStartDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                                            📅 {fmtDate(row.projectStartDate)}
                                                             {row.projectEndDate
-                                                                ? ` → ${new Date(row.projectEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                                                                ? ` → ${fmtDate(row.projectEndDate)}`
                                                                 : " → Ongoing"}
                                                         </div>
                                                     )}
@@ -262,20 +313,27 @@ function RosterContent() {
                                                     <div className="text-xs text-orange-500">{curr(row.rates.pay)}<span className="text-[9px] font-normal text-gray-400">/hr cost</span></div>
                                                     <div className="text-[10px] text-indigo-500 font-semibold mt-0.5">↑ {curr(row.rates.bill - row.rates.pay)}/hr</div>
                                                 </td>
-                                                {/* IDEAL */}
-                                                <td className="px-4 py-3 bg-indigo-50/30 dark:bg-indigo-900/10">
-                                                    <div className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{curr(row.ideal.revenue)}</div>
+                                                {/* Ideal */}
+                                                <td className="px-4 py-3 bg-indigo-50/20 dark:bg-indigo-900/10">
+                                                    <div className="text-[11px] text-gray-400">160h/mo</div>
+                                                    <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{curr(row.ideal.revenue)}</div>
                                                     <div className="text-xs text-orange-500">−{curr(row.ideal.cost)}</div>
                                                     <div className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">{curr(row.ideal.margin)}</div>
-                                                    <div className="text-[10px] text-gray-400">{row.ideal.marginPerc.toFixed(1)}% margin</div>
+                                                    <div className="text-[10px] text-gray-400">{pct(row.ideal.marginPerc)} margin</div>
                                                 </td>
-                                                {/* MONTHLY */}
+                                                {/* Totals */}
+                                                <td className="px-4 py-3 bg-violet-50/20 dark:bg-violet-900/10">
+                                                    <div className="text-[11px] text-gray-400">{row.totals.hours}h total</div>
+                                                    <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{curr(row.totals.revenue)}</div>
+                                                    <div className="text-xs text-orange-500">−{curr(row.totals.cost)}</div>
+                                                    <div className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">{curr(row.totals.margin)}</div>
+                                                    <div className="text-[10px] text-gray-400">{pct(row.totals.marginPerc)} margin</div>
+                                                </td>
+                                                {/* Monthly cells */}
                                                 {visibleMonths.map(dm => {
                                                     const m = row.monthlies.find(ma => ma.month === dm.month && ma.year === dm.year);
                                                     if (!m) return (
-                                                        <td key={`${dm.year}-${dm.month}`} className="px-3 py-3 text-center text-gray-300 dark:text-gray-600 text-xs">
-                                                            No data
-                                                        </td>
+                                                        <td key={`${dm.year}-${dm.month}`} className="px-3 py-3 text-center text-gray-300 dark:text-gray-600 text-[11px]">No data</td>
                                                     );
                                                     return <MonthCell key={`${dm.year}-${dm.month}`} m={m} />;
                                                 })}
@@ -289,6 +347,59 @@ function RosterContent() {
                                         ))
                                     )}
                                 </tbody>
+                                {/* Totals Footer Row */}
+                                {filteredRows.length > 0 && (
+                                    <tfoot>
+                                        <tr className="bg-gray-800 dark:bg-gray-900 text-white text-xs">
+                                            <td className="px-4 py-3 sticky left-0 bg-gray-800 dark:bg-gray-900 font-black uppercase tracking-wider text-gray-200" colSpan={2}>
+                                                Totals ({filteredRows.length} consultants)
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-400">—</td>
+                                            {/* Ideal total */}
+                                            <td className="px-4 py-3 bg-indigo-900/30">
+                                                <div className="font-black text-emerald-400">
+                                                    {curr(filteredRows.reduce((s, r) => s + r.ideal.revenue, 0))}
+                                                </div>
+                                                <div className="text-orange-400">
+                                                    −{curr(filteredRows.reduce((s, r) => s + r.ideal.cost, 0))}
+                                                </div>
+                                                <div className="text-indigo-300 font-bold">
+                                                    {curr(filteredRows.reduce((s, r) => s + r.ideal.margin, 0))}
+                                                </div>
+                                            </td>
+                                            {/* Actual totals */}
+                                            <td className="px-4 py-3 bg-violet-900/30">
+                                                <div className="text-gray-300 text-[10px]">{grandTotals.hours}h</div>
+                                                <div className="font-black text-emerald-400">{curr(grandTotals.revenue)}</div>
+                                                <div className="text-orange-400">−{curr(grandTotals.cost)}</div>
+                                                <div className="text-indigo-300 font-bold">{curr(grandTotals.margin)}</div>
+                                            </td>
+                                            {visibleMonths.map(dm => {
+                                                const totH = filteredRows.reduce((s, r) => {
+                                                    const m = r.monthlies.find(ma => ma.month === dm.month && ma.year === dm.year);
+                                                    return s + (m?.hours ?? 0);
+                                                }, 0);
+                                                const totR = filteredRows.reduce((s, r) => {
+                                                    const m = r.monthlies.find(ma => ma.month === dm.month && ma.year === dm.year);
+                                                    return s + (m?.revenue ?? 0);
+                                                }, 0);
+                                                const totC = filteredRows.reduce((s, r) => {
+                                                    const m = r.monthlies.find(ma => ma.month === dm.month && ma.year === dm.year);
+                                                    return s + (m?.cost ?? 0);
+                                                }, 0);
+                                                return (
+                                                    <td key={`tot-${dm.year}-${dm.month}`} className="px-3 py-3 bg-emerald-900/20 text-xs font-mono">
+                                                        <div className="text-gray-300 text-[10px]">{totH}h</div>
+                                                        <div className="font-bold text-emerald-400">{curr(totR)}</div>
+                                                        <div className="text-orange-400">−{curr(totC)}</div>
+                                                        <div className="text-indigo-300">{curr(totR - totC)}</div>
+                                                    </td>
+                                                );
+                                            })}
+                                            <td className="px-3 py-3 text-gray-600">—</td>
+                                        </tr>
+                                    </tfoot>
+                                )}
                             </table>
                         </div>
                     </div>

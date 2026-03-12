@@ -269,8 +269,42 @@ function Section3({ consultantId, onDone }: { consultantId: string; onDone: () =
                 <Field label="Project Start Date *">
                     <input required type="date" className={inputCls} value={form.startDate} onChange={(e) => set("startDate", e.target.value)} />
                 </Field>
-                <Field label="Project End Date">
-                    <input type="date" className={inputCls} value={form.endDate} onChange={(e) => set("endDate", e.target.value)} />
+                <Field label="Project End Date" hint="Quick-select or enter manually">
+                    <div className="space-y-2">
+                        {/* Quick-select buttons */}
+                        <div className="flex gap-2">
+                            {[{label: "3 Mo", months: 3}, {label: "6 Mo", months: 6}, {label: "12 Mo", months: 12}].map(({ label, months }) => {
+                                const disabled = !form.startDate;
+                                return (
+                                    <button
+                                        key={months}
+                                        type="button"
+                                        disabled={disabled}
+                                        onClick={() => {
+                                            if (!form.startDate) return;
+                                            const d = new Date(form.startDate);
+                                            d.setMonth(d.getMonth() + months);
+                                            set("endDate", d.toISOString().slice(0, 10));
+                                        }}
+                                        className={`flex-1 py-2 rounded-lg text-xs font-bold border transition ${
+                                            disabled
+                                                ? "border-gray-200 text-gray-300 bg-gray-50 cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-600"
+                                                : "border-violet-300 text-violet-700 bg-violet-50 hover:bg-violet-100 dark:bg-violet-900/20 dark:border-violet-700 dark:text-violet-300 dark:hover:bg-violet-900/40"
+                                        }`}
+                                    >
+                                        {label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {/* Manual date input */}
+                        <input type="date" className={inputCls} value={form.endDate} onChange={(e) => set("endDate", e.target.value)} />
+                        {form.endDate && form.startDate && (
+                            <p className="text-[11px] text-violet-600 dark:text-violet-400 font-medium">
+                                📅 End: {new Date(form.endDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                            </p>
+                        )}
+                    </div>
                 </Field>
                 <Field label="Bill Rate ($/hr) *">
                     <input required type="number" min="0" step="0.01" className={inputCls} placeholder="60" value={form.billingRate} onChange={(e) => set("billingRate", e.target.value)} />
