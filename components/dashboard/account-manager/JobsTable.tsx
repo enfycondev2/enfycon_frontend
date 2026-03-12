@@ -901,8 +901,8 @@ export default function JobsTable({
                                 </TableHead>
                             )}
                             {canEditByRole && (
-                                <TableHead className="sticky right-0 z-20 bg-slate-100/95 dark:bg-slate-700/95 text-base px-4 h-12 border-b border-l border-neutral-200 dark:border-slate-600 text-center w-12 min-w-[48px] shadow-[-1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[-1px_0_0_0_rgba(71,85,105,1)]">
-                                    <Edit2 className="h-3.5 w-3.5 mx-auto text-neutral-400" />
+                                <TableHead className="sticky right-0 z-20 bg-slate-100/95 dark:bg-slate-700/95 text-[10px] px-4 h-12 border-b border-l border-neutral-200 dark:border-slate-600 text-center w-[80px] min-w-[80px] shadow-[-1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[-1px_0_0_0_rgba(71,85,105,1)] font-bold text-neutral-500 uppercase tracking-widest">
+                                    Actions
                                 </TableHead>
                             )}
                         </TableRow>
@@ -1268,7 +1268,7 @@ export default function JobsTable({
                                                                     variant="ghost"
                                                                     size="icon"
                                                                     className="h-7 w-7 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 dark:hover:bg-slate-700"
-                                                                    title="Actions"
+                                                                    title="Action"
                                                                 >
                                                                     <MoreHorizontal className="h-4 w-4" />
                                                                 </Button>

@@ -84,58 +84,14 @@ function getCurrentPipelineStage(submission: SubmissionRow) {
   return "UNSTAGED";
 }
 
+import { fetchAllPages } from "@/lib/pagination";
+
 async function getJobs(): Promise<JobRow[]> {
-  try {
-    const firstResponse = await serverApiClient("/jobs?page=1&limit=100", { cache: "no-store" });
-    if (!firstResponse.ok) return [];
-    const firstData = await firstResponse.json();
-    let allJobs = Array.isArray(firstData?.data) ? firstData.data : (Array.isArray(firstData) ? firstData : []);
-    
-    const totalPages = firstData?.totalPages || 1;
-    if (totalPages > 1) {
-      const promises = [];
-      for (let i = 2; i <= totalPages; i++) {
-        promises.push(serverApiClient(`/jobs?page=${i}&limit=100`, { cache: "no-store" }).then(res => res.json()));
-      }
-      const results = await Promise.all(promises);
-      results.forEach(res => {
-        const arr = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-        allJobs = [...allJobs, ...arr];
-      });
-    }
-    return allJobs;
-  } catch {
-    return [];
-  }
+  return await fetchAllPages<JobRow>("/jobs");
 }
 
 async function getSubmissions(): Promise<SubmissionRow[]> {
-  try {
-    const firstResponse = await serverApiClient("/recruiter-submissions?page=1&limit=100", { cache: "no-store" });
-    if (!firstResponse.ok) return [];
-    const firstData = await firstResponse.json();
-    let allSubmissions = Array.isArray(firstData?.data) 
-      ? firstData.data 
-      : (Array.isArray(firstData?.submissions) ? firstData.submissions : (Array.isArray(firstData) ? firstData : []));
-    
-    const totalPages = firstData?.totalPages || 1;
-    if (totalPages > 1) {
-      const promises = [];
-      for (let i = 2; i <= totalPages; i++) {
-        promises.push(serverApiClient(`/recruiter-submissions?page=${i}&limit=100`, { cache: "no-store" }).then(res => res.json()));
-      }
-      const results = await Promise.all(promises);
-      results.forEach(res => {
-        const arr = Array.isArray(res?.data) 
-          ? res.data 
-          : (Array.isArray(res?.submissions) ? res.submissions : (Array.isArray(res) ? res : []));
-        allSubmissions = [...allSubmissions, ...arr];
-      });
-    }
-    return allSubmissions;
-  } catch {
-    return [];
-  }
+  return await fetchAllPages<SubmissionRow>("/recruiter-submissions");
 }
 
 async function getPerformanceTrends(interval: string = "daily"): Promise<any[]> {

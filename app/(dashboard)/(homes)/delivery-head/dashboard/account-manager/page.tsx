@@ -28,16 +28,10 @@ interface JobRow {
   submissionRequired?: number;
 }
 
+import { fetchAllPages } from "@/lib/pagination";
+
 async function getJobs(): Promise<JobRow[]> {
-  try {
-    const response = await serverApiClient("/jobs", { cache: "no-store" });
-    if (!response.ok) return [];
-    const data = await response.json();
-    const jobs = Array.isArray(data) ? data : (data?.data ?? data?.content ?? data?.jobs ?? []);
-    return Array.isArray(jobs) ? jobs : [];
-  } catch {
-    return [];
-  }
+  return await fetchAllPages<JobRow>("/jobs");
 }
 
 export default async function DeliveryHeadAccountManagerPage() {

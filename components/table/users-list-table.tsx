@@ -168,71 +168,92 @@ export default function UserTable({ searchQuery, statusFilter, roleFilter }: Use
                     </p>
                 </div>
             ) : (
-                <div className="grid gap-3">
-                    {filteredUsers.map((user, index) => {
-                        const isOnline = onlineUsers.has(user.keycloakId);
-                        const isMe = user.id === session?.user?.id;
-                        
-                        return (
-                            <div 
-                                key={user.id} 
-                                className={cn(
-                                    "group relative p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl transition-all duration-300",
-                                    "bg-white dark:bg-slate-900 border border-neutral-100 dark:border-slate-800/60 hover:border-primary/30 dark:hover:border-primary/30 shadow-sm hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5",
-                                    !user.isActive && "opacity-75 grayscale-[0.3] bg-neutral-50 dark:bg-slate-950"
-                                )}
-                            >
-                                <div className="flex items-center gap-4">
-                                    {/* Avatar Column */}
-                                    <div className="relative shrink-0">
-                                        <div className="relative w-11 h-11 rounded-xl overflow-hidden shadow-inner bg-neutral-100 dark:bg-slate-800">
-                                            {user.profilePicture ? (
-                                                <Image
-                                                    src={user.profilePicture}
-                                                    alt={user.fullName || user.email}
-                                                    fill
-                                                    className="object-cover group-hover:scale-110 transition-transform duration-500"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center font-bold text-base text-primary/40 bg-gradient-to-br from-primary/10 to-transparent">
-                                                    {(user.fullName || user.email).substring(0, 2).toUpperCase()}
-                                                </div>
-                                            )}
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-neutral-100 dark:border-slate-800/60 shadow-sm overflow-hidden min-w-[850px]">
+                    {/* Table Header Row */}
+                    <div className="hidden sm:flex items-center px-6 py-4 bg-neutral-50/50 dark:bg-slate-800/20 border-b border-neutral-100 dark:border-slate-800/40">
+                        <div className="w-[280px] shrink-0">
+                            <span className="text-[10px] font-bold text-neutral-400 dark:text-slate-500 uppercase tracking-widest">Name</span>
+                        </div>
+                        <div className="w-[150px] shrink-0 px-4">
+                            <span className="text-[10px] font-bold text-neutral-400 dark:text-slate-500 uppercase tracking-widest">Joined Date</span>
+                        </div>
+                        <div className="flex-1 px-4">
+                            <span className="text-[10px] font-bold text-neutral-400 dark:text-slate-500 uppercase tracking-widest">Roles</span>
+                        </div>
+                        <div className="w-[120px] shrink-0 text-center">
+                            <span className="text-[10px] font-bold text-neutral-400 dark:text-slate-500 uppercase tracking-widest">Current Status</span>
+                        </div>
+                        <div className="w-[60px] shrink-0"></div>
+                    </div>
+
+                    <div className="divide-y divide-neutral-100 dark:divide-slate-800/60">
+                        {filteredUsers.map((user, index) => {
+                            const isOnline = onlineUsers.has(user.keycloakId);
+                            const isMe = user.id === session?.user?.id;
+                            
+                            return (
+                                <div 
+                                    key={user.id} 
+                                    className={cn(
+                                        "group relative px-6 py-4 flex items-center transition-all duration-300 hover:bg-neutral-50/50 dark:hover:bg-slate-800/20",
+                                        !user.isActive && "opacity-75 grayscale-[0.3] bg-neutral-50/30 dark:bg-slate-950/30"
+                                    )}
+                                >
+                                    {/* Name Column */}
+                                    <div className="w-[280px] shrink-0 flex items-center gap-4">
+                                        <div className="relative shrink-0">
+                                            <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-sm bg-neutral-100 dark:bg-slate-800 border border-white dark:border-slate-700">
+                                                {user.profilePicture ? (
+                                                    <Image
+                                                        src={user.profilePicture}
+                                                        alt={user.fullName || user.email}
+                                                        fill
+                                                        className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center font-bold text-sm text-primary/40 bg-gradient-to-br from-primary/10 to-transparent">
+                                                        {(user.fullName || user.email).substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Presence Indicator */}
+                                            <div className={cn(
+                                                "absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-[2.5px] border-white dark:border-slate-900 flex items-center justify-center",
+                                                isOnline ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"
+                                            )}>
+                                                {isOnline && (
+                                                    <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-25" />
+                                                )}
+                                            </div>
                                         </div>
-                                        
-                                        {/* Presence Indicator */}
-                                        <div className={cn(
-                                            "absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-[3px] border-white dark:border-slate-900 flex items-center justify-center",
-                                            isOnline ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"
-                                        )}>
-                                            {isOnline && (
-                                                <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75" />
-                                            )}
+
+                                        <div className="flex flex-col min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="font-bold text-neutral-900 dark:text-white truncate group-hover:text-primary transition-colors duration-300 text-[14px]">
+                                                    {user.fullName || "Unverified Identity"}
+                                                </h4>
+                                                {isMe && (
+                                                    <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[8px] font-black uppercase tracking-tighter rounded-md">
+                                                        You
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-1 text-neutral-400 dark:text-slate-500 text-[11px]">
+                                                <Mail className="w-3 h-3" />
+                                                <span className="truncate">{user.email}</span>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Identity info */}
-                                    <div className="flex flex-col min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h4 className="font-bold text-neutral-900 dark:text-white truncate group-hover:text-primary transition-colors duration-300 text-[15px]">
-                                                {user.fullName || "Unverified Identity"}
-                                            </h4>
-                                            {isMe && (
-                                                <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[9px] font-black uppercase tracking-tighter rounded-md">
-                                                    You
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-1 text-neutral-500 dark:text-slate-400 text-xs">
-                                            <Mail className="w-3 h-3" />
-                                            <span className="truncate">{user.email}</span>
-                                        </div>
+                                    {/* Joined Date Column */}
+                                    <div className="w-[150px] shrink-0 px-4 flex items-center gap-2 text-[12px] font-bold text-neutral-600 dark:text-slate-300 uppercase tracking-tight">
+                                        <Clock className="w-3.5 h-3.5 text-neutral-400" />
+                                        <span>{format(new Date(user.createdAt), "dd MMM yyyy")}</span>
                                     </div>
-                                </div>
 
-                                {/* Middle Column: Roles & Meta */}
-                                <div className="flex flex-wrap items-center gap-3 sm:flex-[2] justify-start sm:justify-center">
-                                    <div className="flex flex-wrap gap-1.5">
+                                    {/* Roles Column */}
+                                    <div className="flex-1 px-4 flex flex-wrap gap-1.5">
                                         {user.roles
                                             .filter(role => [
                                                 'ADMIN',
@@ -244,25 +265,18 @@ export default function UserTable({ searchQuery, statusFilter, roleFilter }: Use
                                             ].includes(role.toUpperCase()))
                                             .map(role => (
                                                 <span key={role} className={cn(
-                                                    "px-2.5 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all duration-300",
+                                                    "px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all duration-300",
                                                     getRoleColor(role)
                                                 )}>
                                                     {role.replace(/_/g, " ").replace(/-/g, " ")}
                                                 </span>
                                             ))}
                                     </div>
-                                    
-                                    <div className="hidden xl:flex items-center gap-1 text-[10px] font-bold text-neutral-400 uppercase tracking-wider bg-neutral-50 dark:bg-slate-800/40 px-2 py-1 rounded-lg border border-neutral-100 dark:border-slate-800">
-                                        <Clock className="w-2.5 h-2.5" />
-                                        <span>{format(new Date(user.createdAt), "MMM yyyy")}</span>
-                                    </div>
-                                </div>
 
-                                {/* Action Column */}
-                                <div className="flex items-center justify-between sm:justify-end gap-5 sm:w-44 pl-3 border-l border-neutral-100 dark:border-slate-800/80">
-                                    <div className="flex flex-col items-center">
+                                    {/* Status Column */}
+                                    <div className="w-[120px] shrink-0 flex flex-col items-center gap-1">
                                         <span className={cn(
-                                            "text-[9px] font-black uppercase tracking-[0.15em] mb-1",
+                                            "text-[9px] font-bold uppercase tracking-widest",
                                             user.isActive ? "text-emerald-500" : "text-neutral-400"
                                         )}>
                                             {user.isActive ? "Active" : "Inactive"}
@@ -271,17 +285,20 @@ export default function UserTable({ searchQuery, statusFilter, roleFilter }: Use
                                             checked={user.isActive}
                                             onCheckedChange={() => toggleStatus(user.id, user.isActive)}
                                             disabled={updatingId === user.id || isMe}
-                                            className="data-[state=checked]:bg-emerald-500 h-5 w-9 shadow-inner scale-90"
+                                            className="data-[state=checked]:bg-emerald-500 h-4.5 w-8 shadow-inner scale-90"
                                         />
                                     </div>
-                                    
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 min-w-8 rounded-xl bg-neutral-50 dark:bg-slate-800 hover:bg-neutral-100 dark:hover:bg-slate-700 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 duration-300">
-                                        <ChevronRight className="w-4 h-4 text-neutral-400" />
-                                    </Button>
+
+                                    {/* Action Column */}
+                                    <div className="w-[60px] shrink-0 flex justify-end">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-transparent hover:bg-neutral-100 dark:hover:bg-slate-800 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 duration-300">
+                                            <ChevronRight className="w-4 h-4 text-neutral-300" />
+                                        </Button>
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
             )}
         </div>

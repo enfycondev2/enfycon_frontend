@@ -35,41 +35,14 @@ interface SubmissionRow {
 
 const norm = (value?: string) => (value || "").trim().toUpperCase();
 
+import { fetchAllPages } from "@/lib/pagination";
+
 async function getRecruiterJobs(): Promise<JobRow[]> {
-  try {
-    const response = await serverApiClient("/jobs", {
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      console.error("Failed to fetch recruiter jobs. Status:", response.status);
-      return [];
-    }
-
-    const data = await response.json();
-    const jobs = Array.isArray(data) ? data : (data?.data ?? data?.content ?? data?.jobs ?? []);
-    return Array.isArray(jobs) ? jobs : [];
-  } catch (error) {
-    console.error("Error fetching recruiter jobs:", error);
-    return [];
-  }
+  return await fetchAllPages<JobRow>("/jobs");
 }
 
 async function getSubmissions(): Promise<SubmissionRow[]> {
-  try {
-    const response = await serverApiClient("/recruiter-submissions", {
-      cache: "no-store",
-    });
-    if (!response.ok) return [];
-    const data = await response.json();
-    const arr = Array.isArray(data)
-      ? data
-      : (data?.data || data?.submissions || []);
-    return Array.isArray(arr) ? arr : [];
-  } catch (error) {
-    console.error("Error fetching recruiter submissions:", error);
-    return [];
-  }
+  return await fetchAllPages<SubmissionRow>("/recruiter-submissions");
 }
 
 export default async function AdminRecruiterDashboardPage() {

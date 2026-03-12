@@ -719,7 +719,7 @@ export default function SubmittedJobsTable({
                                         </TableHead>
                                     </>
                                 )}
-                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-end border-b border-neutral-200 dark:border-slate-600 sticky right-0 z-30 bg-gray-50 shadow-[-1px_0_0_0_rgba(226,232,240,1)]">
+                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-end border-b border-neutral-200 dark:border-slate-600 sticky right-0 z-30 bg-gray-50 shadow-[-1px_0_0_0_rgba(226,232,240,1)] uppercase tracking-wider text-[10px]">
                                     Actions
                                 </TableHead>
                             </TableRow>
@@ -927,7 +927,7 @@ export default function SubmittedJobsTable({
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
                                                                 <DropdownMenuContent align="end" className="w-48">
-                                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                                    <DropdownMenuLabel>Action</DropdownMenuLabel>
                                                                     <DropdownMenuSeparator />
                                                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                                                         <EditStatusDialog sub={sub} onSaved={onUpdate} isRecruiter={isRecruiter} trigger={
