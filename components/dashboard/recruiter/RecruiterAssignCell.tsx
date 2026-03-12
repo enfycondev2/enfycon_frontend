@@ -7,10 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 import { apiClient } from "@/lib/apiClient";
 
 export interface TeamMember {
@@ -26,6 +29,9 @@ interface RecruiterAssignCellProps {
     token: string;
     canEdit?: boolean;
     onSuccess?: () => void;
+    triggerMode?: "default" | "icon";
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
 function getInitials(name: string | null, email: string): string {
@@ -59,8 +65,15 @@ export default function RecruiterAssignCell({
     token,
     canEdit = false,
     onSuccess,
+    triggerMode = "default",
+    open: controlledOpen,
+    onOpenChange: controlledOnOpenChange,
 }: RecruiterAssignCellProps) {
-    const [open, setOpen] = useState(false);
+    const [internalOpen, setInternalOpen] = useState(false);
+    
+    const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+    const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen;
+
     const [selected, setSelected] = useState<Set<string>>(
         new Set(assignedRecruiters.map((r) => r.id))
     );
@@ -168,14 +181,14 @@ export default function RecruiterAssignCell({
 
     const trigger =
         assignedRecruiters.length === 0 ? (
-            <button
-                className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2.5 py-1.5 rounded-lg border border-dashed border-neutral-300 dark:border-slate-600 transition-colors group"
-                type="button"
-                title="Assign Recruiters"
-            >
-                <UserPlus className="h-3.5 w-3.5" />
-                <span className="font-medium group-hover:text-blue-600">Assign</span>
-            </button>
+        <button
+            className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2.5 py-1.5 rounded-lg border border-dashed border-neutral-300 dark:border-slate-600 transition-colors group"
+            type="button"
+            title="Assign Recruiters"
+        >
+            <UserPlus className="h-3.5 w-3.5" />
+            <span className="font-medium group-hover:text-blue-600">Assign</span>
+        </button>
         ) : (
             <button
                 className="flex items-center gap-1 rounded-lg px-1.5 py-1 transition-colors hover:bg-neutral-100 dark:hover:bg-slate-700"
@@ -202,42 +215,61 @@ export default function RecruiterAssignCell({
             </button>
         );
 
+    const iconTrigger = (
+        <button
+            className="h-8 w-8 flex items-center justify-center text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+            type="button"
+            title="Assign Recruiters"
+        >
+            <UserPlus className="h-4 w-4" />
+        </button>
+    );
+
+    const finalTrigger = triggerMode === "icon" ? iconTrigger : trigger;
+
     return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-            <PopoverContent
-                className="w-72 p-0 shadow-xl border border-neutral-200 dark:border-slate-600 rounded-xl overflow-hidden"
-                align="start"
-                side="bottom"
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>{finalTrigger}</DialogTrigger>
+            <DialogContent
+                className="max-w-md p-0 overflow-hidden border-none shadow-2xl"
+                onPointerDownOutside={(e) => {
+                    // Prevent accidental closure if needed, but Dialog is usually very stable
+                }}
             >
+                <DialogHeader className="sr-only">
+                    <DialogTitle>Assign Recruiters</DialogTitle>
+                    <DialogDescription>Select team members to assign to this job.</DialogDescription>
+                </DialogHeader>
                 {/* Header */}
-                <div className="flex items-center justify-between px-3 py-2.5 bg-neutral-50 dark:bg-slate-800 border-b border-neutral-200 dark:border-slate-600">
+                <div className="flex items-center justify-between px-3 pr-10 py-2.5 bg-neutral-50 dark:bg-slate-800 border-b border-neutral-200 dark:border-slate-600">
                     <span className="text-xs font-semibold text-neutral-600 dark:text-slate-300 uppercase tracking-wider">
                         Assign Recruiters
                     </span>
                     {selected.size > 0 && (
-                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 shrink-0">
                             {selected.size} selected
                         </Badge>
                     )}
                 </div>
 
-                {/* Search */}
-                <div className="px-3 py-2 border-b border-neutral-100 dark:border-slate-700">
-                    <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
-                        <Input
-                            placeholder="Search team members..."
-                            className="pl-8 h-8 text-xs bg-white dark:bg-slate-900 border-neutral-200 dark:border-slate-600"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            autoFocus
-                        />
+                {/* Search - only show if more than 6 members */}
+                {teamMembers.length > 6 && (
+                    <div className="px-3 py-2 border-b border-neutral-100 dark:border-slate-700">
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-neutral-400" />
+                            <Input
+                                placeholder="Search team members..."
+                                className="pl-8 h-8 text-xs bg-white dark:bg-slate-900 border-neutral-200 dark:border-slate-600 focus-visible:ring-blue-500"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Member list */}
-                <div className="max-h-52 overflow-y-auto py-1">
+                <div className="max-h-[320px] overflow-y-auto py-1 scrollbar-thin scrollbar-thumb-neutral-200 dark:scrollbar-thumb-slate-700">
                     {filteredMembers.length === 0 ? (
                         <p className="text-xs text-neutral-400 text-center py-6">
                             No members found
@@ -287,37 +319,35 @@ export default function RecruiterAssignCell({
                     )}
                 </div>
 
-                {/* Footer actions */}
-                <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-t border-neutral-100 dark:border-slate-700 bg-neutral-50 dark:bg-slate-800">
-                    <button
-                        type="button"
+                {/* Footer / Actions */}
+                <div className="flex items-center justify-between px-3 py-2.5 bg-neutral-50 dark:bg-slate-800/50 border-t border-neutral-200 dark:border-slate-600">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-[11px] h-8 px-2 text-neutral-500 hover:text-neutral-700"
                         onClick={() => setSelected(new Set())}
-                        className="text-[11px] text-neutral-400 hover:text-destructive transition-colors underline-offset-2 hover:underline"
                     >
                         Clear all
-                    </button>
-                    <div className="flex gap-2">
+                    </Button>
+                    <div className="flex items-center gap-2">
                         <Button
-                            type="button"
                             variant="outline"
                             size="sm"
-                            className="h-7 text-xs px-3"
-                            onClick={handleCancel}
-                            disabled={saving}
+                            className="text-[11px] h-8 px-3"
+                            onClick={() => setOpen(false)}
                         >
                             Cancel
                         </Button>
                         <Button
-                            type="button"
                             size="sm"
-                            className="h-7 text-xs px-3 bg-blue-600 hover:bg-blue-700"
+                            className="text-[11px] h-8 px-4 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                            disabled={!hasChanges || saving}
                             onClick={handleSave}
-                            disabled={saving || !hasChanges}
                         >
                             {saving ? (
                                 <>
-                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                    Saving…
+                                    <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
+                                    Saving...
                                 </>
                             ) : (
                                 "Save"
@@ -325,7 +355,7 @@ export default function RecruiterAssignCell({
                         </Button>
                     </div>
                 </div>
-            </PopoverContent>
-        </Popover>
+            </DialogContent>
+        </Dialog>
     );
 }

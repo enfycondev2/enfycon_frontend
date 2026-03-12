@@ -12,7 +12,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-    Eye,
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
@@ -21,7 +20,6 @@ import {
     X,
     UserPlus,
 } from "lucide-react";
-import Link from "next/link";
 import {
     Select,
     SelectContent,
@@ -37,6 +35,7 @@ import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import RecruiterAssignCell, { TeamMember } from "./RecruiterAssignCell";
 import JobSubmissionDialog from "./JobSubmissionDialog";
+import RecruiterJobRowActions from "./RecruiterJobRowActions";
 import { apiClient } from "@/lib/apiClient";
 
 import { DateRange } from "react-day-picker";
@@ -107,6 +106,7 @@ export default function RecruiterJobsTable({
     const [sortBy, setSortBy] = useState<string>("date-desc");
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [submissionJob, setSubmissionJob] = useState<{ id: string; jobCode: string } | null>(null);
+    const [assigningJobId, setAssigningJobId] = useState<string | null>(null);
 
     const token = (session as any)?.user?.accessToken;
     const roles: string[] = (session?.user as any)?.roles || [];
@@ -470,9 +470,11 @@ export default function RecruiterJobsTable({
                             <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-center">
                                 CFR Age
                             </TableHead>
-                            <TableHead className="bg-neutral-100 dark:bg-slate-700 text-base px-4 h-12 border-b border-neutral-200 dark:border-slate-600 text-end">
-                                Actions
-                            </TableHead>
+                                    <TableHead 
+                                        className="sticky right-0 z-30 w-[80px] min-w-[80px] text-center bg-slate-50/90 dark:bg-slate-800/90 backdrop-blur-sm py-3 px-4 border-b border-l border-neutral-200 dark:border-slate-600 font-semibold shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+                                    >
+                                        Actions
+                                    </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -561,14 +563,20 @@ export default function RecruiterJobsTable({
                                                     </TableCell>
                                                 </TableRow>
                                             )}
-                                            <TableRow className={cn(
-                                                "transition-colors",
-                                                index % 2 === 0
-                                                    ? "bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                                                    : "bg-slate-50 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75"
-                                            )}>
+                                            <TableRow 
+                                                className={cn(
+                                                    "transition-colors cursor-pointer group/row",
+                                                    index % 2 === 0
+                                                        ? "bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                                                        : "bg-slate-50 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75"
+                                                )}
+                                                onClick={() => router.push(`${baseUrl}/${job.id}`)}
+                                            >
                                                 {/* Job Code - never editable */}
-                                                <TableCell className={cn("sticky left-0 z-30 min-w-[170px] w-[170px] whitespace-nowrap overflow-hidden py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(71,85,105,1)]", index % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50 dark:bg-slate-800")}>
+                                                <TableCell 
+                                                    className={cn("sticky left-0 z-30 min-w-[170px] w-[170px] whitespace-nowrap overflow-hidden py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(71,85,105,1)]", index % 2 === 0 ? "bg-white dark:bg-slate-900" : "bg-slate-50 dark:bg-slate-800")}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
                                                     <code className="inline-block bg-neutral-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-xs font-mono whitespace-nowrap">{job.jobCode}</code>
                                                     {job.submissionRequired !== undefined && (
                                                         <div className="mt-1">
@@ -612,13 +620,21 @@ export default function RecruiterJobsTable({
                                                         <span className="text-[10px] text-muted-foreground">{job.accountManager?.email}</span>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="py-3 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
+                                                <TableCell 
+                                                    className="py-3 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
                                                     <RecruiterAssignCell
                                                         jobId={job.id}
                                                         assignedRecruiters={job.assignedRecruiters || []}
                                                         teamMembers={teamMembers}
                                                         token={token}
                                                         canEdit={isPodLead || roles.includes('ADMIN') || roles.includes('DELIVERY_HEAD')}
+                                                        open={assigningJobId === job.id}
+                                                        onOpenChange={(open) => {
+                                                            if (open) setAssigningJobId(job.id);
+                                                            else if (assigningJobId === job.id) setAssigningJobId(null);
+                                                        }}
                                                         onSuccess={() => {
                                                             if (onRefresh) onRefresh();
                                                             else router.refresh();
@@ -639,29 +655,24 @@ export default function RecruiterJobsTable({
                                                 <TableCell className="py-3 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-center">
                                                     <span className="text-sm font-medium">{job.carryForwardAge ?? 0}</span>
                                                 </TableCell>
-                                                <TableCell className="py-3 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-end">
-                                                    <div className="flex justify-end gap-2">
-                                                        {job.requirementType === "CFR" ? (
-                                                            <span className="text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
-                                                                Submissions blocked
-                                                            </span>
-                                                        ) : (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 text-primary hover:text-primary/80 hover:bg-primary/10"
-                                                                onClick={() => setSubmissionJob({ id: job.id, jobCode: job.jobCode })}
-                                                                title="Submit Candidate"
-                                                                disabled={job.status === "CLOSED"}
-                                                            >
-                                                                <UserPlus className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20" asChild>
-                                                            <Link href={`${baseUrl}/${job.id}`}>
-                                                                <Eye className="h-4 w-4" />
-                                                            </Link>
-                                                        </Button>
+                                                <TableCell 
+                                                    className={cn(
+                                                        "sticky right-0 z-30 w-[80px] min-w-[80px] py-3 px-4 border-b border-l border-neutral-200 dark:border-slate-600 text-center shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)] transition-colors",
+                                                        index % 2 === 0 ? "bg-slate-50/50 dark:bg-slate-800/50" : "bg-slate-100/50 dark:bg-slate-700/50"
+                                                    )}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <div className="flex justify-center">
+                                                        <RecruiterJobRowActions 
+                                                            jobId={job.id} 
+                                                            jobCode={job.jobCode} 
+                                                            baseUrl={baseUrl}
+                                                            onAssign={() => setAssigningJobId(job.id)}
+                                                            onSubmission={() => setSubmissionJob({ id: job.id, jobCode: job.jobCode })}
+                                                            canAssign={isPodLead || roles.includes('ADMIN') || roles.includes('DELIVERY_HEAD')}
+                                                            isCfr={job.requirementType === "CFR"}
+                                                            isClosed={job.status === "CLOSED"}
+                                                        />
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
