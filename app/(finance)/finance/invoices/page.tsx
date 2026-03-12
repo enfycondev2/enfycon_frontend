@@ -6,7 +6,7 @@ import { financeGet, financePost, financePatch } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 
 const STATUS_OPTIONS = ["", "PENDING", "PAID"];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+import { MONTHS } from "@/components/finance/FinanceUI";
 const curr = (v: number) => `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function InvoicesContent() {

@@ -6,7 +6,7 @@ import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet } from "@/lib/financeClient";
 
-const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+import { MONTHS, StatusBadge } from "@/components/finance/FinanceUI";
 
 interface MonthActual {
     month: number; year: number; hours: number;
@@ -31,6 +31,7 @@ interface Row {
     projectStartDate: string | null; projectEndDate: string | null;
     recruiterName: string; accountManagerName: string;
     paymentTerm: string; paymentTermsDays: number;
+    consultantPaymentTermsDays: number | null;
     rates: { bill: number; pay: number };
     ideal: { hours: number; revenue: number; cost: number; margin: number; marginPerc: number };
     totals: Totals;
@@ -40,7 +41,7 @@ interface Row {
 const curr = (v: number) =>
     "$" + v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const pct = (v: number) => v.toFixed(1) + "%";
-const label = (dm: { month: number; year: number }) => `${MN[dm.month - 1]} ${dm.year}`;
+const label = (dm: { month: number; year: number }) => `${MONTHS[dm.month - 1]} ${dm.year}`;
 const fmtDate = (s: string | null) =>
     s ? new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
 
@@ -59,21 +60,7 @@ function initials(name: string) {
     return (p[0]?.[0] ?? "") + (p[1]?.[0] ?? "");
 }
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
-function StatusBadge({ status }: { status: "ACTIVE" | "ENDED" }) {
-    if (status === "ACTIVE") return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-            Active
-        </span>
-    );
-    return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300">
-            <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-            Ended
-        </span>
-    );
-}
+
 
 // ─── Month cell ───────────────────────────────────────────────────────────────
 function MonthCell({ m }: { m: MonthActual }) {
@@ -226,7 +213,7 @@ function RosterContent() {
                             <option value="ALL">All months</option>
                             {availableMonths.map(am => (
                                 <option key={`${am.year}-${am.month}`} value={`${am.year}-${am.month}`}>
-                                    {MN[am.month - 1]} {am.year}
+                                    {MONTHS[am.month - 1]} {am.year}
                                 </option>
                             ))}
                         </select>
@@ -338,10 +325,19 @@ function RosterContent() {
                                                     return <MonthCell key={`${dm.year}-${dm.month}`} m={m} />;
                                                 })}
                                                 {/* Terms */}
-                                                <td className="px-3 py-3 text-center">
-                                                    <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded text-[10px] font-medium border border-gray-200 dark:border-gray-600">
-                                                        {row.paymentTerm}
-                                                    </span>
+                                                <td className="px-3 py-3 text-xs space-y-1.5 min-w-[130px]">
+                                                    <div>
+                                                        <div className="text-[9px] text-blue-400 uppercase font-bold tracking-wide mb-0.5">📥 Client Terms</div>
+                                                        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded font-bold text-[11px] border border-blue-200 dark:border-blue-700">
+                                                            {row.paymentTermsDays ? `Net ${row.paymentTermsDays}` : "N/A"}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-[9px] text-violet-400 uppercase font-bold tracking-wide mb-0.5">📤 Consultant Terms</div>
+                                                        <span className="bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded font-bold text-[11px] border border-violet-200 dark:border-violet-700">
+                                                            {row.consultantPaymentTermsDays ? `Net ${row.consultantPaymentTermsDays}` : "N/A"}
+                                                        </span>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))

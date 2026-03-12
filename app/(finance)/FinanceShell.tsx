@@ -9,8 +9,8 @@ import { ReactNode } from "react";
 const NAV_LINKS = [
     { href: "/finance",                  label: "📊 Overview",        exact: true },
     { href: "/finance/roster",           label: "📋 Roster" },
+    { href: "/finance/candidate-onboard", label: "➕ Full Onboard" },
     { href: "/finance/consultants",      label: "👤 Consultants" },
-    { href: "/finance/candidate-onboard",label: "➕ Onboard" },
     { href: "/finance/projects",         label: "🗂 Projects" },
     { href: "/finance/hours",            label: "⏱ Hours" },
     { href: "/finance/invoices",         label: "🧾 Invoices" },

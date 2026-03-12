@@ -6,26 +6,13 @@ import Link from "next/link";
 import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet, financePatch, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import { apiClient } from "@/lib/apiClient";
+import { StatusBadge, MONTHS, btnPrimary, btnSecondary, StepIndicator, Field, inputCls, selectCls } from "@/components/finance/FinanceUI";
 
 const STATUS_OPTIONS = ["ACTIVE", "INACTIVE", "ENDED", "ON_HOLD"];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const iCls = "w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500";
-const btnPrimary = "bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-xl transition";
-const btnSecondary = "border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-sm px-4 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition";
 
-function StatusBadge({ status }: { status: string }) {
-    const colors: Record<string, string> = {
-        ACTIVE: "bg-green-100 text-green-700",
-        INACTIVE: "bg-gray-100 text-gray-500",
-        ENDED: "bg-red-100 text-red-600",
-        ON_HOLD: "bg-yellow-100 text-yellow-700",
-        PENDING: "bg-yellow-100 text-yellow-700",
-        PAID: "bg-green-100 text-green-700",
-    };
-    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[status] ?? "bg-gray-100 text-gray-500"}`}>{status.replace("_", " ")}</span>;
-}
+
 
 function Card({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
     return (
@@ -42,7 +29,8 @@ function Card({ title, action, children }: { title: string; action?: React.React
 // ─── Log Hours inline form ────────────────────────────────────────────────────
 function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogged: () => void }) {
     const now = new Date();
-    const [form, setForm] = useState({ consultantId, month: now.getMonth() + 1, year: now.getFullYear(), hours: "" });
+    const [entryMode, setEntryMode] = useState<"MONTHLY" | "WEEKLY">("MONTHLY");
+    const [form, setForm] = useState({ consultantId, month: now.getMonth() + 1, year: now.getFullYear(), week: "1", hours: "" });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [ok, setOk] = useState(false);
@@ -51,34 +39,57 @@ function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogg
         e.preventDefault();
         setSaving(true); setError(""); setOk(false);
         try {
-            await financePost("finance/hours", { ...form, month: +form.month, year: +form.year, hours: +form.hours });
+            const payload = {
+                ...form,
+                month: +form.month,
+                year: +form.year,
+                hours: +form.hours,
+                week: entryMode === "WEEKLY" ? +form.week : undefined
+            };
+            await financePost("finance/hours", payload);
             setOk(true);
+            setForm(f => ({...f, hours: ""}));
             onLogged();
         } catch (err: any) { setError(err.message); }
         finally { setSaving(false); }
     }
 
     return (
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-            <div>
-                <label className="block text-xs text-gray-500 mb-1">Month</label>
-                <select className={iCls} value={form.month} onChange={e => setForm(f => ({ ...f, month: +e.target.value }))}>
-                    {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-                </select>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+            <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl w-fit">
+                <button type="button" onClick={() => setEntryMode("MONTHLY")} className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${entryMode === "MONTHLY" ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>Monthly Total</button>
+                <button type="button" onClick={() => setEntryMode("WEEKLY")} className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${entryMode === "WEEKLY" ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>Weekly Entry</button>
             </div>
-            <div>
-                <label className="block text-xs text-gray-500 mb-1">Year</label>
-                <input type="number" className={iCls} value={form.year} onChange={e => setForm(f => ({ ...f, year: +e.target.value }))} />
+
+            <div className={`grid gap-3 ${entryMode === "WEEKLY" ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-2 sm:grid-cols-4"}`}>
+                <div>
+                    <label className="block text-xs text-gray-500 mb-1">Month</label>
+                    <select className={iCls} value={form.month} onChange={e => setForm(f => ({ ...f, month: +e.target.value }))}>
+                        {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-xs text-gray-500 mb-1">Year</label>
+                    <input type="number" className={iCls} value={form.year} onChange={e => setForm(f => ({ ...f, year: +e.target.value }))} />
+                </div>
+                {entryMode === "WEEKLY" && (
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Week</label>
+                        <select className={iCls} value={form.week} onChange={e => setForm(f => ({ ...f, week: e.target.value }))}>
+                            {[1, 2, 3, 4, 5].map(w => <option key={w} value={w}>Week {w}</option>)}
+                        </select>
+                    </div>
+                )}
+                <div>
+                    <label className="block text-xs text-gray-500 mb-1">Hours</label>
+                    <input type="number" step="0.5" required className={iCls} value={form.hours} placeholder={entryMode === "WEEKLY" ? "40" : "160"} onChange={e => setForm(f => ({ ...f, hours: e.target.value }))} />
+                </div>
+                <div className="flex items-end gap-2">
+                    <button type="submit" disabled={saving} className={`${btnPrimary} w-full`}>{saving ? "Saving…" : "Log"}</button>
+                </div>
             </div>
-            <div>
-                <label className="block text-xs text-gray-500 mb-1">Hours</label>
-                <input type="number" step="0.5" required className={iCls} value={form.hours} placeholder="160" onChange={e => setForm(f => ({ ...f, hours: e.target.value }))} />
-            </div>
-            <div className="flex items-end gap-2">
-                <button type="submit" disabled={saving} className={`${btnPrimary} flex-1`}>{saving ? "Saving…" : "Log"}</button>
-            </div>
-            {error && <p className="col-span-full text-red-500 text-xs">{error}</p>}
-            {ok && <p className="col-span-full text-green-600 text-xs">✓ Hours saved!</p>}
+            {error && <p className="text-red-500 text-xs">{error}</p>}
+            {ok && <p className="text-green-600 text-xs">✓ Hours saved!</p>}
         </form>
     );
 }
@@ -355,45 +366,7 @@ function AddContractForm({ projects, onCreated }: { projects: any[]; onCreated: 
 
 const STEPS = ["Consultant Info", "Billing & Rates"];
 
-function StepIndicator({ current, steps }: { current: number; steps: string[] }) {
-    return (
-        <div className="flex items-center gap-0 mb-8">
-            {steps.map((label, i) => {
-                const done = i < current;
-                const active = i === current;
-                return (
-                    <div key={i} className="flex items-center flex-1 last:flex-none">
-                        <div className="flex flex-col items-center">
-                            <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all
-                                ${done ? "bg-violet-600 border-violet-600 text-white" : active ? "border-violet-600 bg-white text-violet-600" : "border-gray-300 bg-white text-gray-400"}`}>
-                                {done ? (
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                                ) : i + 1}
-                            </div>
-                            <span className={`mt-1 text-xs font-medium whitespace-nowrap ${active ? "text-violet-600" : done ? "text-violet-500" : "text-gray-400"}`}>{label}</span>
-                        </div>
-                        {i < steps.length - 1 && (
-                            <div className={`h-0.5 flex-1 mx-2 mb-4 transition-all ${done ? "bg-violet-500" : "bg-gray-200"}`} />
-                        )}
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
 
-function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: React.ReactNode }) {
-    return (
-        <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">{label}</label>
-            {children}
-            {hint && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
-        </div>
-    );
-}
-
-const inputCls = "w-full border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2.5 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm transition";
-const selectCls = `${inputCls} cursor-pointer`;
 
 // ─── Main Detail ──────────────────────────────────────────────────────────────
 function ConsultantDetailContent() {
@@ -415,6 +388,13 @@ function ConsultantDetailContent() {
         clientName: "", endClientName: "", startDate: "", endDate: "",
         billingRate: "", payRate: "", currency: "USD", paymentTermsDays: "30"
     });
+    const [options, setOptions] = useState<{ recruiters: any[], accountManagers: any[], podHeads: any[] }>({ recruiters: [], accountManagers: [], podHeads: [] });
+
+    useEffect(() => {
+        financeGet("finance/options/staff")
+            .then(res => setOptions(res))
+            .catch(err => console.error("Failed to fetch staff options", err));
+    }, []);
 
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState("");
@@ -422,9 +402,13 @@ function ConsultantDetailContent() {
     const [showInvoice, setShowInvoice] = useState(false);
     const [showPayment, setShowPayment] = useState(false);
     const [showContract, setShowContract] = useState(false);
-    const [showPayout, setShowPayout] = useState(false);
+    const [showLogInvoice, setShowLogInvoice] = useState(false);
+    const [showRecordPayout, setShowRecordPayout] = useState(false);
 
-    function clearForms() { setShowLogHours(false); setShowInvoice(false); setShowPayment(false); setShowContract(false); setShowPayout(false); }
+    function clearForms() { 
+        setShowLogHours(false); setShowInvoice(false); setShowPayment(false); setShowContract(false); 
+        setShowLogInvoice(false); setShowRecordPayout(false);
+    }
 
     async function load() {
         setLoading(true); setError("");
@@ -648,15 +632,24 @@ function ConsultantDetailContent() {
                                             <input required type="number" min="0" className={inputCls} value={editForm.clientPaymentTermsDays} onChange={(e) => setEditForm((f: any) => ({ ...f, clientPaymentTermsDays: e.target.value }))} />
                                         </Field>
                                     </div>
-                                    <div className="border-t border-gray-100 dark:border-gray-700 pt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-                                        <Field label="Recruiter ID *">
-                                            <input required className={inputCls} value={editForm.recruiterId} onChange={(e) => setEditForm((f: any) => ({ ...f, recruiterId: e.target.value }))} />
+                                    <div className="border-t border-gray-100 dark:border-gray-700 pt-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                        <Field label="Recruiter">
+                                            <select className={selectCls} value={editForm.recruiterId} onChange={(e) => setEditForm((f: any) => ({ ...f, recruiterId: e.target.value }))}>
+                                                <option value="">— Unassigned —</option>
+                                                {options.recruiters.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                            </select>
                                         </Field>
-                                        <Field label="Account Manager ID *">
-                                            <input required className={inputCls} value={editForm.accountManagerId} onChange={(e) => setEditForm((f: any) => ({ ...f, accountManagerId: e.target.value }))} />
+                                        <Field label="Account Manager">
+                                            <select className={selectCls} value={editForm.accountManagerId} onChange={(e) => setEditForm((f: any) => ({ ...f, accountManagerId: e.target.value }))}>
+                                                <option value="">— Unassigned —</option>
+                                                {options.accountManagers.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                            </select>
                                         </Field>
-                                        <Field label="Pod Head ID">
-                                            <input className={inputCls} value={editForm.podHeadId} onChange={(e) => setEditForm((f: any) => ({ ...f, podHeadId: e.target.value }))} />
+                                        <Field label="Pod Head">
+                                            <select className={selectCls} value={editForm.podHeadId} onChange={(e) => setEditForm((f: any) => ({ ...f, podHeadId: e.target.value }))}>
+                                                <option value="">— Unassigned —</option>
+                                                {options.podHeads.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                            </select>
                                         </Field>
                                     </div>
 
@@ -789,8 +782,12 @@ function ConsultantDetailContent() {
                             className={`text-xs font-semibold px-3 py-2 rounded-xl border transition ${showPayment ? "bg-violet-600 text-white border-violet-600" : "border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
                             + Payment
                         </button>
-                        <button onClick={() => { clearForms(); setShowPayout(v => !v); }}
-                            className={`text-xs font-semibold px-3 py-2 rounded-xl border transition ${showPayout ? "bg-orange-500 text-white border-orange-500" : "border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"} col-span-2`}>
+                        <button onClick={() => { clearForms(); setShowLogInvoice(v => !v); }}
+                            className={`text-xs font-semibold px-3 py-2 rounded-xl border transition ${showLogInvoice ? "bg-orange-500 text-white border-orange-500" : "border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
+                            + Log Cnslt Inv
+                        </button>
+                        <button onClick={() => { clearForms(); setShowRecordPayout(v => !v); }}
+                            className={`text-xs font-semibold px-3 py-2 rounded-xl border transition ${showRecordPayout ? "bg-orange-600 text-white border-orange-600" : "border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
                             + Pay Consultant
                         </button>
                     </div>
@@ -824,9 +821,15 @@ function ConsultantDetailContent() {
                         </Card>
                     )}
 
-                    {showPayout && (
-                        <Card title="Pay Consultant">
-                            <PayoutForm consultantId={id!} hours={data.hours ?? []} projects={projects} onRecorded={load} />
+                    {showLogInvoice && (
+                        <Card title="Log Consultant Invoice">
+                            <LogConsultantInvoiceForm consultantId={id!} hours={data.hours ?? []} projects={projects} onRecorded={load} />
+                        </Card>
+                    )}
+
+                    {showRecordPayout && (
+                        <Card title="Record Payment (Payout)">
+                            <RecordPayoutForm consultantId={id!} payouts={data.payouts ?? []} onRecorded={load} />
                         </Card>
                     )}
 
@@ -889,7 +892,9 @@ function ConsultantDetailContent() {
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {data.hours.map((h: any) => (
                                             <tr key={h.id}>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300">{MONTHS[h.month - 1]}</td>
+                                                <td className="py-2 text-gray-600 dark:text-gray-300">
+                                                    {MONTHS[h.month - 1]} {h.week ? <span className="text-xs text-violet-500 font-medium ml-1 bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">W{h.week}</span> : null}
+                                                </td>
                                                 <td className="py-2 text-gray-600 dark:text-gray-300">{h.year}</td>
                                                 <td className="py-2 font-semibold text-gray-800 dark:text-white text-right">{h.hours}</td>
                                             </tr>
@@ -939,40 +944,117 @@ function ConsultantDetailContent() {
                             </div>
                         )}
                     </Card>
+
+                    {/* Payout History */}
+                    <Card title="Payout History" action={
+                        <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">AP</span>
+                    }>
+                        {!data.payouts?.length ? (
+                            <div className="p-6 text-center text-gray-400 text-sm">No payouts recorded yet.</div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b border-gray-100 dark:border-gray-700">
+                                        <tr>
+                                            <th className="text-left px-4 py-3">Period</th>
+                                            <th className="text-left px-4 py-3">Hours</th>
+                                            <th className="text-left px-4 py-3 text-right">Amount</th>
+                                            <th className="text-left px-4 py-3">Inv Date</th>
+                                            <th className="text-left px-4 py-3 text-emerald-600">Pay Date</th>
+                                            <th className="text-left px-4 py-3 font-mono">Ref #</th>
+                                            <th className="text-left px-4 py-3">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                        {data.payouts.map((payout: any) => (
+                                            <tr key={payout.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition border-b border-gray-50 dark:border-gray-800 last:border-0">
+                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">{MONTHS[payout.month - 1]} {payout.year}</td>
+                                                <td className="px-4 py-3 text-gray-500 font-mono text-[10px]">{Number(payout.hours)}h</td>
+                                                <td className="px-4 py-3 font-bold text-gray-800 dark:text-gray-100 text-right font-mono">${Number(payout.amount).toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-gray-400 text-[10px]">{payout.consultantInvoiceDate ? new Date(payout.consultantInvoiceDate).toLocaleDateString() : "—"}</td>
+                                                <td className="px-4 py-3 text-emerald-600 text-[10px] font-semibold">{payout.paymentDate ? new Date(payout.paymentDate).toLocaleDateString() : "—"}</td>
+                                                <td className="px-4 py-3 text-gray-500 font-mono text-[10px]">{payout.referenceNumber || "—"}</td>
+                                                <td className="px-4 py-3"><StatusBadge status={payout.status || "PENDING"} /></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
                 </div>
 
-                {/* ── Payouts (What you paid to the consultant) ────────────────── */}
+                {/* ── Monthly Financial Timeline ──────────────────────────────────── */}
                 <div className="xl:col-span-3 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-100 dark:border-gray-700 overflow-hidden mt-6">
-                    <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-orange-50/50 dark:bg-orange-900/10">
-                        <h3 className="font-bold text-gray-800 dark:text-white text-sm flex items-center gap-2">
-                            <span>Payout History</span>
-                            <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs font-semibold">AP</span>
-                        </h3>
+                    <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-900/40 dark:to-gray-800 flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-lg">
+                                <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-gray-800 dark:text-white text-sm">Monthly Financial Timeline</h3>
+                                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Pay-In vs Pay-Out Deadlines</p>
+                            </div>
+                        </div>
                     </div>
-                    {(data.payouts?.length ?? 0) === 0 ? (
-                        <div className="p-6 text-center text-gray-400 text-sm">No payouts recorded yet.</div>
+                    {(!data.months || data.months.length === 0) ? (
+                        <div className="p-12 text-center text-gray-400 text-sm">No activity recorded for this consultant yet.</div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
-                                <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 uppercase text-xs">
+                                <thead className="bg-gray-50/50 dark:bg-gray-700/30 text-gray-500 dark:text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b border-gray-100 dark:border-gray-700">
                                     <tr>
-                                        <th className="text-left px-4 py-3">Period</th>
-                                        <th className="text-left px-4 py-3">Hours</th>
-                                        <th className="text-left px-4 py-3">Pay Rate</th>
-                                        <th className="text-left px-4 py-3">Amount Paid</th>
-                                        <th className="text-left px-4 py-3">Date</th>
-                                        <th className="text-left px-4 py-3">Ref #</th>
+                                        <th className="px-4 py-3 text-left">Period & Hours</th>
+                                        <th className="px-4 py-3 text-left">Pay-In (Client)</th>
+                                        <th className="px-4 py-3 text-left">Pay-Out (Consultant)</th>
+                                        <th className="px-4 py-3 text-right">Net Margin</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                    {data.payouts.map((payout: any) => (
-                                        <tr key={payout.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
-                                            <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">{MONTHS[payout.month - 1]} {payout.year}</td>
-                                            <td className="px-4 py-3 text-gray-500">{Number(payout.hours)}h</td>
-                                            <td className="px-4 py-3 text-gray-500">${Number(payout.payRate)}/hr</td>
-                                            <td className="px-4 py-3 font-semibold text-orange-600">${Number(payout.amount).toLocaleString()}</td>
-                                            <td className="px-4 py-3 text-gray-400 text-xs">{new Date(payout.paymentDate).toLocaleDateString()}</td>
-                                            <td className="px-4 py-3 text-gray-500 font-mono text-xs">{payout.referenceNumber || "—"}</td>
+                                    {data.months.map((m: any, idx: number) => (
+                                        <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition">
+                                            <td className="px-4 py-4">
+                                                <div className="font-bold text-gray-800 dark:text-gray-100">{MONTHS[m.month - 1]} {m.year}</div>
+                                                <div className="text-xs text-violet-500 font-medium">{m.hours} hrs @ ${data.rates?.bill}/hr</div>
+                                            </td>
+                                            <td className="px-4 py-4 space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                    <StatusBadge status={m.invoiceStatus || "PENDING"} />
+                                                    <span className="font-semibold text-emerald-600">${m.revenue.toLocaleString()}</span>
+                                                </div>
+                                                <div className="text-[10px] flex flex-col">
+                                                    <span className="text-gray-400">Deadline (Pay-In):</span>
+                                                    <span className={`font-medium ${m.isOverdue ? "text-red-500 animate-pulse" : "text-gray-600 dark:text-gray-400"}`}>
+                                                        {m.expectedPaymentDate ? new Date(m.expectedPaymentDate).toLocaleDateString() : "No Invoice"}
+                                                        {m.isOverdue && " — OVERDUE"}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                    <StatusBadge status={m.consultantPaid ? "PAID" : (m.consultantInvoiceDate ? "PENDING" : "DUE")} />
+                                                    <span className="font-semibold text-orange-500">${m.cost.toLocaleString()}</span>
+                                                </div>
+                                                <div className="text-[10px] flex flex-col gap-0.5">
+                                                    {m.consultantPaid ? (
+                                                        <>
+                                                            <span className="text-gray-400">Paid on: <strong className="text-emerald-600 font-mono">{m.payoutDate}</strong></span>
+                                                            <span className="text-gray-400 italic">Inv: {m.consultantInvoiceDate || "—"}</span>
+                                                        </>
+                                                    ) : m.consultantInvoiceDate ? (
+                                                        <>
+                                                            <span className="text-orange-600 font-bold bg-orange-50 dark:bg-orange-900/20 px-1 py-0.5 rounded w-fit">INVOICED: {m.consultantInvoiceDate}</span>
+                                                            <span className="text-gray-400">Due by: <strong className={m.isConsultantDueOverdue ? "text-red-500 underline" : "text-gray-600 dark:text-gray-400"}>{m.consultantDueDate}</strong></span>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-gray-400 italic font-medium">Wait for consultant invoice</span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 text-right">
+                                                <div className="font-bold text-emerald-600">${m.margin.toLocaleString()}</div>
+                                                <div className="text-[10px] text-gray-400">{m.marginPerc.toFixed(1)}% Margin</div>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -980,7 +1062,6 @@ function ConsultantDetailContent() {
                         </div>
                     )}
                 </div>
-
             </div>
 
             <div className="mt-4">
@@ -990,28 +1071,28 @@ function ConsultantDetailContent() {
     );
 }
 
-// ─── Payout Form (to the consultant) ─────────────────────────────────────────
-function PayoutForm({ consultantId, hours, projects, onRecorded }: { consultantId: string, hours: any[], projects: any[], onRecorded: () => void }) {
+// ─── Step 1: Log Consultant Invoice ──────────────────────────────────────────────
+function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded }: { consultantId: string, hours: any[], projects: any[], onRecorded: () => void }) {
     const now = new Date();
     const [form, setForm] = useState({
         month: now.getMonth() + 1,
         year: now.getFullYear(),
         hours: "",
         payRate: "",
-        paymentDate: now.toISOString().slice(0, 10),
-        referenceNumber: ""
+        consultantInvoiceDate: now.toISOString().slice(0, 10),
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [ok, setOk] = useState(false);
 
-    // Auto-fill hours & pay rate
+    // Auto-fill hours & pay rate based on month/year
     useEffect(() => {
         const foundHour = hours.find(h => h.month === form.month && h.year === form.year);
         const autoHours = foundHour ? Number(foundHour.hours).toString() : "";
         let autoPayRate = "";
         if (projects.length > 0) {
-            const contract = projects[0]?.contracts?.sort((a: any, b: any) => b.id - a.id)?.[0];
+            const project = projects.find((p: any) => p.status === "ACTIVE") || projects[0];
+            const contract = project?.contracts?.sort((a: any, b: any) => b.id - a.id)?.[0];
             if (contract) autoPayRate = Number(contract.payRate).toString();
         }
         setForm(f => ({ ...f, hours: autoHours, payRate: autoPayRate }));
@@ -1027,8 +1108,8 @@ function PayoutForm({ consultantId, hours, projects, onRecorded }: { consultantI
                 year: +form.year,
                 hours: +form.hours,
                 payRate: +form.payRate,
-                paymentDate: form.paymentDate,
-                referenceNumber: form.referenceNumber || undefined,
+                consultantInvoiceDate: form.consultantInvoiceDate,
+                // paymentDate is left out purposely to mark as PENDING
             });
             setOk(true);
             setTimeout(() => setOk(false), 3000);
@@ -1040,49 +1121,125 @@ function PayoutForm({ consultantId, hours, projects, onRecorded }: { consultantI
     const tTotal = (Number(form.hours || 0) * Number(form.payRate || 0));
 
     return (
-        <form onSubmit={handleSave} className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white dark:bg-gray-800 p-4 rounded-xl">
+        <form onSubmit={handleSave} className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white dark:bg-gray-800 p-4 rounded-xl border border-orange-100 dark:border-orange-900/20">
             <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Month</label>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-1">Month</label>
                 <select required value={form.month} onChange={(e) => setForm(f => ({ ...f, month: +e.target.value }))} className={iCls}>
                     {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
                 </select>
             </div>
             <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Year</label>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-1">Year</label>
                 <input required type="number" value={form.year} onChange={(e) => setForm(f => ({ ...f, year: +e.target.value }))} className={iCls} />
             </div>
             <div>
-                <label className="block text-xs font-medium text-orange-600 mb-1 flex items-center justify-between">
-                    <span>Pay Rate ($/hr)</span>
-                    <span className="text-[10px] text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 rounded-md italic">auto</span>
+                <label className="block text-[10px] font-bold text-orange-600 uppercase tracking-tight mb-1 flex items-center justify-between">
+                    <span>Pay Rate</span>
+                    <span className="text-[8px] bg-orange-50 text-orange-400 px-1 rounded italic">auto</span>
                 </label>
                 <input required type="number" step="0.01" value={form.payRate} onChange={(e) => setForm(f => ({ ...f, payRate: e.target.value }))}
-                    className="w-full border-2 border-orange-200 dark:border-orange-800/50 rounded-lg px-3 py-1.5 text-sm bg-orange-50/30 dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                    className="w-full border-2 border-orange-100 dark:border-orange-900/50 rounded-xl px-3 py-2 text-sm bg-orange-50/10 focus:outline-none focus:ring-2 focus:ring-orange-500" />
             </div>
             <div>
-                <label className="block text-xs font-medium text-orange-600 mb-1 flex items-center justify-between">
-                    <span>Hours</span>
-                    <span className="text-[10px] text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 rounded-md italic">auto</span>
+                <label className="block text-[10px] font-bold text-orange-600 uppercase tracking-tight mb-1 flex items-center justify-between">
+                    <span>Hours Logged</span>
+                    <span className="text-[8px] bg-orange-50 text-orange-400 px-1 rounded italic">auto</span>
                 </label>
                 <input required type="number" step="0.5" value={form.hours} onChange={(e) => setForm(f => ({ ...f, hours: e.target.value }))}
-                    className="w-full border-2 border-orange-200 dark:border-orange-800/50 rounded-lg px-3 py-1.5 text-sm bg-orange-50/30 dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                    className="w-full border-2 border-orange-100 dark:border-orange-900/50 rounded-xl px-3 py-2 text-sm bg-orange-50/10 focus:outline-none focus:ring-2 focus:ring-orange-500" />
             </div>
             <div className="col-span-2">
-                <label className="block text-xs font-medium text-gray-500 mb-1">Payment Date</label>
-                <input required type="date" value={form.paymentDate} onChange={(e) => setForm(f => ({ ...f, paymentDate: e.target.value }))} className={iCls} />
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-tight mb-1">Consultant Invoice Received Date</label>
+                <input required type="date" value={form.consultantInvoiceDate} onChange={(e) => setForm(f => ({ ...f, consultantInvoiceDate: e.target.value }))} className={iCls} />
             </div>
-            <div className="col-span-2">
-                <label className="block text-xs font-medium text-gray-500 mb-1">Reference # (Optional)</label>
-                <input type="text" placeholder="ACH-10029..." value={form.referenceNumber} onChange={(e) => setForm(f => ({ ...f, referenceNumber: e.target.value }))} className={iCls} />
-            </div>
-            <div className="col-span-full pt-2 mt-2 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                <p className="text-gray-500 text-sm">Payout Total: <strong className="text-orange-600 font-bold">${tTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></p>
-                <button type="submit" disabled={saving} className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-semibold px-6 py-2 rounded-xl text-sm transition">
-                    {saving ? "Saving…" : "Record Payout"}
+            <div className="col-span-2 flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700 mt-2">
+                <p className="text-gray-500 text-xs font-medium">Invoice Total: <strong className="text-orange-600 font-bold">${tTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></p>
+                <button type="submit" disabled={saving} className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold px-5 py-2 rounded-xl text-xs transition uppercase tracking-wider">
+                    {saving ? "Logging…" : "Log Invoice"}
                 </button>
             </div>
-            {error && <p className="col-span-full text-red-500 text-xs">{error}</p>}
-            {ok && <p className="col-span-full text-green-600 text-xs">✓ Payout recorded!</p>}
+            {error && <p className="col-span-full text-red-500 text-[10px] font-medium mt-1">{error}</p>}
+            {ok && <p className="col-span-full text-green-600 text-[10px] font-bold mt-1">✓ Invoice logged! Status set to PENDING.</p>}
+        </form>
+    );
+}
+
+// ─── Step 2: Record Payout / Payment ──────────────────────────────────────────────
+function RecordPayoutForm({ consultantId, payouts, onRecorded }: { consultantId: string, payouts: any[], onRecorded: () => void }) {
+    const now = new Date();
+    
+    // Filter for payouts that are not yet fully paid (PENDING)
+    const pendingPayouts = payouts.filter(p => p.status === "PENDING" || !p.paymentDate);
+
+    const [form, setForm] = useState({
+        payoutId: pendingPayouts[0]?.id || "",
+        paymentDate: now.toISOString().slice(0, 10),
+        referenceNumber: ""
+    });
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
+    const [ok, setOk] = useState(false);
+
+    async function handleSave(e: React.FormEvent) {
+        e.preventDefault();
+        const selected = payouts.find(p => p.id === form.payoutId);
+        if (!selected) {
+            setError("Please select a valid invoice/period to pay.");
+            return;
+        }
+
+        setSaving(true); setError(""); setOk(false);
+        try {
+            await financePost("finance/payouts", {
+                consultantId,
+                month: selected.month,
+                year: selected.year,
+                hours: Number(selected.hours),
+                payRate: Number(selected.payRate),
+                consultantInvoiceDate: selected.consultantInvoiceDate ? new Date(selected.consultantInvoiceDate).toISOString().slice(0, 10) : undefined,
+                paymentDate: form.paymentDate,
+                referenceNumber: form.referenceNumber || undefined,
+            });
+            setOk(true);
+            setTimeout(() => setOk(false), 3000);
+            onRecorded();
+        } catch (err: any) { setError(err.message); }
+        finally { setSaving(false); }
+    }
+
+    if (!pendingPayouts.length) {
+        return (
+            <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30 p-4 rounded-xl text-center">
+                <p className="text-emerald-700 dark:text-emerald-400 text-sm font-medium">All logged invoices have been paid! No pending payouts to record.</p>
+            </div>
+        );
+    }
+
+    return (
+        <form onSubmit={handleSave} className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white dark:bg-gray-800 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/20">
+            <div className="col-span-2">
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-1">Select Pending Invoice/Period</label>
+                <select required value={form.payoutId} onChange={(e) => setForm(f => ({ ...f, payoutId: e.target.value }))} className={iCls}>
+                    {pendingPayouts.map(p => (
+                        <option key={p.id} value={p.id}>{MONTHS[p.month - 1]} {p.year} — ${Number(p.amount).toLocaleString()} ({Number(p.hours)}h)</option>
+                    ))}
+                </select>
+            </div>
+            <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-tight mb-1">Payment Date</label>
+                <input required type="date" value={form.paymentDate} onChange={(e) => setForm(f => ({ ...f, paymentDate: e.target.value }))} className={iCls} />
+            </div>
+            <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-tight mb-1">Reference #</label>
+                <input type="text" placeholder="Check/ACH/Ref" value={form.referenceNumber} onChange={(e) => setForm(f => ({ ...f, referenceNumber: e.target.value }))} className={iCls} />
+            </div>
+            <div className="col-span-full flex justify-end pt-2 border-t border-gray-100 dark:border-gray-700 mt-2">
+                <button type="submit" disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition uppercase tracking-widest shadow-lg shadow-emerald-200 dark:shadow-none">
+                    {saving ? "Recording..." : "Mark as PAID"}
+                </button>
+            </div>
+            {error && <p className="col-span-full text-red-500 text-[10px] font-medium mt-1">{error}</p>}
+            {ok && <p className="col-span-full text-emerald-600 text-[10px] font-bold mt-1">✓ Payment recorded. Status set to PAID!</p>}
         </form>
     );
 }
