@@ -873,13 +873,13 @@ export default function SubmittedJobsTable({
                                                     </TableCell>
                                                     <TableCell className="px-6 py-4 text-start whitespace-nowrap border-b border-r border-neutral-200 dark:border-slate-600">
                                                         <div className="flex flex-col gap-0.5">
-                                                            {(sub.job?.createdAt || sub.createdAt) ? (
+                                                            {sub.job?.createdAt ? (
                                                                 <>
                                                                     <span className="text-sm text-gray-900 font-medium">
-                                                                        {formatUsDate(sub.job?.createdAt || sub.createdAt)}
+                                                                        {formatUsDate(sub.job.createdAt)}
                                                                     </span>
                                                                     <span className="text-xs text-gray-400">
-                                                                        {formatUsTime(sub.job?.createdAt || sub.createdAt)}
+                                                                        {formatUsTime(sub.job.createdAt)}
                                                                     </span>
                                                                 </>
                                                             ) : (
