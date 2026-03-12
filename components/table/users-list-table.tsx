@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, Mail, ChevronRight, Search } from "lucide-react";
 import Image from "next/image";
 import { apiClient } from "@/lib/apiClient";
-import { toast } from "sonner";
+import { toast } from "react-hot-toast";
 import { format } from "date-fns";
 import { Switch } from "@/components/ui/switch";
 import { useSession } from "next-auth/react";
