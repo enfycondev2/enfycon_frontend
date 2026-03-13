@@ -22,30 +22,32 @@ export default function FinancePinGate({ children }: FinancePinGateProps) {
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-            setError("PIN must be exactly 4 digits.");
+        if (pin.length < 4 || pin.length > 6) {
+            setError("Code must be 4 digits (PIN) or 6 digits (Authenticator).");
             return;
         }
         setLoading(true);
         setError("");
         try {
-            // Validate PIN by hitting the dashboard endpoint
+            // Validate by hitting the dashboard endpoint with the code in the header
             const res = await fetch(
                 `${process.env.NEXT_PUBLIC_API_URL}/finance/dashboard`,
                 {
                     headers: { "x-finance-pin": pin, Authorization: `Bearer ` },
                 }
             );
-            // 401 from auth is fine — 403 means bad PIN
-            if (res.status === 403) {
-                setError("Incorrect PIN. Please try again.");
+            
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                setError(data.message || "Incorrect code. Please try again.");
                 setLoading(false);
                 return;
             }
+
             setStoredPin(pin);
             setUnlocked(true);
         } catch {
-            // Network error — store the pin anyway since we can't validate without token
+            // Network error fallback
             setStoredPin(pin);
             setUnlocked(true);
         } finally {
@@ -67,28 +69,31 @@ export default function FinancePinGate({ children }: FinancePinGateProps) {
                         </svg>
                     </div>
                     <h2 className="text-xl font-bold text-gray-800 dark:text-white">Finance Access</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Enter your 4-digit Finance PIN to continue</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Enter your Finance PIN or 6-digit Authenticator code</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <input
                         type="password"
                         inputMode="numeric"
-                        maxLength={4}
+                        maxLength={6}
                         value={pin}
-                        onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                        placeholder="••••"
-                        className="w-full text-center text-3xl tracking-[1rem] border border-gray-300 dark:border-gray-600 rounded-xl py-3 px-4 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        placeholder="••••••"
+                        className="w-full text-center text-3xl tracking-[0.5rem] border border-gray-300 dark:border-gray-600 rounded-xl py-3 px-4 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
                         autoFocus
                     />
-                    {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+                    {error && <p className="text-red-500 text-sm text-center px-4">{error}</p>}
                     <button
                         type="submit"
-                        disabled={loading || pin.length !== 4}
-                        className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-colors"
+                        disabled={loading || (pin.length !== 4 && pin.length !== 6)}
+                        className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-colors shadow-lg shadow-violet-200 dark:shadow-none"
                     >
                         {loading ? "Verifying…" : "Unlock Finance"}
                     </button>
+                    <p className="text-[10px] text-center text-gray-400">
+                      Standard PIN is 4 digits. Authenticator codes are 6 digits.
+                    </p>
                 </form>
             </div>
         </div>
