@@ -12,18 +12,28 @@ function HoursContent() {
     const searchParams = useSearchParams();
     const filterConsultantId = searchParams.get("consultantId") ?? "";
     const [consultantId, setConsultantId] = useState(filterConsultantId);
+    const [consultants, setConsultants] = useState<any[]>([]);
     const [hours, setHours] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
     const now = new Date();
-    // Log hours form — matches CreateHoursDto: { consultantId, month, year, hours }
+    // Log hours form
     const [form, setForm] = useState({
         consultantId: filterConsultantId,
         month: now.getMonth() + 1,
         year: now.getFullYear(),
-        hours: "",
+        hours: "160",
     });
+
+    async function fetchConsultants() {
+        try {
+            const data = await financeGet("finance/consultants");
+            setConsultants(data || []);
+        } catch (err) { console.error("Failed to fetch consultants", err); }
+    }
+
+    useEffect(() => { fetchConsultants(); }, []);
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState("");
     const [saved, setSaved] = useState(false);
@@ -44,6 +54,9 @@ function HoursContent() {
 
     async function handleLog(e: React.FormEvent) {
         e.preventDefault();
+        const msg = `Are you sure you want to log ${form.hours} hours for ${consultants.find(c => c.id === form.consultantId)?.name || 'this consultant'}?`;
+        if (!window.confirm(msg)) return;
+
         setSaving(true);
         setSaveError("");
         setSaved(false);
@@ -69,10 +82,15 @@ function HoursContent() {
                     <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4">Log Hours</h3>
                     <form onSubmit={handleLog} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Consultant ID</label>
-                            <input type="text" required value={form.consultantId}
+                            <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Consultant</label>
+                            <select required value={form.consultantId}
                                 onChange={(e) => setForm((f) => ({ ...f, consultantId: e.target.value }))}
-                                className="w-full border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm" />
+                                className="w-full border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm">
+                                <option value="">Select Consultant...</option>
+                                {consultants.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Month</label>
@@ -105,9 +123,14 @@ function HoursContent() {
                 {/* Hours History */}
                 <div className="xl:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-100 dark:border-gray-700 overflow-hidden">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border-b border-gray-100 dark:border-gray-700">
-                        <label className="text-sm text-gray-500 shrink-0">Consultant ID:</label>
-                        <input value={consultantId} onChange={(e) => setConsultantId(e.target.value)} placeholder="Paste consultant ID…"
-                            className="border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 flex-1 max-w-xs" />
+                        <label className="text-sm text-gray-500 shrink-0">Consultant:</label>
+                        <select value={consultantId} onChange={(e) => setConsultantId(e.target.value)}
+                            className="border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500 flex-1 max-w-xs">
+                            <option value="">Select Consultant...</option>
+                            {consultants.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
                         <button onClick={() => load()} className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-xl text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition">View History</button>
                     </div>
 

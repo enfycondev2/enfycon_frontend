@@ -192,6 +192,7 @@ function FinanceDashboardContent() {
                             <table className="w-full text-sm">
                                 <thead className="text-[10px] text-gray-400 uppercase bg-gray-50 dark:bg-gray-800/60">
                                     <tr>
+                                        <th className="text-center px-4 py-2 w-10">SL</th>
                                         <th className="text-left px-4 py-2">Consultant</th>
                                         <th className="text-left px-4 py-2">Client</th>
                                         <th className="text-left px-4 py-2">Status</th>
@@ -204,10 +205,11 @@ function FinanceDashboardContent() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
-                                    {filteredRows.map(r => {
+                                    {filteredRows.map((r, index) => {
                                         const mp = r.totals.revenue > 0 ? (r.totals.margin / r.totals.revenue) * 100 : 0;
                                         return (
                                             <tr key={r.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/30 transition">
+                                                <td className="px-4 py-2.5 text-xs text-gray-400 font-mono text-center">{index + 1}</td>
                                                 <td className="px-4 py-2.5 font-semibold text-gray-800 dark:text-white">{r.name}</td>
                                                 <td className="px-4 py-2.5 text-gray-500 text-xs">{r.clientName}</td>
                                                 <td className="px-4 py-2.5">
@@ -233,7 +235,7 @@ function FinanceDashboardContent() {
                                 </tbody>
                                 <tfoot>
                                     <tr className="bg-gray-800 dark:bg-gray-900 text-white text-xs font-bold">
-                                        <td className="px-4 py-2.5" colSpan={3}>Total ({filteredRows.length})</td>
+                                        <td className="px-4 py-2.5" colSpan={4}>Total ({filteredRows.length})</td>
                                         <td className="px-4 py-2.5 text-right text-emerald-400">{fmt(filteredTotals.revenue)}</td>
                                         <td className="px-4 py-2.5 text-right text-orange-400">{fmt(filteredTotals.cost)}</td>
                                         <td className="px-4 py-2.5 text-right text-indigo-300">{fmt(filteredTotals.margin)}</td>

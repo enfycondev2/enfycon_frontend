@@ -23,7 +23,7 @@ interface Consultant {
 
 
 function ConsultantsContent() {
-    const [consultants, setConsultants] = useState<Consultant[]>([]);
+    const [allConsultants, setAllConsultants] = useState<Consultant[]>([]);
     const [status, setStatus] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -32,9 +32,9 @@ function ConsultantsContent() {
         setLoading(true);
         setError("");
         try {
-            const endpoint = status ? `finance/consultants?status=${status}` : "finance/consultants";
-            const data = await financeGet(endpoint);
-            setConsultants(Array.isArray(data) ? data : data?.data ?? []);
+            const data = await financeGet("finance/consultants");
+            const list = Array.isArray(data) ? data : data?.data ?? [];
+            setAllConsultants(list);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -42,7 +42,17 @@ function ConsultantsContent() {
         }
     }
 
-    useEffect(() => { load(); }, [status]);
+    useEffect(() => { load(); }, []);
+
+    const filteredConsultants = status 
+        ? allConsultants.filter(c => c.status === status)
+        : allConsultants;
+
+    const counts = {
+        ALL: allConsultants.length,
+        ACTIVE: allConsultants.filter(c => c.status === "ACTIVE").length,
+        ENDED: allConsultants.filter(c => c.status === "ENDED").length,
+    };
 
     return (
         <>
@@ -52,10 +62,12 @@ function ConsultantsContent() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Filter:</span>
-                        <button onClick={() => setStatus("")} className={`px-3 py-1 rounded-full text-xs font-medium transition ${status === "" ? "bg-violet-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200"}`}>All</button>
+                        <button onClick={() => setStatus("")} className={`px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${status === "" ? "bg-violet-600 text-white shadow-md shadow-violet-200 dark:shadow-none" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200"}`}>
+                            All <span className={`px-1.5 rounded-md ${status === "" ? "bg-violet-500" : "bg-gray-200 dark:bg-gray-600"}`}>{counts.ALL}</span>
+                        </button>
                         {STATUS_OPTIONS.map((s) => (
-                            <button key={s} onClick={() => setStatus(s)} className={`px-3 py-1 rounded-full text-xs font-medium transition ${status === s ? "bg-violet-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200"}`}>
-                                {s.replace("_", " ")}
+                            <button key={s} onClick={() => setStatus(s)} className={`px-3 py-1 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${status === s ? "bg-violet-600 text-white shadow-md shadow-violet-200 dark:shadow-none" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200"}`}>
+                                {s.replace("_", " ")} <span className={`px-1.5 rounded-md ${status === s ? "bg-violet-500" : "bg-gray-200 dark:bg-gray-600 text-[10px]"}`}>{counts[s as keyof typeof counts]}</span>
                             </button>
                         ))}
                     </div>
@@ -71,31 +83,33 @@ function ConsultantsContent() {
                     <div className="p-12 text-center text-gray-400 animate-pulse">Loading consultants…</div>
                 ) : error ? (
                     <div className="p-12 text-center text-red-500">{error}</div>
-                ) : consultants.length === 0 ? (
-                    <div className="p-12 text-center text-gray-400">No consultants found.</div>
+                ) : filteredConsultants.length === 0 ? (
+                    <div className="p-12 text-center text-gray-400">No consultants found for this filter.</div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                            <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 uppercase text-xs tracking-wider">
+                            <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 uppercase text-[10px] font-bold tracking-wider border-b border-gray-100 dark:border-gray-700">
                                 <tr>
+                                    <th className="text-center px-4 py-3 w-12 border-r border-gray-100 dark:border-gray-700/50">SL</th>
                                     <th className="text-left px-4 py-3">Name</th>
                                     <th className="text-left px-4 py-3">Email</th>
                                     <th className="text-left px-4 py-3">Phone</th>
-                                    <th className="text-left px-4 py-3">Status</th>
+                                    <th className="text-left px-4 py-3 text-center">Status</th>
                                     <th className="text-left px-4 py-3">Added</th>
                                     <th className="px-4 py-3"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {consultants.map((c) => (
-                                    <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
-                                        <td className="px-4 py-3 font-medium text-gray-800 dark:text-white">{c.name}</td>
+                                {filteredConsultants.map((c, index) => (
+                                    <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition border-b border-gray-100/50 dark:border-gray-700/50 last:border-0">
+                                        <td className="px-4 py-3 text-center font-bold text-gray-400 border-r border-gray-100/50 dark:border-gray-700/50">{index + 1}</td>
+                                        <td className="px-4 py-3 font-semibold text-gray-800 dark:text-white">{c.name}</td>
                                         <td className="px-4 py-3 text-gray-500">{c.email}</td>
                                         <td className="px-4 py-3 text-gray-500">{c.phone ?? "—"}</td>
-                                        <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
-                                        <td className="px-4 py-3 text-gray-400 text-xs">{new Date(c.createdAt).toLocaleDateString()}</td>
+                                        <td className="px-4 py-3 text-center"><StatusBadge status={c.status} /></td>
+                                        <td className="px-4 py-3 text-gray-400 text-[11px]">{new Date(c.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</td>
                                         <td className="px-4 py-3 text-right">
-                                            <Link href={`/finance/consultants/${c.id}`} className="text-violet-600 hover:underline text-xs font-medium">View →</Link>
+                                            <Link href={`/finance/consultants/${c.id}`} className="inline-flex items-center gap-1 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 px-3 py-1 rounded-lg text-xs font-bold hover:bg-violet-100 transition">View Details</Link>
                                         </td>
                                     </tr>
                                 ))}

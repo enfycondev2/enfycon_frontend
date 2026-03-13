@@ -62,56 +62,7 @@ function initials(name: string) {
 
 
 
-// ─── Month cell ───────────────────────────────────────────────────────────────
-function MonthCell({ m }: { m: MonthActual }) {
-    const noData = m.hours === 0 && !m.invoiceStatus;
-    if (noData) return (
-        <td className="px-3 py-3 text-center text-gray-300 dark:text-gray-600 text-[11px]">—</td>
-    );
-    return (
-        <td className="px-3 py-3 text-xs font-mono min-w-[176px] align-top space-y-2">
-            {/* Hours + Revenue */}
-            <div className="font-bold text-gray-800 dark:text-white">
-                {m.hours}h
-                <span className="ml-1 text-emerald-600 dark:text-emerald-400"> {curr(m.revenue)}</span>
-            </div>
-            {/* Margin */}
-            {m.margin > 0 && (
-                <div className="text-indigo-600 dark:text-indigo-400 text-[10px] font-semibold">
-                    ↑ {curr(m.margin)} margin
-                </div>
-            )}
-            {/* Client pay-in */}
-            <div className="space-y-0.5">
-                <div className="text-[9px] uppercase font-bold text-gray-400 tracking-widest">📥 Pay-In</div>
-                {m.clientPaid ? (
-                    <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-0.5 rounded-full text-[10px] font-semibold">✓ Received</span>
-                ) : m.isOverdue ? (
-                    <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-2 py-0.5 rounded-full text-[10px] font-bold animate-pulse">
-                        ⚠ {Math.abs(m.daysUntilDue ?? 0)}d OVERDUE
-                    </span>
-                ) : (
-                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded-full text-[10px] font-medium">
-                        📅 {m.expectedPaymentDate ? fmtDate(m.expectedPaymentDate) : "Pending"}
-                    </span>
-                )}
-            </div>
-            {/* Consultant pay-out */}
-            <div className="space-y-0.5">
-                <div className="text-[9px] uppercase font-bold text-gray-400 tracking-widest">📤 Pay-Out</div>
-                {m.consultantPaid ? (
-                    <span className="inline-flex items-center gap-1 bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 px-2 py-0.5 rounded-full text-[10px] font-semibold">
-                        ✓ {curr(m.payoutAmount)}
-                    </span>
-                ) : m.cost > 0 ? (
-                    <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-0.5 rounded-full text-[10px] font-semibold">
-                        ⏳ Due {curr(m.cost)}
-                    </span>
-                ) : <span className="text-gray-300 text-[10px]">—</span>}
-            </div>
-        </td>
-    );
-}
+// ─── Main content ─────────────────────────────────────────────────────────────
 
 // ─── Main content ─────────────────────────────────────────────────────────────
 function RosterContent() {
@@ -140,7 +91,31 @@ function RosterContent() {
         ? displayMonths
         : displayMonths.filter(dm => `${dm.year}-${dm.month}` === filterMonth);
 
-    const filteredRows = rows.filter(r => filterStatus === "ALL" || r.consultantStatus === filterStatus);
+    const filteredRows = rows.filter(r => {
+        const matchesStatus = filterStatus === "ALL" || r.consultantStatus === filterStatus;
+        if (!matchesStatus) return false;
+        if (filterMonth === "ALL") return true;
+
+        const [fy, fm] = filterMonth.split("-").map(Number);
+
+        // 1. Check if they have actual data for this month
+        const hasData = r.monthlies.some(m => m.month === fm && m.year === fy && (m.hours > 0 || m.invoiceStatus));
+        if (hasData) return true;
+
+        // 2. Check if their project timeline overlaps this month
+        if (!r.projectStartDate) return false;
+        const start = new Date(r.projectStartDate);
+        const startVal = start.getFullYear() * 12 + start.getMonth();
+        const filterVal = fy * 12 + (fm - 1);
+
+        if (filterVal < startVal) return false;
+
+        if (!r.projectEndDate) return true; // Ongoing
+        const end = new Date(r.projectEndDate);
+        const endVal = end.getFullYear() * 12 + end.getMonth();
+
+        return filterVal <= endVal;
+    });
 
     // Summary stats
     const overdueCount = rows.reduce((n, r) => n + r.monthlies.filter(m => m.isOverdue).length, 0);
@@ -232,7 +207,8 @@ function RosterContent() {
                             <table className="w-full text-sm text-left">
                                 <thead className="text-[10px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/80 uppercase border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">
                                     <tr>
-                                        <th className="px-4 py-3 sticky left-0 bg-gray-50 dark:bg-gray-800 z-10 min-w-[220px]">Consultant</th>
+                                        <th className="px-3 py-3 w-12 sticky left-0 bg-gray-50 dark:bg-gray-800 z-20 text-center">SL</th>
+                                        <th className="px-4 py-3 sticky left-12 bg-gray-50 dark:bg-gray-800 z-10 min-w-[220px]">Consultant</th>
                                         <th className="px-4 py-3 min-w-[170px]">Project / Client</th>
                                         <th className="px-4 py-3 min-w-[110px]">Rates</th>
                                         <th className="px-4 py-3 bg-indigo-50/60 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 min-w-[150px]">
@@ -241,36 +217,38 @@ function RosterContent() {
                                         <th className="px-4 py-3 bg-violet-50/60 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 min-w-[150px]">
                                             Totals (All)
                                         </th>
-                                        {visibleMonths.map(dm => (
-                                            <th key={`${dm.year}-${dm.month}`}
-                                                className="px-3 py-3 bg-emerald-50/60 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-400 text-center min-w-[176px]">
-                                                {label(dm)}<br />
-                                                <span className="text-[9px] normal-case font-normal text-gray-400">Hours · Pay-In · Pay-Out</span>
-                                            </th>
-                                        ))}
                                         <th className="px-3 py-3 min-w-[70px]">Terms</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
                                     {filteredRows.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6 + visibleMonths.length} className="text-center py-16 text-gray-400">
+                                            <td colSpan={7} className="text-center py-16 text-gray-400">
                                                 No consultants found.
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredRows.map((row) => (
+                                        filteredRows.map((row, index) => (
                                             <tr key={row.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition align-top group">
+                                                {/* SL Number */}
+                                                <td className="px-3 py-3 sticky left-0 bg-white dark:bg-gray-800 z-20 group-hover:bg-gray-50/60 dark:group-hover:bg-gray-800/40 text-center font-bold text-gray-500 border-r border-gray-100 dark:border-gray-700/50">
+                                                    {index + 1}
+                                                </td>
                                                 {/* Consultant */}
-                                                <td className="px-4 py-3 sticky left-0 bg-white dark:bg-gray-800 z-10 group-hover:bg-gray-50/60 dark:group-hover:bg-gray-800/40">
+                                                <td className="px-4 py-3 sticky left-12 bg-white dark:bg-gray-800 z-10 group-hover:bg-gray-50/60 dark:group-hover:bg-gray-800/40">
                                                     <div className="flex items-start gap-2.5">
                                                         <div className={`${avatarColor(row.name)} text-white rounded-full w-9 h-9 shrink-0 flex items-center justify-center text-xs font-bold shadow-sm`}>
                                                             {initials(row.name).toUpperCase()}
                                                         </div>
-                                                        <div className="min-w-0">
-                                                            <Link href={`/finance/roster/${row.id}`} className="font-semibold text-gray-800 dark:text-white hover:text-violet-600 dark:hover:text-violet-400 leading-tight block">
-                                                                {row.name}
-                                                            </Link>
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <Link href={`/finance/roster/${row.id}`} className="font-semibold text-gray-800 dark:text-white hover:text-violet-600 dark:hover:text-violet-400 leading-tight block truncate">
+                                                                    {row.name}
+                                                                </Link>
+                                                                <Link href={`/finance/consultants/${row.id}`} className="text-gray-400 hover:text-violet-600 transition" title="Edit Consultant">
+                                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                                                </Link>
+                                                            </div>
                                                             <div className="text-[11px] text-gray-400 truncate">{row.email}</div>
                                                             <div className="mt-1">
                                                                 <StatusBadge status={row.consultantStatus} />
@@ -316,14 +294,6 @@ function RosterContent() {
                                                     <div className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">{curr(row.totals.margin)}</div>
                                                     <div className="text-[10px] text-gray-400">{pct(row.totals.marginPerc)} margin</div>
                                                 </td>
-                                                {/* Monthly cells */}
-                                                {visibleMonths.map(dm => {
-                                                    const m = row.monthlies.find(ma => ma.month === dm.month && ma.year === dm.year);
-                                                    if (!m) return (
-                                                        <td key={`${dm.year}-${dm.month}`} className="px-3 py-3 text-center text-gray-300 dark:text-gray-600 text-[11px]">No data</td>
-                                                    );
-                                                    return <MonthCell key={`${dm.year}-${dm.month}`} m={m} />;
-                                                })}
                                                 {/* Terms */}
                                                 <td className="px-3 py-3 text-xs space-y-1.5 min-w-[130px]">
                                                     <div>
@@ -347,7 +317,8 @@ function RosterContent() {
                                 {filteredRows.length > 0 && (
                                     <tfoot>
                                         <tr className="bg-gray-800 dark:bg-gray-900 text-white text-xs">
-                                            <td className="px-4 py-3 sticky left-0 bg-gray-800 dark:bg-gray-900 font-black uppercase tracking-wider text-gray-200" colSpan={2}>
+                                            <td className="px-4 py-3 sticky left-0 text-center bg-gray-800 dark:bg-gray-900 border-r border-gray-700/50"></td>
+                                            <td className="px-4 py-3 sticky left-12 bg-gray-800 dark:bg-gray-900 font-black uppercase tracking-wider text-gray-200" colSpan={2}>
                                                 Totals ({filteredRows.length} consultants)
                                             </td>
                                             <td className="px-4 py-3 text-gray-400">—</td>
@@ -370,28 +341,6 @@ function RosterContent() {
                                                 <div className="text-orange-400">−{curr(grandTotals.cost)}</div>
                                                 <div className="text-indigo-300 font-bold">{curr(grandTotals.margin)}</div>
                                             </td>
-                                            {visibleMonths.map(dm => {
-                                                const totH = filteredRows.reduce((s, r) => {
-                                                    const m = r.monthlies.find(ma => ma.month === dm.month && ma.year === dm.year);
-                                                    return s + (m?.hours ?? 0);
-                                                }, 0);
-                                                const totR = filteredRows.reduce((s, r) => {
-                                                    const m = r.monthlies.find(ma => ma.month === dm.month && ma.year === dm.year);
-                                                    return s + (m?.revenue ?? 0);
-                                                }, 0);
-                                                const totC = filteredRows.reduce((s, r) => {
-                                                    const m = r.monthlies.find(ma => ma.month === dm.month && ma.year === dm.year);
-                                                    return s + (m?.cost ?? 0);
-                                                }, 0);
-                                                return (
-                                                    <td key={`tot-${dm.year}-${dm.month}`} className="px-3 py-3 bg-emerald-900/20 text-xs font-mono">
-                                                        <div className="text-gray-300 text-[10px]">{totH}h</div>
-                                                        <div className="font-bold text-emerald-400">{curr(totR)}</div>
-                                                        <div className="text-orange-400">−{curr(totC)}</div>
-                                                        <div className="text-indigo-300">{curr(totR - totC)}</div>
-                                                    </td>
-                                                );
-                                            })}
                                             <td className="px-3 py-3 text-gray-600">—</td>
                                         </tr>
                                     </tfoot>

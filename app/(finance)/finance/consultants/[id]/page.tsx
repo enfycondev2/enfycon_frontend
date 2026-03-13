@@ -7,8 +7,10 @@ import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet, financePatch, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { StatusBadge, MONTHS, btnPrimary, btnSecondary, StepIndicator, Field, inputCls, selectCls } from "@/components/finance/FinanceUI";
+import AutoComplete from "@/components/finance/AutoComplete";
+import { apiClient } from "@/lib/apiClient";
 
-const STATUS_OPTIONS = ["ACTIVE", "INACTIVE", "ENDED", "ON_HOLD"];
+const STATUS_OPTIONS = ["ACTIVE", "ENDED"];
 
 const iCls = "w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500";
 
@@ -37,6 +39,7 @@ function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogg
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+        if (!window.confirm(`Are you sure you want to log ${form.hours} hours?`)) return;
         setSaving(true); setError(""); setOk(false);
         try {
             const payload = {
@@ -388,7 +391,34 @@ function ConsultantDetailContent() {
         clientName: "", endClientName: "", startDate: "", endDate: "",
         billingRate: "", payRate: "", currency: "USD", paymentTermsDays: "30"
     });
+    const [duration, setDuration] = useState("ONGOING");
     const [options, setOptions] = useState<{ recruiters: any[], accountManagers: any[], podHeads: any[] }>({ recruiters: [], accountManagers: [], podHeads: [] });
+
+    function handleStartDateChange(val: string) {
+        setBillingForm((f: any) => ({ ...f, startDate: val }));
+        if (duration === "3_MONTHS" || duration === "6_MONTHS" || duration === "12_MONTHS") {
+            const start = new Date(val || new Date());
+            const d = new Date(start);
+            if (duration === "3_MONTHS") d.setMonth(d.getMonth() + 3);
+            if (duration === "6_MONTHS") d.setMonth(d.getMonth() + 6);
+            if (duration === "12_MONTHS") d.setFullYear(d.getFullYear() + 1);
+            setBillingForm((f: any) => ({ ...f, endDate: d.toISOString().split("T")[0] }));
+        }
+    }
+
+    function handleDurationChange(val: string) {
+        setDuration(val);
+        if (val === "ONGOING") {
+            setBillingForm((f: any) => ({ ...f, endDate: "" }));
+        } else if (val !== "CUSTOM") {
+            const start = billingForm.startDate ? new Date(billingForm.startDate) : new Date();
+            const d = new Date(start);
+            if (val === "3_MONTHS") d.setMonth(d.getMonth() + 3);
+            if (val === "6_MONTHS") d.setMonth(d.getMonth() + 6);
+            if (val === "12_MONTHS") d.setFullYear(d.getFullYear() + 1);
+            setBillingForm((f: any) => ({ ...f, endDate: d.toISOString().split("T")[0] }));
+        }
+    }
 
     useEffect(() => {
         financeGet("finance/options/staff")
@@ -444,6 +474,7 @@ function ConsultantDetailContent() {
                 currency: contract?.currency ?? "USD",
                 paymentTermsDays: contract?.paymentTermsDays ? String(contract.paymentTermsDays) : "30"
             });
+            setDuration(activeProject?.endDate ? "CUSTOM" : "ONGOING");
 
             // Try to fetch submission if possible - for now we'll just use default/blank or from res if we had it
             // Based on recruiter-submissions service, we don't have a direct "by consultant" search but we can filter by recruiter.
@@ -513,6 +544,22 @@ function ConsultantDetailContent() {
         e.preventDefault();
         setSaving(true); setSaveError("");
         try {
+            // Upsert clients to main module if new
+            if (billingForm.clientName) {
+                await apiClient("clients", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: billingForm.clientName, type: "CLIENT" })
+                }).catch(err => console.error("Client upsert failed", err));
+            }
+            if (billingForm.endClientName) {
+                await apiClient("clients", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: billingForm.endClientName, type: "END_CLIENT" })
+                }).catch(err => console.error("End client upsert failed", err));
+            }
+
             const activeProject = data.projects?.find((p: any) => p.status === "ACTIVE") ?? data.projects?.[0];
             let projectId = activeProject?.id;
 
@@ -657,14 +704,14 @@ function ConsultantDetailContent() {
                                         <div className="border-t border-gray-100 dark:border-gray-700 pt-5 space-y-5">
                                             <h3 className="text-sm font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider">Agency / Vendor Details</h3>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-violet-50/50 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100 dark:border-violet-900/30">
-                                                <Field label="Agency / Vendor Name *">
-                                                    <input required className={inputCls} value={editForm.c2cVendorName} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cVendorName: e.target.value }))} />
+                                                <Field label="Agency / Vendor Name">
+                                                    <input className={inputCls} value={editForm.c2cVendorName} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cVendorName: e.target.value }))} />
                                                 </Field>
-                                                <Field label="Contact Person *">
-                                                    <input required className={inputCls} value={editForm.c2cContactPerson} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cContactPerson: e.target.value }))} />
+                                                <Field label="Contact Person">
+                                                    <input className={inputCls} value={editForm.c2cContactPerson} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cContactPerson: e.target.value }))} />
                                                 </Field>
-                                                <Field label="Contact Email *">
-                                                    <input required type="email" className={inputCls} value={editForm.c2cContactEmail} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cContactEmail: e.target.value }))} />
+                                                <Field label="Contact Email">
+                                                    <input type="email" className={inputCls} value={editForm.c2cContactEmail} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cContactEmail: e.target.value }))} />
                                                 </Field>
                                                 <Field label="Phone & Fax">
                                                     <input className={inputCls} placeholder="123-456-7890" value={editForm.c2cPhoneFax} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cPhoneFax: e.target.value }))} />
@@ -689,16 +736,32 @@ function ConsultantDetailContent() {
                                 <form onSubmit={handleSaveStep3} className="space-y-5">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <Field label="Client Name *">
-                                            <input required className={inputCls} value={billingForm.clientName} onChange={(e) => setBillingForm((f: any) => ({ ...f, clientName: e.target.value }))} />
+                                            <AutoComplete clientType="CLIENT" value={billingForm.clientName} onChange={(v) => setBillingForm((f: any) => ({ ...f, clientName: v }))} placeholder="Search or type client..." />
                                         </Field>
                                         <Field label="End Client Name">
-                                            <input className={inputCls} value={billingForm.endClientName} onChange={(e) => setBillingForm((f: any) => ({ ...f, endClientName: e.target.value }))} />
+                                            <AutoComplete clientType="END_CLIENT" value={billingForm.endClientName} onChange={(v) => setBillingForm((f: any) => ({ ...f, endClientName: v }))} placeholder="Search or type end client..." />
                                         </Field>
                                         <Field label="Project Start Date *">
-                                            <input required type="date" className={inputCls} value={billingForm.startDate} onChange={(e) => setBillingForm((f: any) => ({ ...f, startDate: e.target.value }))} />
+                                            <input required type="date" className={inputCls} value={billingForm.startDate} onChange={(e) => handleStartDateChange(e.target.value)} />
                                         </Field>
                                         <Field label="Project End Date">
-                                            <input type="date" className={inputCls} value={billingForm.endDate} onChange={(e) => setBillingForm((f: any) => ({ ...f, endDate: e.target.value }))} />
+                                            <div className="flex flex-col gap-2">
+                                                <select className={selectCls} value={duration} onChange={(e) => handleDurationChange(e.target.value)}>
+                                                    <option value="ONGOING">Ongoing</option>
+                                                    <option value="3_MONTHS">3 Months</option>
+                                                    <option value="6_MONTHS">6 Months</option>
+                                                    <option value="12_MONTHS">12 Months</option>
+                                                    <option value="CUSTOM">Custom Date</option>
+                                                </select>
+                                                {duration !== "ONGOING" && (
+                                                    <input 
+                                                        type="date" 
+                                                        className={inputCls} 
+                                                        value={billingForm.endDate} 
+                                                        onChange={(e) => { setDuration("CUSTOM"); setBillingForm((f: any) => ({ ...f, endDate: e.target.value })); }} 
+                                                    />
+                                                )}
+                                            </div>
                                         </Field>
                                         <Field label="Bill Rate ($/hr) *">
                                             <input required type="number" step="0.01" className={inputCls} value={billingForm.billingRate} onChange={(e) => setBillingForm((f: any) => ({ ...f, billingRate: e.target.value }))} />
@@ -708,7 +771,7 @@ function ConsultantDetailContent() {
                                         </Field>
                                         <Field label="Currency">
                                             <select className={selectCls} value={billingForm.currency} onChange={(e) => setBillingForm((f: any) => ({ ...f, currency: e.target.value }))}>
-                                                {["USD", "CAD", "GBP", "EUR", "INR"].map((c) => <option key={c} value={c}>{c}</option>)}
+                                                {["USD"].map((c) => <option key={c} value={c}>{c}</option>)}
                                             </select>
                                         </Field>
                                         {editForm.engagementType !== "W2" && (
@@ -718,7 +781,7 @@ function ConsultantDetailContent() {
                                         )}
                                     </div>
                                     <div className="flex justify-between pt-4">
-                                        <button type="button" onClick={() => setEditStep(1)} className="text-gray-500 hover:text-gray-700 text-sm font-medium flex items-center gap-1">
+                                        <button type="button" onClick={() => setEditStep(0)} className="text-gray-500 hover:text-gray-700 text-sm font-medium flex items-center gap-1">
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Previous
                                         </button>
                                         <button type="submit" disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-8 py-2.5 rounded-xl transition flex items-center gap-2">

@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/apiClient";
 import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import AutoComplete from "@/components/finance/AutoComplete";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -198,14 +199,14 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
                 <div className="border-t border-gray-100 dark:border-gray-700 pt-5 space-y-5">
                     <h3 className="text-sm font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider">Agency / Vendor Details</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-violet-50/50 dark:bg-violet-900/10 p-4 rounded-xl border border-violet-100 dark:border-violet-900/30">
-                        <Field label="Agency / Vendor Name *">
-                            <input required className={inputCls} placeholder="Apex Systems" value={form.c2cVendorName} onChange={(e) => set("c2cVendorName", e.target.value)} />
+                        <Field label="Agency / Vendor Name">
+                            <input className={inputCls} placeholder="Apex Systems" value={form.c2cVendorName} onChange={(e) => set("c2cVendorName", e.target.value)} />
                         </Field>
-                        <Field label="Contact Person *">
-                            <input required className={inputCls} placeholder="Jane Doe" value={form.c2cContactPerson} onChange={(e) => set("c2cContactPerson", e.target.value)} />
+                        <Field label="Contact Person">
+                            <input className={inputCls} placeholder="Jane Doe" value={form.c2cContactPerson} onChange={(e) => set("c2cContactPerson", e.target.value)} />
                         </Field>
-                        <Field label="Contact Email *">
-                            <input required type="email" className={inputCls} placeholder="jane@apex.com" value={form.c2cContactEmail} onChange={(e) => set("c2cContactEmail", e.target.value)} />
+                        <Field label="Contact Email">
+                            <input type="email" className={inputCls} placeholder="jane@apex.com" value={form.c2cContactEmail} onChange={(e) => set("c2cContactEmail", e.target.value)} />
                         </Field>
                         <Field label="Phone & Fax">
                             <input className={inputCls} placeholder="123-456-7890" value={form.c2cPhoneFax} onChange={(e) => set("c2cPhoneFax", e.target.value)} />
@@ -236,22 +237,65 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
 
 // ─── Section 3 ───────────────────────────────────────────────────────────────
 
-function Section3({ consultantId, onDone }: { consultantId: string; onDone: () => void }) {
+function Section3({ consultantId, onDone, onBack }: { consultantId: string; onDone: () => void; onBack: () => void }) {
     const [form, setForm] = useState<Section3Data>({
         clientName: "", endClientName: "", startDate: "", endDate: "",
         billingRate: "", payRate: "", currency: "USD", paymentTermsDays: "30"
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
+    const [duration, setDuration] = useState("ONGOING");
 
     function set(field: keyof Section3Data, value: string) {
         setForm((f) => ({ ...f, [field]: value }));
+    }
+
+    function handleStartDateChange(val: string) {
+        set("startDate", val);
+        if (duration === "3_MONTHS" || duration === "6_MONTHS" || duration === "12_MONTHS") {
+            const start = new Date(val || new Date());
+            const d = new Date(start);
+            if (duration === "3_MONTHS") d.setMonth(d.getMonth() + 3);
+            if (duration === "6_MONTHS") d.setMonth(d.getMonth() + 6);
+            if (duration === "12_MONTHS") d.setFullYear(d.getFullYear() + 1);
+            set("endDate", d.toISOString().split("T")[0]);
+        }
+    }
+
+    function handleDurationChange(val: string) {
+        setDuration(val);
+        if (val === "ONGOING") {
+            set("endDate", "");
+        } else if (val !== "CUSTOM") {
+            const start = form.startDate ? new Date(form.startDate) : new Date();
+            const d = new Date(start);
+            if (val === "3_MONTHS") d.setMonth(d.getMonth() + 3);
+            if (val === "6_MONTHS") d.setMonth(d.getMonth() + 6);
+            if (val === "12_MONTHS") d.setFullYear(d.getFullYear() + 1);
+            set("endDate", d.toISOString().split("T")[0]);
+        }
     }
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setSaving(true); setError("");
         try {
+            // Upsert clients to main module if new
+            if (form.clientName) {
+                await apiClient("clients", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: form.clientName, type: "CLIENT" })
+                }).catch(err => console.error("Client upsert failed", err));
+            }
+            if (form.endClientName) {
+                await apiClient("clients", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: form.endClientName, type: "END_CLIENT" })
+                }).catch(err => console.error("End client upsert failed", err));
+            }
+
             const projectPayload: any = {
                 consultantId,
                 clientName: form.clientName,
@@ -278,16 +322,32 @@ function Section3({ consultantId, onDone }: { consultantId: string; onDone: () =
         <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <Field label="Client Name *">
-                    <input required className={inputCls} placeholder="Tech Corp" value={form.clientName} onChange={(e) => set("clientName", e.target.value)} />
+                    <AutoComplete clientType="CLIENT" value={form.clientName} onChange={(v) => set("clientName", v)} placeholder="Search or type client..." />
                 </Field>
                 <Field label="End Client Name">
-                    <input className={inputCls} placeholder="Google / Amazon (Optional)" value={form.endClientName} onChange={(e) => set("endClientName", e.target.value)} />
+                    <AutoComplete clientType="END_CLIENT" value={form.endClientName} onChange={(v) => set("endClientName", v)} placeholder="Search or type end client..." />
                 </Field>
                 <Field label="Project Start Date *">
-                    <input required type="date" className={inputCls} value={form.startDate} onChange={(e) => set("startDate", e.target.value)} />
+                    <input required type="date" className={inputCls} value={form.startDate} onChange={(e) => handleStartDateChange(e.target.value)} />
                 </Field>
                 <Field label="Project End Date">
-                    <input type="date" className={inputCls} value={form.endDate} onChange={(e) => set("endDate", e.target.value)} />
+                    <div className="flex flex-col gap-2">
+                        <select className={selectCls} value={duration} onChange={(e) => handleDurationChange(e.target.value)}>
+                            <option value="ONGOING">Ongoing</option>
+                            <option value="3_MONTHS">3 Months</option>
+                            <option value="6_MONTHS">6 Months</option>
+                            <option value="12_MONTHS">12 Months</option>
+                            <option value="CUSTOM">Custom Date</option>
+                        </select>
+                        {duration !== "ONGOING" && (
+                            <input 
+                                type="date" 
+                                className={inputCls} 
+                                value={form.endDate} 
+                                onChange={(e) => { setDuration("CUSTOM"); set("endDate", e.target.value); }} 
+                            />
+                        )}
+                    </div>
                 </Field>
                 <Field label="Bill Rate ($/hr) *">
                     <input required type="number" min="0" step="0.01" className={inputCls} placeholder="60" value={form.billingRate} onChange={(e) => set("billingRate", e.target.value)} />
@@ -297,7 +357,7 @@ function Section3({ consultantId, onDone }: { consultantId: string; onDone: () =
                 </Field>
                 <Field label="Currency">
                     <select className={selectCls} value={form.currency} onChange={(e) => set("currency", e.target.value)}>
-                        {["USD", "CAD", "GBP", "EUR", "INR"].map((c) => <option key={c} value={c}>{c}</option>)}
+                        {["USD"].map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                 </Field>
                 {(form.currency !== "W2") && ( // Reusing currency check since W2 usually has fixed terms
@@ -313,7 +373,10 @@ function Section3({ consultantId, onDone }: { consultantId: string; onDone: () =
 
             {error && <p className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 rounded-xl px-4 py-2">{error}</p>}
 
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-between pt-2">
+                <button type="button" onClick={onBack} className="text-gray-500 hover:text-gray-700 text-sm font-medium flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Previous
+                </button>
                 <button type="submit" disabled={saving}
                     className="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-semibold px-8 py-2.5 rounded-xl transition flex items-center gap-2">
                     {saving ? "Saving…" : <>Finish <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></>}
@@ -377,7 +440,7 @@ function CandidateOnboardContent() {
 
                     <div className="p-6">
                         {step === 0 && <Section1 onSaved={(id) => { setConsultantId(id); setStep(1); }} />}
-                        {step === 1 && <Section3 consultantId={consultantId} onDone={() => setDone(true)} />}
+                        {step === 1 && <Section3 consultantId={consultantId} onDone={() => setDone(true)} onBack={() => setStep(0)} />}
                     </div>
                 </div>
 
