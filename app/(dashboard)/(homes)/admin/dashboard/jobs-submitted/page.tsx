@@ -85,6 +85,7 @@ export default function AdminJobsSubmittedPage() {
                         <SubmittedJobsTable 
                             submissions={submissions} 
                             showExtendedDetails={true} 
+                            baseUrl="/admin/dashboard/jobs"
                             onUpdate={fetchSubmissions}
                         />
                     )}

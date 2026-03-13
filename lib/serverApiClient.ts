@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://api.enfycon.com").replace(/\/+$/, "");
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://backend.enfycon.com").replace(/\/+$/, "");
 
 /**
  * A wrapper around native `fetch` intended for use in Server Components.

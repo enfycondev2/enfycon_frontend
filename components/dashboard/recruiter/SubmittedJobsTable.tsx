@@ -27,9 +27,11 @@ import {
     X,
     Filter,
     Pencil,
-    MoreHorizontal,
+    MoreVertical,
     FileText,
+    Eye,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -395,6 +397,7 @@ export default function SubmittedJobsTable({
     baseUrl = "/delivery-head/dashboard/jobs",
     onUpdate,
 }: SubmittedJobsTableProps) {
+    const router = useRouter();
     const { data: session } = useSession();
     const sessionRoles = (session?.user as any)?.roles || [];
     const isAdmin = sessionRoles.includes("ADMIN");
@@ -719,7 +722,7 @@ export default function SubmittedJobsTable({
                                         </TableHead>
                                     </>
                                 )}
-                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-end border-b border-neutral-200 dark:border-slate-600 sticky right-0 z-30 bg-gray-50 shadow-[-1px_0_0_0_rgba(226,232,240,1)] uppercase tracking-wider text-[10px]">
+                                <TableHead className="text-gray-600 font-medium text-sm px-4 py-4 text-center border-b border-neutral-200 dark:border-slate-600 sticky right-0 z-30 bg-gray-50 shadow-[-1px_0_0_0_rgba(226,232,240,1)] uppercase tracking-wider text-[10px] w-12 min-w-[48px]">
                                     Actions
                                 </TableHead>
                             </TableRow>
@@ -763,8 +766,8 @@ export default function SubmittedJobsTable({
 
                                         const colSpanTotal = showExtendedDetails ? 9 : 7;
                                         const stickyBgClass = index % 2 === 0
-                                            ? "bg-white dark:bg-slate-900/20"
-                                            : "bg-slate-50/70 dark:bg-slate-800/35";
+                                            ? "bg-white dark:bg-slate-900"
+                                            : "bg-slate-50 dark:bg-slate-800";
 
                                         return (
                                             <React.Fragment key={sub.id}>
@@ -808,10 +811,16 @@ export default function SubmittedJobsTable({
                                                 <TableRow
                                                     className={cn(
                                                         "transition-colors group",
+                                                        baseUrl && "cursor-pointer",
                                                         index % 2 === 0
                                                             ? "bg-white dark:bg-slate-900/20 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                                                             : "bg-slate-50/70 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75"
                                                     )}
+                                                    onClick={() => {
+                                                        if (baseUrl) {
+                                                            router.push(`${baseUrl}/${sub.jobId}`);
+                                                        }
+                                                    }}
                                                 >
                                                     <TableCell className={cn(
                                                         "sticky left-0 z-20 px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600 shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(71,85,105,1)]",
@@ -916,14 +925,14 @@ export default function SubmittedJobsTable({
                                                         </TableCell>
                                                     )}
                                                     <TableCell className={cn(
-                                                        "px-4 py-4 text-end whitespace-nowrap w-[80px] border-b border-neutral-200 dark:border-slate-600 sticky right-0 z-20 shadow-[-1px_0_0_0_rgba(226,232,240,1)]",
+                                                        "px-2 py-4 text-center whitespace-nowrap w-12 min-w-[48px] border-b border-l border-neutral-200 dark:border-slate-600 sticky right-0 z-20 shadow-[-1px_0_0_0_rgba(226,232,240,1)]",
                                                         stickyBgClass
                                                     )}>
-                                                        <div className="flex justify-end items-center">
+                                                        <div className="flex justify-center items-center">
                                                             <DropdownMenu>
                                                                 <DropdownMenuTrigger asChild>
                                                                     <Button variant="ghost" className="h-8 w-8 p-0">
-                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                        <MoreVertical className="h-4 w-4" />
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
                                                                 <DropdownMenuContent align="end" className="w-48">
@@ -939,7 +948,7 @@ export default function SubmittedJobsTable({
                                                                     </DropdownMenuItem>
                                                                     <DropdownMenuItem asChild disabled={!baseUrl}>
                                                                         <Link href={`${baseUrl}/${sub.jobId}`} className="flex items-center gap-2 w-full cursor-pointer">
-                                                                            <FileText className="h-4 w-4" />
+                                                                            <Eye className="h-4 w-4 text-blue-500" />
                                                                             <span>View Details</span>
                                                                         </Link>
                                                                     </DropdownMenuItem>

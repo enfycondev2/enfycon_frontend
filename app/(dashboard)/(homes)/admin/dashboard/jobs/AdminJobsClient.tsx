@@ -150,6 +150,7 @@ export default function AdminJobsClient() {
             ) : (
                 <JobsTable
                     jobs={jobs}
+                    baseUrl="/admin/dashboard/jobs"
                     showAccountManager={true}
                     showPod={true}
                     showActions={false}

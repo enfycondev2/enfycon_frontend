@@ -23,7 +23,7 @@ import {
     Calendar as CalendarIcon,
     Filter,
     MessageCircle,
-    MoreHorizontal,
+    MoreVertical,
     RefreshCw,
     RotateCcw,
 } from "lucide-react";
@@ -223,7 +223,7 @@ function InlineExtendMenu({
                 className="h-7 w-7 flex items-center justify-center rounded opacity-20 cursor-default"
                 aria-hidden="true"
             >
-                <MoreHorizontal className="h-4 w-4 text-neutral-400" />
+                <MoreVertical className="h-4 w-4 text-neutral-400" />
             </button>
         );
     }
@@ -243,7 +243,7 @@ function InlineExtendMenu({
                     )}
                     title={isCfr ? "Extend CFR" : "Re-extend CFR"}
                 >
-                    <MoreHorizontal className="h-4 w-4" />
+                    <MoreVertical className="h-4 w-4" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="bottom" className="w-52">
@@ -1277,10 +1277,19 @@ export default function JobsTable({
                                                                     className="h-7 w-7 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 dark:hover:bg-slate-700"
                                                                     title="Action"
                                                                 >
-                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                    <MoreVertical className="h-4 w-4" />
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end" side="bottom" className="w-40">
+                                                                <DropdownMenuItem
+                                                                    className="gap-2 cursor-pointer"
+                                                                    asChild
+                                                                >
+                                                                    <Link href={`${baseUrl}/${job.id}`}>
+                                                                        <Eye className="h-3.5 w-3.5 text-blue-500" />
+                                                                        View Details
+                                                                    </Link>
+                                                                </DropdownMenuItem>
                                                                 <DropdownMenuItem
                                                                     onClick={() => setEditDialogJob(job)}
                                                                     className="gap-2 cursor-pointer"
