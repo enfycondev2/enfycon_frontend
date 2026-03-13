@@ -12,7 +12,10 @@ export function setStoredPin(pin: string): void {
 }
 
 export function clearStoredPin(): void {
-    sessionStorage.removeItem(PIN_KEY);
+    if (typeof window !== "undefined") {
+        sessionStorage.removeItem(PIN_KEY);
+        window.dispatchEvent(new Event("finance-locked"));
+    }
 }
 
 function financeHeaders(pin?: string): Record<string, string> {
@@ -20,16 +23,23 @@ function financeHeaders(pin?: string): Record<string, string> {
     return { "x-finance-pin": p, "Content-Type": "application/json" };
 }
 
+async function handleFinanceResponse(res: Response, endpoint: string) {
+    if (res.status === 403) {
+        clearStoredPin();
+    }
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message ?? `Request to ${endpoint} failed: ${res.status}`);
+    }
+    return res.json();
+}
+
 export async function financeGet(endpoint: string, pin?: string): Promise<any> {
     const res = await apiClient(endpoint, {
         method: "GET",
         headers: financeHeaders(pin),
     });
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.message ?? `GET ${endpoint} failed: ${res.status}`);
-    }
-    return res.json();
+    return handleFinanceResponse(res, endpoint);
 }
 
 export async function financePost(endpoint: string, body: any, pin?: string): Promise<any> {
@@ -38,11 +48,7 @@ export async function financePost(endpoint: string, body: any, pin?: string): Pr
         headers: financeHeaders(pin),
         body: JSON.stringify(body),
     });
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.message ?? `POST ${endpoint} failed: ${res.status}`);
-    }
-    return res.json();
+    return handleFinanceResponse(res, endpoint);
 }
 
 export async function financePatch(endpoint: string, body?: any, pin?: string): Promise<any> {
@@ -51,11 +57,7 @@ export async function financePatch(endpoint: string, body?: any, pin?: string): 
         headers: financeHeaders(pin),
         body: body ? JSON.stringify(body) : undefined,
     });
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.message ?? `PATCH ${endpoint} failed: ${res.status}`);
-    }
-    return res.json();
+    return handleFinanceResponse(res, endpoint);
 }
 
 export async function financeLock(): Promise<void> {

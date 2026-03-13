@@ -19,7 +19,40 @@ export default function FinancePinGate({ children }: FinancePinGateProps) {
         const stored = getStoredPin();
         if (stored) setUnlocked(true);
         setMounted(true);
-    }, []);
+
+        const handleLock = () => {
+            setUnlocked(false);
+            setPin("");
+        };
+
+        // --- Idle Detection (Bank-Level Security) ---
+        const IDLE_TIME = 15 * 60 * 1000; // 15 minutes
+        let idleTimer: NodeJS.Timeout;
+
+        const resetIdleTimer = () => {
+            clearTimeout(idleTimer);
+            if (unlocked) {
+                idleTimer = setTimeout(() => {
+                    const { clearStoredPin } = require("@/lib/financeClient");
+                    clearStoredPin(); // This dispatches "finance-locked"
+                }, IDLE_TIME);
+            }
+        };
+
+        const events = ["mousemove", "mousedown", "keydown", "scroll", "touchstart"];
+        if (unlocked) {
+            events.forEach(e => window.addEventListener(e, resetIdleTimer));
+            resetIdleTimer();
+        }
+
+        window.addEventListener("finance-locked", handleLock);
+        
+        return () => {
+            window.removeEventListener("finance-locked", handleLock);
+            events.forEach(e => window.removeEventListener(e, resetIdleTimer));
+            clearTimeout(idleTimer);
+        };
+    }, [unlocked]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -42,11 +75,15 @@ export default function FinancePinGate({ children }: FinancePinGateProps) {
                 return;
             }
 
-            setStoredPin(pin);
+            // ONLY store the legacy 4-digit global PIN.
+            // 6-digit TOTP codes are one-time use and should NEVER be stored.
+            if (pin.length === 4) {
+                setStoredPin(pin);
+            }
             setUnlocked(true);
         } catch {
-            // Network error fallback
-            setStoredPin(pin);
+            // Network error fallback - only store if 4 digits
+            if (pin.length === 4) setStoredPin(pin);
             setUnlocked(true);
         } finally {
             setLoading(false);
