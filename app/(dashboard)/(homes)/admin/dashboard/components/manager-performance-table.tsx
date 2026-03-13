@@ -25,121 +25,84 @@ import {
     isThisYear,
     parseISO,
     isValid,
+    startOfToday,
+    endOfToday,
+    startOfYesterday,
+    startOfWeek,
+    endOfWeek,
+    startOfMonth,
+    endOfMonth,
+    startOfYear,
+    endOfYear,
 } from "date-fns";
+import { apiClient } from "@/lib/apiClient";
+import { Loader2 } from "lucide-react";
 
 interface ManagerPerformanceTableProps {
-    jobs: any[];
+    jobs?: any[]; // Keep for compatibility but prioritize API
 }
 
-const ManagerPerformanceTable = ({ jobs }: ManagerPerformanceTableProps) => {
+const ManagerPerformanceTable = ({ jobs: initialJobs = [] }: ManagerPerformanceTableProps) => {
     const [filter, setFilter] = useState("all");
+    const [data, setData] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const fetchPerformance = async () => {
+        setIsLoading(true);
+        try {
+            let url = `/dashboard/admin/am-performance`;
+            const params = new URLSearchParams();
+
+            if (filter !== "all") {
+                let start: Date | null = null;
+                let end: Date | null = null;
+                const now = new Date();
+
+                if (filter === "today") {
+                    start = startOfToday();
+                    end = endOfToday();
+                } else if (filter === "week") {
+                    start = startOfWeek(now, { weekStartsOn: 1 });
+                    end = endOfWeek(now, { weekStartsOn: 1 });
+                } else if (filter === "month") {
+                    start = startOfMonth(now);
+                    end = endOfMonth(now);
+                } else if (filter === "year") {
+                    start = startOfYear(now);
+                    end = endOfYear(now);
+                }
+
+                if (start) params.append('startDate', start.toISOString());
+                if (end) params.append('endDate', end.toISOString());
+            }
+
+            const queryString = params.toString();
+            if (queryString) url += `?${queryString}`;
+
+            const response = await apiClient(url);
+            const resData = await response.json();
+            if (resData?.data) {
+                setData(resData.data);
+            }
+        } catch (error) {
+            console.error("Error fetching AM performance:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchPerformance();
+    }, [filter]);
 
     const filteredData = useMemo(() => {
-        const managers: Record<string, any> = {};
-
-        // EST Timezone Helpers
-        const getESTPart = (date: Date, part: 'year' | 'month' | 'day' | 'week') => {
-            if (!date || !isValid(date)) return "N/A";
-
-            if (part === 'week') {
-                // Approximate week of year in EST
-                const d = new Date(date.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-                d.setHours(0, 0, 0, 0);
-                d.setDate(d.getDate() + 4 - (d.getDay() || 7));
-                const yearStart = new Date(d.getFullYear(), 0, 1);
-                return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-            }
-            const options: Intl.DateTimeFormatOptions = { timeZone: 'America/New_York' };
-            if (part === 'year') options.year = 'numeric';
-            if (part === 'month') options.month = 'numeric';
-            if (part === 'day') options.day = 'numeric';
-            return new Intl.DateTimeFormat('en-US', options).format(date);
-        };
-
-        const now = new Date();
-        const currentYear = getESTPart(now, 'year');
-        const currentMonth = getESTPart(now, 'month');
-        const currentDay = getESTPart(now, 'day');
-        const currentWeek = getESTPart(now, 'week');
-
-        jobs.forEach((job) => {
-            if (!job || !job.createdAt) return;
-
-            const createdAt = parseISO(job.createdAt);
-            const updatedAt = job.updatedAt ? parseISO(job.updatedAt) : null;
-
-            if (!isValid(createdAt)) return;
-
-            const jobYear = getESTPart(createdAt, 'year');
-            const jobMonth = getESTPart(createdAt, 'month');
-            const jobDay = getESTPart(createdAt, 'day');
-            const jobWeek = getESTPart(createdAt, 'week');
-
-            let isInRange = false;
-            if (filter === "all") isInRange = true;
-            else if (filter === "today") isInRange = jobYear === currentYear && jobMonth === currentMonth && jobDay === currentDay;
-            else if (filter === "week") isInRange = jobYear === currentYear && jobWeek === currentWeek;
-            else if (filter === "month") isInRange = jobYear === currentYear && jobMonth === currentMonth;
-            else if (filter === "year") isInRange = jobYear === currentYear;
-
-            let isClosedInRange = false;
-            const isClosedStatus = job.status === "CLOSED" || job.status === "FILLED";
-            if (isClosedStatus && updatedAt && isValid(updatedAt)) {
-                const updatedYear = getESTPart(updatedAt, 'year');
-                const updatedMonth = getESTPart(updatedAt, 'month');
-                const updatedDay = getESTPart(updatedAt, 'day');
-                const updatedWeek = getESTPart(updatedAt, 'week');
-
-                if (filter === "all") isClosedInRange = true;
-                else if (filter === "today") isClosedInRange = updatedYear === currentYear && updatedMonth === currentMonth && updatedDay === currentDay;
-                else if (filter === "week") isClosedInRange = updatedYear === currentYear && updatedWeek === currentWeek;
-                else if (filter === "month") isClosedInRange = updatedYear === currentYear && updatedMonth === currentMonth;
-                else if (filter === "year") isClosedInRange = updatedYear === currentYear;
-            }
-
-            const manager = job.accountManager;
-            if (!manager) return;
-
-            if (!managers[manager.id]) {
-                managers[manager.id] = {
-                    name: manager.fullName || "Unknown",
-                    newReq: 0,
-                    cfr: 0,
-                    totalJobs: 0,
-                    totalPositions: 0,
-                    submissionDone: 0,
-                    submissionRequired: 0,
-                    totalSubmissions: 0,
-                    closure: 0,
-                };
-            }
-
-            const m = managers[manager.id];
-
-            if (isInRange) {
-                m.newReq += 1;
-                m.totalJobs += 1;
-                m.totalPositions += job.noOfPositions || job.positions || 1; // Default to 1 if not specified
-                if (job.requirementType === "CFR" || job.requirementType === "CFR_EXTENDED") {
-                    m.cfr += 1;
-                }
-                m.submissionDone += job.submissionDone || 0;
-                m.submissionRequired += job.submissionRequired || 0;
-                m.totalSubmissions += job.submissionDone || 0;
-            }
-
-            if (isClosedInRange) {
-                m.closure += 1;
-            }
-        });
-
-        return Object.values(managers).map((m: any) => ({
+        return data.map((m: any) => ({
             ...m,
             submissionRate: m.submissionRequired > 0
-                ? Math.round((m.submissionDone / m.submissionRequired) * 100)
+                ? Math.round((m.totalSubmissions / m.submissionRequired) * 100)
                 : 0
         }));
-    }, [jobs, filter]);
+    }, [data]);
 
     const getInitials = (name: string) => {
         return name
@@ -156,7 +119,6 @@ const ManagerPerformanceTable = ({ jobs }: ManagerPerformanceTableProps) => {
             acc.cfr += current.cfr;
             acc.totalJobs += current.totalJobs;
             acc.totalPositions += current.totalPositions;
-            acc.submissionDone += current.submissionDone;
             acc.submissionRequired += current.submissionRequired;
             acc.totalSubmissions += current.totalSubmissions;
             acc.closure += current.closure;
@@ -166,7 +128,6 @@ const ManagerPerformanceTable = ({ jobs }: ManagerPerformanceTableProps) => {
             cfr: 0,
             totalJobs: 0,
             totalPositions: 0,
-            submissionDone: 0,
             submissionRequired: 0,
             totalSubmissions: 0,
             closure: 0
@@ -174,17 +135,20 @@ const ManagerPerformanceTable = ({ jobs }: ManagerPerformanceTableProps) => {
     }, [filteredData]);
 
     const totalSubmissionRate = totals.submissionRequired > 0
-        ? Math.round((totals.submissionDone / totals.submissionRequired) * 100)
+        ? Math.round((totals.totalSubmissions / totals.submissionRequired) * 100)
         : 0;
 
     return (
         <Card className="card border-none shadow-premium overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between pb-6 px-6 bg-neutral-50/50 dark:bg-slate-800/50">
-                <div>
-                    <CardTitle className="text-xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-                        Account Manager Performance
-                    </CardTitle>
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Real-time tracking of manager targets and closures</p>
+                <div className="flex items-center gap-3">
+                    <div>
+                        <CardTitle className="text-xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+                            Account Manager Performance
+                        </CardTitle>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Real-time tracking of manager targets and closures</p>
+                    </div>
+                    {isLoading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
                 </div>
                 <Select value={filter} onValueChange={setFilter}>
                     <SelectTrigger className="w-[160px] bg-white dark:bg-slate-900 shadow-sm border-neutral-200 dark:border-slate-700">

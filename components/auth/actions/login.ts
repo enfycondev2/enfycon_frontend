@@ -12,7 +12,7 @@ function getRoleDashboard(roles: string[]): string {
     return "/account-manager/dashboard"
   if (normalized.includes("POD_LEAD") || normalized.includes("POD-LEAD"))
     return "/pod-lead/dashboard"
-  if (normalized.includes("RECRUITER")) return "/recruiter/dashboard"
+  if (normalized.includes("RECRUITER")) return "/pod-lead/dashboard"
   return "/dashboard"
 }
 

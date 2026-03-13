@@ -31,7 +31,7 @@ import { useChat } from "@/contexts/ChatContext";
 import { useSession } from "next-auth/react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ConfirmationDialog } from "@/components/shared/confirmation-dialog";
 
 interface ChatWindowProps {
@@ -73,6 +73,7 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
         unblockUser
     } = useChat();
     const { data: session } = useSession();
+    const myProfilePicture = (session?.user as any)?.profilePicture as string | null | undefined;
     const [messageInput, setMessageInput] = useState("");
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedMessageIds, setSelectedMessageIds] = useState<Set<string>>(new Set());
@@ -241,6 +242,7 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
                     )}
                     <div className="img">
                         <Avatar className="w-10 h-10 border-2 border-primary/10">
+                            {activeUser.profilePicture && <AvatarImage src={activeUser.profilePicture} alt={activeUser.fullName} className="object-cover" />}
                             <AvatarFallback className="bg-primary/5 text-primary text-xs font-bold">
                                 {activeUser.fullName.substring(0, 2).toUpperCase()}
                             </AvatarFallback>
@@ -342,7 +344,7 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
                             key={msg.id || i}
                             className={cn(
                                 "max-w-[85%] flex items-end gap-3 transition-all duration-200",
-                                isMe ? "ms-auto text-white flex-row-reverse" : "text-neutral-900",
+                                isMe ? "ms-auto flex-row-reverse" : "text-neutral-900",
                                 isSelectionMode && "cursor-pointer"
                             )}
                             onClick={() => isSelectionMode && toggleMessageSelection(msg.id)}
@@ -361,10 +363,18 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
                                     {isSelected && <div className="w-2 h-2 bg-white rounded-full" />}
                                 </div>
                             )}
-                            {!isMe && (
-                                <Avatar className="w-8 h-8 rounded-full mb-1">
+                            {!isMe ? (
+                                <Avatar className="w-8 h-8 rounded-full mb-1 shrink-0">
+                                    {activeUser.profilePicture && <AvatarImage src={activeUser.profilePicture} alt={activeUser.fullName} className="object-cover" />}
                                     <AvatarFallback className="bg-neutral-200 dark:bg-slate-800 text-neutral-600 dark:text-neutral-400 text-[10px] font-bold">
                                         {activeUser.fullName.substring(0, 2).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                            ) : (
+                                <Avatar className="w-8 h-8 rounded-full mb-1 shrink-0">
+                                    {myProfilePicture && <AvatarImage src={myProfilePicture} alt="Me" className="object-cover" />}
+                                    <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">
+                                        {((session?.user?.name || "").substring(0, 2).toUpperCase()) || "ME"}
                                     </AvatarFallback>
                                 </Avatar>
                             )}

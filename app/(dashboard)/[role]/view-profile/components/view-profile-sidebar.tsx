@@ -20,7 +20,11 @@ const ViewProfileSidebar = ({ user }: { user?: any }) => {
             <img src="/assets/images/user-grid/user-grid-bg1.png" alt="" className="w-full object-fit-cover" />
             <div className="pb-6 ms-6 mb-6 me-6 -mt-[100px]">
                 <div className="text-center border-b border-slate-200 dark:border-slate-600">
-                    <img src="/assets/images/user-grid/user-grid-img14.png" alt="" className="border br-white border-[3px] w-[200px] h-[200px] rounded-full object-fit-cover mx-auto bg-neutral-100" />
+                    <img
+                        src={user?.profilePicture || "/assets/images/user-grid/user-grid-img14.png"}
+                        alt={fullName}
+                        className="border br-white border-[3px] w-[200px] h-[200px] rounded-full object-cover mx-auto bg-neutral-100"
+                    />
                     <h6 className="mb-0 mt-4">{fullName}</h6>
                     <span className="text-neutral-500 dark:text-neutral-300 mb-4">{email}</span>
                 </div>

@@ -5,6 +5,7 @@ import DeliveryStatsCards from "./components/delivery-stats-cards";
 import PodSubmissionChart from "./components/pod-submission-chart";
 import JobAgingChart from "./components/job-aging-chart";
 import UrgentJobsTable from "./components/urgent-jobs-table";
+import ManagerPerformanceTable from "@/app/(dashboard)/(homes)/admin/dashboard/components/manager-performance-table";
 import { Suspense } from "react";
 import LoadingSkeleton from "@/components/loading-skeleton";
 import { serverApiClient } from "@/lib/serverApiClient";
@@ -13,19 +14,14 @@ export const dynamic = "force-dynamic";
 
 const norm = (value?: string) => (value || "").trim().toUpperCase();
 
+import { fetchAllPages } from "@/lib/pagination";
+
 async function getDeliveryHeadData() {
     try {
-        const [jobsRes, subsRes] = await Promise.all([
-            serverApiClient("/jobs", { cache: "no-store" }),
-            serverApiClient("/recruiter-submissions", { cache: "no-store" })
+        const [jobs, submissions] = await Promise.all([
+            fetchAllPages<any>("/jobs"),
+            fetchAllPages<any>("/recruiter-submissions")
         ]);
-
-        const jobsRaw = jobsRes.ok ? await jobsRes.json() : {};
-        const jobs = Array.isArray(jobsRaw?.data) ? jobsRaw.data : [];
-        const subsData = subsRes.ok ? await subsRes.json() : [];
-        const submissions = Array.isArray(subsData)
-            ? subsData
-            : (subsData?.data || subsData?.submissions || []);
 
         return { jobs, submissions };
     } catch (error) {
@@ -157,6 +153,12 @@ export default async function DeliveryHeadDashboard() {
                 <div className="grid grid-cols-1 gap-6">
                     <Suspense fallback={<LoadingSkeleton />}>
                         <UrgentJobsTable jobs={urgentJobs} />
+                    </Suspense>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                    <Suspense fallback={<LoadingSkeleton />}>
+                        <ManagerPerformanceTable jobs={jobs} />
                     </Suspense>
                 </div>
             </div>

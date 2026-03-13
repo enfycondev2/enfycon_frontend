@@ -8,7 +8,9 @@ import {
   MessageCircleMore,
   StickyNote,
   UsersRound,
-  Mail
+  Mail,
+  Bell,
+  ImageIcon
 } from "lucide-react";
 
 export const getSidebarData = (role: string) => {
@@ -25,32 +27,44 @@ export const getSidebarData = (role: string) => {
           icon: House,
         },
         {
-          title: "All Jobs",
-          url: "/admin/dashboard/jobs",
-          icon: BriefcaseBusiness,
+          title: "Account Manager",
+          url: "/admin/dashboard/account-manager",
+          icon: UsersRound,
         },
         {
           title: "Pods",
           url: "/admin/dashboard/pods",
           icon: Boxes,
         },
-        {
-          title: "Account Manager",
-          url: "/admin/dashboard/account-manager",
-          icon: UsersRound,
-        },
+
         {
           title: "Recruiter",
           url: "/admin/dashboard/recruiter",
           icon: UsersRound,
         },
+
+      ],
+    },
+   
+    {
+      title: "Jobs Management",
+      url: "#",
+      icon: BriefcaseBusiness,
+      isActive: true,
+      items: [
         {
-          title: "Login Media",
-          url: "/admin/login-media",
-          icon: MessageCircleMore,
+          title: "All Jobs",
+          url: "/admin/dashboard/jobs",
+          icon: BriefcaseBusiness,
+        },
+        {
+          title: "Submitted Jobs",
+          url: "/admin/dashboard/jobs-submitted",
+          icon: ClipboardList,
         },
       ],
-    }, {
+    },
+    {
       label: "Application",
     },
     {
@@ -58,6 +72,22 @@ export const getSidebarData = (role: string) => {
       url: "/admin/dashboard/chats",
       icon: MessageCircleMore,
     },
+    {
+      title:"Change Login Image",
+      url:"/admin/login-media",
+      icon: ImageIcon,
+    },
+    {
+      title:"Live Notification",
+      url:"/admin/dashboard/notifications",
+      icon: Bell,
+    },
+    {
+      title:"Users Management",
+      url:"/admin/dashboard/users",
+      icon: UsersRound,
+    }
+
   ];
 
   const accountManagerNav = [
@@ -122,6 +152,11 @@ export const getSidebarData = (role: string) => {
           title: "Pods",
           url: "/delivery-head/dashboard/pods",
           icon: Boxes,
+        },
+        {
+          title: "Account Manager",
+          url: "/delivery-head/dashboard/account-manager",
+          icon: UsersRound,
         },
       ],
     },
@@ -214,22 +249,22 @@ export const getSidebarData = (role: string) => {
       items: [
         {
           title: "Home",
-          url: "/recruiter/dashboard",
+          url: "/pod-lead/dashboard",
           icon: House,
         },
         {
           title: "Assigned Jobs",
-          url: "/recruiter/dashboard/jobs-assigned",
+          url: "/pod-lead/dashboard/jobs-assigned",
           icon: BriefcaseBusiness,
         },
         {
           title: "Submitted Jobs",
-          url: "/recruiter/dashboard/jobs-submitted",
+          url: "/pod-lead/dashboard/jobs-submitted",
           icon: ClipboardList,
         },
         {
           title: "Jobs in my Pods",
-          url: "/recruiter/dashboard/jobs",
+          url: "/pod-lead/dashboard/jobs",
           icon: Boxes,
         },
       ],

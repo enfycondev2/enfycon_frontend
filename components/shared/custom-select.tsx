@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -13,6 +14,7 @@ interface CustomSelectProps {
   options: string[];
   value?: string;
   onValueChange?: (value: string) => void;
+  className?: string;
 }
 
 function CustomSelect({
@@ -20,10 +22,11 @@ function CustomSelect({
   options,
   value,
   onValueChange,
+  className,
 }: CustomSelectProps) {
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className="min-w-[88px] focus-visible:shadow-none focus-visible:ring-0 font-medium dark:bg-slate-700 text-neutral-900 dark:text-white border border-slate-300 dark:border-slate-500 data-[placeholder]:text-neutral-900">
+      <SelectTrigger className={cn("min-w-[88px] focus-visible:shadow-none focus-visible:ring-0 font-medium dark:bg-slate-700 text-neutral-900 dark:text-white border border-slate-300 dark:border-slate-500 data-[placeholder]:text-neutral-900", className)}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

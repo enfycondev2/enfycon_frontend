@@ -24,6 +24,22 @@ import { toast } from "react-hot-toast";
 import { useSession } from "next-auth/react";
 import { Textarea } from "@/components/ui/textarea";
 import { apiClient } from "@/lib/apiClient";
+import { LocationSelect } from "@/components/shared/location-select";
+import { MultiSelect, Option } from "@/components/shared/multi-select";
+
+const visaOptions: Option[] = [
+    { label: "All Visa", value: "ALL_VISA" },
+    { label: "All Visa except H1B", value: "ALL_VISA_EXCEPT_H1B" },
+    { label: "H1B", value: "H1B" },
+    { label: "Green Card (GC)", value: "GC" },
+    { label: "US Citizen", value: "US_CITIZEN" },
+    { label: "OPT/CPT", value: "OPT" },
+    { label: "EAD", value: "EAD" },
+    { label: "TN Visa", value: "TN" },
+];
+
+const parseVisaTypes = (visaType?: string) =>
+    (visaType || "").split(",").map((v) => v.trim()).filter(Boolean);
 
 interface Job {
     id: string;
@@ -62,8 +78,11 @@ export default function JobEditDialog({ job, isOpen, onClose, onSuccess }: JobEd
     const [isLoading, setIsLoading] = React.useState(false);
     const [pods, setPods] = React.useState<Pod[]>([]);
     const [formData, setFormData] = React.useState<Partial<Job>>({});
+    const [selectedPodIds, setSelectedPodIds] = React.useState<string[]>([]);
 
     const token = (session as any)?.user?.accessToken;
+    const userRoles = (session?.user as any)?.roles || [];
+    const isAccountManager = userRoles.some((r: string) => r.toUpperCase() === "ACCOUNT_MANAGER" || r.toUpperCase() === "ACCOUNT-MANAGER");
 
     const fetchJobDetails = React.useCallback(async () => {
         if (!job) return;
@@ -84,10 +103,13 @@ export default function JobEditDialog({ job, isOpen, onClose, onSuccess }: JobEd
                     submissionRequired: fullJob.submissionRequired,
                     urgency: fullJob.urgency,
                     status: fullJob.status,
-                    podId: fullJob.podId || "unassigned",
                     accountManagerId: fullJob.accountManagerId,
                     description: fullJob.description || "",
                 });
+                // Pre-populate selected pods from the many-to-many pods array
+                setSelectedPodIds(
+                    Array.isArray(fullJob.pods) ? fullJob.pods.map((p: any) => p.id) : []
+                );
             } else {
                 toast.error("Failed to fetch job details");
             }
@@ -104,6 +126,7 @@ export default function JobEditDialog({ job, isOpen, onClose, onSuccess }: JobEd
             fetchJobDetails();
         } else {
             setFormData({});
+            setSelectedPodIds([]);
         }
     }, [isOpen, job, fetchJobDetails]);
 
@@ -143,16 +166,8 @@ export default function JobEditDialog({ job, isOpen, onClose, onSuccess }: JobEd
                 ...sanitizedData,
                 noOfPositions: Number(formData.noOfPositions) || 0,
                 submissionRequired: Number(formData.submissionRequired) || 0,
+                ...(isAccountManager ? {} : { podIds: selectedPodIds }),
             };
-
-            // Handle pod relation in a Prisma-compatible way if podId is present
-            if (formData.podId) {
-                if (formData.podId === "unassigned") {
-                    patchData.pod = { disconnect: true };
-                } else {
-                    patchData.pod = { connect: { id: formData.podId } };
-                }
-            }
 
             const response = await apiClient(`/jobs/${job.id}`, {
                 method: "PATCH",
@@ -206,23 +221,14 @@ export default function JobEditDialog({ job, isOpen, onClose, onSuccess }: JobEd
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="podId">Assigned Pod</Label>
-                            <Select
-                                value={formData.podId || "unassigned"}
-                                onValueChange={(value) => setFormData({ ...formData, podId: value })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a pod" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {pods.map((pod) => (
-                                        <SelectItem key={pod.id} value={pod.id}>
-                                            {pod.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Label>Assigned Pods</Label>
+                            <MultiSelect
+                                options={pods.map((p) => ({ label: p.name, value: p.id }))}
+                                selected={selectedPodIds}
+                                onChange={setSelectedPodIds}
+                                placeholder={isAccountManager ? "View assigned pods" : "Select pods..."}
+                                disabled={isAccountManager}
+                            />
                         </div>
                     </div>
 
@@ -249,31 +255,22 @@ export default function JobEditDialog({ job, isOpen, onClose, onSuccess }: JobEd
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="jobLocation">Location</Label>
-                            <Input
-                                id="jobLocation"
+                            <LocationSelect
                                 value={formData.jobLocation || ""}
-                                onChange={(e) => setFormData({ ...formData, jobLocation: e.target.value })}
-                                required
+                                onChange={(val) => setFormData({ ...formData, jobLocation: val })}
+                                placeholder="Select location"
                             />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="visaType">Visa Type</Label>
-                            <Select
-                                value={formData.visaType || ""}
-                                onValueChange={(value) => setFormData({ ...formData, visaType: value })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select Visa Type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="H1B">H1B</SelectItem>
-                                    <SelectItem value="GC">Green Card (GC)</SelectItem>
-                                    <SelectItem value="US_CITIZEN">US Citizen</SelectItem>
-                                    <SelectItem value="OPT">OPT/CPT</SelectItem>
-                                    <SelectItem value="EAD">EAD</SelectItem>
-                                    <SelectItem value="TN">TN Visa</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <MultiSelect
+                                options={visaOptions}
+                                selected={parseVisaTypes(formData.visaType)}
+                                onChange={(selected) =>
+                                    setFormData({ ...formData, visaType: selected.join(",") })
+                                }
+                                placeholder="Select visa type(s)"
+                            />
                         </div>
                     </div>
 
@@ -326,16 +323,16 @@ export default function JobEditDialog({ job, isOpen, onClose, onSuccess }: JobEd
                         <div className="space-y-2">
                             <Label htmlFor="urgency">Urgency</Label>
                             <Select
-                                value={formData.urgency || "MEDIUM"}
+                                value={formData.urgency || "WARM"}
                                 onValueChange={(value) => setFormData({ ...formData, urgency: value })}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select urgency" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="LOW">Low</SelectItem>
-                                    <SelectItem value="MEDIUM">Medium</SelectItem>
-                                    <SelectItem value="HIGH">High</SelectItem>
+                                    <SelectItem value="HOT">🔴 Hot</SelectItem>
+                                    <SelectItem value="WARM">🟡 Warm</SelectItem>
+                                    <SelectItem value="COLD">🔵 Cold</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

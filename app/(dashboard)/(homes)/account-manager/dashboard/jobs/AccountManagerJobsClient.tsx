@@ -125,6 +125,20 @@ export default function AccountManagerJobsClient() {
 
     const refresh = () => { cache.current.clear(); inflight.current.clear(); goTo(currentPage); };
 
+    /** Silently patch one job in state after an edit — no loading flicker */
+    const handleJobUpdated = useCallback(async (jobId: string) => {
+        try {
+            const res = await apiClient(`/jobs/${jobId}`);
+            if (!res.ok) return;
+            const updated = await res.json();
+            setJobs(prev => prev.map((j: any) => j.id === updated.id ? updated : j));
+            cache.current.clear();
+            inflight.current.clear();
+        } catch {
+            // Silently ignore
+        }
+    }, []);
+
     return (
         <div className="space-y-4">
             {isLoading ? (
@@ -137,11 +151,15 @@ export default function AccountManagerJobsClient() {
             ) : (
                 <JobsTable
                     jobs={jobs}
+                    baseUrl="/account-manager/dashboard/jobs"
                     showPod={true}
+                    showActions={false}
+                    showFilters={true}
                     showEstCreatedDateTime={true}
                     serverPaginated={false}
                     serverTotal={meta.total}
                     onRefresh={refresh}
+                    onJobUpdated={handleJobUpdated}
                 />
             )}
             {!isLoading && !error && tp > 1 && (

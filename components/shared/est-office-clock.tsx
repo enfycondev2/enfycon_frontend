@@ -18,15 +18,16 @@ export default function EstOfficeClock() {
     }
 
 
-    // Format EST time: "hh:mm:ss A (EST)"
+    // Format EST time: "hh:mm:ss A (EST/EDT)"
     const estFormatter = new Intl.DateTimeFormat('en-US', {
         timeZone: 'America/New_York',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
         hour12: true,
+        timeZoneName: 'short',
     });
-    const formattedEstTime = estFormatter.format(currentTime) + ' EST';
+    const formattedEstTime = estFormatter.format(currentTime);
 
     // Office hours based on IST: 7:30 PM IST to 4:30 AM IST next day
     // 7:30 PM IST = 14:00 UTC

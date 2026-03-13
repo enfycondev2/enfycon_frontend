@@ -99,7 +99,12 @@ export default function AccountManagerSubmittedJobsPage() {
                             <p className="text-sm text-neutral-500 font-medium">Loading submissions...</p>
                         </div>
                     ) : (
-                        <SubmittedJobsTable submissions={submissions} showExtendedDetails={true} onUpdate={fetchSubmissions} />
+                        <SubmittedJobsTable 
+                            submissions={submissions} 
+                            baseUrl="/account-manager/dashboard/jobs"
+                            showExtendedDetails={true} 
+                            onUpdate={fetchSubmissions} 
+                        />
                     )}
                 </div>
             </div>

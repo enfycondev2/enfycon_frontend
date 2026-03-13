@@ -1,6 +1,6 @@
 "use client";
-
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
 import {
     Table,
     TableBody,
@@ -9,6 +9,14 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
     ChevronLeft,
@@ -19,7 +27,18 @@ import {
     X,
     Filter,
     Pencil,
+    MoreHorizontal,
+    FileText,
 } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -40,6 +59,10 @@ export interface CandidateSubmission {
     job?: {
         jobCode: string;
         jobTitle: string;
+        accountManager: {
+            fullName: string | null;
+            email: string;
+        };
         submissionRequired?: number;
         submissionDone?: number;
         requirementType?: string;
@@ -71,6 +94,7 @@ interface SubmittedJobsTableProps {
     submissions: CandidateSubmission[];
     showExtendedDetails?: boolean;
     isRecruiter?: boolean;
+    baseUrl?: string;
     onUpdate?: () => void;
 }
 
@@ -147,7 +171,17 @@ function FeedbackPopover({ remarks, comment }: { remarks?: string; comment?: str
     );
 }
 
-function EditStatusPopover({ sub, onSaved, isRecruiter = false }: { sub: CandidateSubmission; onSaved?: () => void; isRecruiter?: boolean }) {
+function EditStatusDialog({
+    sub,
+    onSaved,
+    isRecruiter = false,
+    trigger
+}: {
+    sub: CandidateSubmission;
+    onSaved?: () => void;
+    isRecruiter?: boolean;
+    trigger?: React.ReactNode;
+}) {
     const [open, setOpen] = useState(false);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({
@@ -212,73 +246,86 @@ function EditStatusPopover({ sub, onSaved, isRecruiter = false }: { sub: Candida
     ] as const;
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <Button size="sm" variant="outline" className="h-7 px-2 gap-1 text-xs">
-                    <Pencil className="h-3 w-3" /> Edit
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72 p-4 space-y-3" align="end">
-                <p className="text-xs font-semibold text-neutral-700 border-b pb-2">
-                    {isRecruiter ? "Update Feedback" : "Update Pipeline Status"}
-                </p>
-
-                {!isRecruiter && stages.map((stage) => (
-                    <div key={stage.key} className="flex items-center gap-2">
-                        <span className="text-xs font-semibold w-6 text-neutral-500">{stage.label}</span>
-                        <Select value={form[stage.key]} onValueChange={sf(stage.key)} disabled={stage.disabled}>
-                            <SelectTrigger className="h-7 text-xs flex-1">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {STAGE_STATUSES.map(s => (
-                                    <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                ))}
-
-                {!isRecruiter && (
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold w-6 text-neutral-500">Final</span>
-                        <Select value={displayFinalStatus} onValueChange={sf("finalStatus")} disabled={disableFinal}>
-                            <SelectTrigger className="h-7 text-xs flex-1">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {FINAL_STATUSES.map(s => (
-                                    <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                {trigger || (
+                    <Button size="sm" variant="outline" className="h-7 px-2 gap-1 text-xs">
+                        <Pencil className="h-3 w-3" /> Edit
+                    </Button>
                 )}
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md p-6 space-y-4">
+                <DialogHeader>
+                    <DialogTitle className="text-base font-semibold text-neutral-800 tracking-tight">
+                        {isRecruiter ? "Update Recruitment Feedback" : "Update Candidate Pipeline Status"}
+                    </DialogTitle>
+                </DialogHeader>
 
-                <div>
-                    <label className="text-xs font-semibold text-neutral-500 block mb-1">Feedback / Remarks</label>
-                    {isRecruiter ? (
-                        <Textarea
-                            value={form.remarks}
-                            onChange={e => setForm(p => ({ ...p, remarks: e.target.value }))}
-                            placeholder="Add your feedback here..."
-                            className="text-xs min-h-[160px] resize-none"
-                        />
-                    ) : (
-                        <Input
-                            value={form.remarks}
-                            onChange={e => setForm(p => ({ ...p, remarks: e.target.value }))}
-                            placeholder="Add feedback..."
-                            className="h-7 text-xs"
-                        />
+                <div className="space-y-4 py-2">
+                    {!isRecruiter && (
+                        <div className="grid grid-cols-1 gap-3">
+                            {stages.map((stage) => (
+                                <div key={stage.key} className="flex items-center gap-3">
+                                    <span className="text-xs font-bold w-12 text-neutral-500 uppercase tracking-wider">{stage.label}</span>
+                                    <Select value={form[stage.key]} onValueChange={sf(stage.key)} disabled={stage.disabled}>
+                                        <SelectTrigger className="h-9 text-sm flex-1 border-neutral-200 focus:ring-blue-500 rounded-lg">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {STAGE_STATUSES.map(s => (
+                                                <SelectItem key={s} value={s} className="text-sm">{s}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            ))}
+
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs font-bold w-12 text-neutral-500 uppercase tracking-wider">Final</span>
+                                <Select value={displayFinalStatus} onValueChange={sf("finalStatus")} disabled={disableFinal}>
+                                    <SelectTrigger className="h-9 text-sm flex-1 border-neutral-200 focus:ring-blue-500 rounded-lg">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {FINAL_STATUSES.map(s => (
+                                            <SelectItem key={s} value={s} className="text-sm">{s}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
                     )}
+
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block">Feedback & Remarks</label>
+                        {isRecruiter ? (
+                            <Textarea
+                                value={form.remarks}
+                                onChange={e => setForm(p => ({ ...p, remarks: e.target.value }))}
+                                placeholder="Provide detailed feedback on the recruitment process..."
+                                className="text-sm min-h-[160px] resize-none border-neutral-200 focus:ring-blue-500 rounded-lg p-3"
+                            />
+                        ) : (
+                            <Input
+                                value={form.remarks}
+                                onChange={e => setForm(p => ({ ...p, remarks: e.target.value }))}
+                                placeholder="Add technical or process remarks..."
+                                className="h-10 text-sm border-neutral-200 focus:ring-blue-500 rounded-lg px-3"
+                            />
+                        )}
+                    </div>
                 </div>
 
-                <Button size="sm" className="w-full" onClick={handleSave} disabled={saving}>
-                    {saving ? "Saving..." : "Save Changes"}
-                </Button>
-            </PopoverContent>
-        </Popover>
+                <DialogFooter className="sm:justify-end gap-2 pt-2">
+                    <Button variant="ghost" size="sm" onClick={() => setOpen(false)} disabled={saving} className="h-10 px-4 font-medium text-neutral-500">
+                        Cancel
+                    </Button>
+                    <Button size="sm" onClick={handleSave} disabled={saving} className="h-10 px-6 font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all rounded-lg">
+                        {saving ? "Saving Changes..." : "Save Updates"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -345,8 +392,15 @@ export default function SubmittedJobsTable({
     submissions,
     showExtendedDetails = true,
     isRecruiter = false,
+    baseUrl = "/delivery-head/dashboard/jobs",
     onUpdate,
 }: SubmittedJobsTableProps) {
+    const { data: session } = useSession();
+    const sessionRoles = (session?.user as any)?.roles || [];
+    const isAdmin = sessionRoles.includes("ADMIN");
+    const isDeliveryHead = sessionRoles.includes("DELIVERY_HEAD") || sessionRoles.includes("DELIVERY-HEAD");
+    const isAccountManager = sessionRoles.includes("ACCOUNT_MANAGER") || sessionRoles.includes("ACCOUNT-MANAGER");
+
     const [currentPage, setCurrentPage] = useState(1);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
@@ -634,6 +688,9 @@ export default function SubmittedJobsTable({
                                     Job Reference
                                 </TableHead>
                                 <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
+                                    Account Manager
+                                </TableHead>
+                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
                                     Submitted By
                                 </TableHead>
 
@@ -642,7 +699,7 @@ export default function SubmittedJobsTable({
                                     Candidate Details
                                 </TableHead>
                                 <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
-                                    Created At
+                                    Job Created At
                                 </TableHead>
                                 <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
                                     Submission Date
@@ -662,7 +719,7 @@ export default function SubmittedJobsTable({
                                         </TableHead>
                                     </>
                                 )}
-                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-end border-b border-neutral-200 dark:border-slate-600">
+                                <TableHead className="text-gray-600 font-medium text-sm px-6 py-4 text-end border-b border-neutral-200 dark:border-slate-600 sticky right-0 z-30 bg-gray-50 shadow-[-1px_0_0_0_rgba(226,232,240,1)] uppercase tracking-wider text-[10px]">
                                     Actions
                                 </TableHead>
                             </TableRow>
@@ -671,7 +728,7 @@ export default function SubmittedJobsTable({
                             {currentSubmissions.length === 0 ? (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={showExtendedDetails ? 9 : 7}
+                                        colSpan={showExtendedDetails ? 10 : 8}
                                         className="h-32 text-center text-gray-500"
                                     >
                                         <div className="flex flex-col items-center justify-center gap-2">
@@ -779,6 +836,16 @@ export default function SubmittedJobsTable({
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
+                                                        <div className="flex flex-col gap-0.5" title={sub.job?.accountManager?.email}>
+                                                            <span className="text-sm text-gray-900 font-medium">
+                                                                {sub.job?.accountManager?.fullName || "-"}
+                                                            </span>
+                                                            <span className="text-[11px] text-gray-500 lowercase truncate max-w-[150px]">
+                                                                {sub.job?.accountManager?.email}
+                                                            </span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="px-6 py-4 text-start border-b border-r border-neutral-200 dark:border-slate-600">
                                                         <div className="flex flex-col gap-1">
                                                             <span className="font-medium text-sm text-gray-900 capitalize">
                                                                 {sub.recruiter?.fullName || "-"}
@@ -806,13 +873,13 @@ export default function SubmittedJobsTable({
                                                     </TableCell>
                                                     <TableCell className="px-6 py-4 text-start whitespace-nowrap border-b border-r border-neutral-200 dark:border-slate-600">
                                                         <div className="flex flex-col gap-0.5">
-                                                            {sub.createdAt ? (
+                                                            {sub.job?.createdAt ? (
                                                                 <>
                                                                     <span className="text-sm text-gray-900 font-medium">
-                                                                        {formatUsDate(sub.createdAt)}
+                                                                        {formatUsDate(sub.job.createdAt)}
                                                                     </span>
                                                                     <span className="text-xs text-gray-400">
-                                                                        {formatUsTime(sub.createdAt)}
+                                                                        {formatUsTime(sub.job.createdAt)}
                                                                     </span>
                                                                 </>
                                                             ) : (
@@ -848,9 +915,36 @@ export default function SubmittedJobsTable({
                                                             <FeedbackPopover remarks={sub.remarks} comment={sub.recruiterComment} />
                                                         </TableCell>
                                                     )}
-                                                    <TableCell className="px-4 py-4 text-end whitespace-nowrap w-[80px] border-b border-neutral-200 dark:border-slate-600">
+                                                    <TableCell className={cn(
+                                                        "px-4 py-4 text-end whitespace-nowrap w-[80px] border-b border-neutral-200 dark:border-slate-600 sticky right-0 z-20 shadow-[-1px_0_0_0_rgba(226,232,240,1)]",
+                                                        stickyBgClass
+                                                    )}>
                                                         <div className="flex justify-end items-center">
-                                                            <EditStatusPopover sub={sub} onSaved={onUpdate} isRecruiter={isRecruiter} />
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end" className="w-48">
+                                                                    <DropdownMenuLabel>Action</DropdownMenuLabel>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                        <EditStatusDialog sub={sub} onSaved={onUpdate} isRecruiter={isRecruiter} trigger={
+                                                                            <div className="flex items-center gap-2 w-full">
+                                                                                <Pencil className="h-4 w-4" />
+                                                                                <span>Edit status</span>
+                                                                            </div>
+                                                                        } />
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem asChild disabled={!baseUrl}>
+                                                                        <Link href={`${baseUrl}/${sub.jobId}`} className="flex items-center gap-2 w-full cursor-pointer">
+                                                                            <FileText className="h-4 w-4" />
+                                                                            <span>View Details</span>
+                                                                        </Link>
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>

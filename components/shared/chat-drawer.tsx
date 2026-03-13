@@ -13,7 +13,7 @@ import { MessageSquare, ArrowLeft, Search } from "lucide-react";
 import { useChat } from "@/contexts/ChatContext";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ChatWindow from "@/components/chat/ChatWindow";
 
 function formatLastSeen(lastOnline?: string): string {
@@ -163,6 +163,7 @@ const ChatDrawer = () => {
                                         >
                                             <div className="relative shrink-0">
                                                 <Avatar className="w-12 h-12 shadow-sm border border-neutral-100 dark:border-slate-800">
+                                                    {u.profilePicture && <AvatarImage src={u.profilePicture} alt={u.fullName} className="object-cover" />}
                                                     <AvatarFallback className="bg-neutral-100 dark:bg-slate-800 text-neutral-600 dark:text-neutral-400 font-bold text-sm">
                                                         {u.fullName.substring(0, 2).toUpperCase()}
                                                     </AvatarFallback>

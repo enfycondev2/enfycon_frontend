@@ -26,15 +26,10 @@ interface PodRow {
     name: string;
 }
 
+import { fetchAllPages } from "@/lib/pagination";
+
 async function getJobs(): Promise<JobRow[]> {
-    try {
-        const response = await serverApiClient("/jobs", { cache: "no-store" });
-        if (!response.ok) return [];
-        const data = await response.json();
-        return Array.isArray(data?.data) ? data.data : [];
-    } catch {
-        return [];
-    }
+    return await fetchAllPages<JobRow>("/jobs");
 }
 
 async function getMyPods(): Promise<PodRow[]> {
