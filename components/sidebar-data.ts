@@ -62,6 +62,11 @@ export const getSidebarData = (role: string) => {
           url: "/admin/dashboard/jobs-submitted",
           icon: ClipboardList,
         },
+        {
+          title: "Assignment Logs",
+          url: "/admin/dashboard/assignment-logs",
+          icon: ClipboardList,
+        },
       ],
     },
     {
