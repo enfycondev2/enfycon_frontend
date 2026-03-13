@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { House } from 'lucide-react';
 import { useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
 
 
 interface BreadcrumbData {
@@ -26,31 +27,60 @@ const ROLE_LABELS: Record<string, string> = {
     ACCOUNT_MANAGER: "Account Manager",
     "ACCOUNT-MANAGER": "Account Manager",
     RECRUITER: "Recruiter",
+    FIN_ADMIN: "Finance Admin",
+    "FIN-ADMIN": "Finance Admin",
+};
+
+const ROLE_PATHS: Record<string, string> = {
+    ADMIN: "/admin/dashboard",
+    DELIVERY_HEAD: "/delivery-head/dashboard",
+    "DELIVERY-HEAD": "/delivery-head/dashboard",
+    POD_LEAD: "/pod-lead/dashboard",
+    "POD-LEAD": "/pod-lead/dashboard",
+    ACCOUNT_MANAGER: "/account-manager/dashboard",
+    "ACCOUNT-MANAGER": "/account-manager/dashboard",
+    RECRUITER: "/recruiter/dashboard",
+    FIN_ADMIN: "/finance",
+    "FIN-ADMIN": "/finance",
 };
 
 /** Normalise a raw role string to its canonical upper-snake form. */
 const normalise = (role: string) => role.toUpperCase().replace(/-/g, "_");
 
 const DashboardBreadcrumb = ({ title, text }: BreadcrumbData) => {
+    const pathname = usePathname();
     const { data: session } = useSession();
     const rawRoles: string[] = (session?.user as any)?.roles || [];
 
     const normalisedRoles = rawRoles.map(normalise);
 
-    // Special case: Pod Lead who is also a Recruiter
-    const isPodLeadRecruiter =
-        normalisedRoles.includes("POD_LEAD") &&
-        normalisedRoles.includes("RECRUITER");
+    const validRoles = Object.keys(ROLE_LABELS);
 
-    let roleLabel: string;
-    if (isPodLeadRecruiter) {
-        roleLabel = "Pod Lead ";
-    } else {
-        const validRoles = Object.keys(ROLE_LABELS);
-        const primaryRole =
-            normalisedRoles.find((r) => validRoles.includes(r)) ?? "ADMIN";
-        roleLabel = ROLE_LABELS[primaryRole] ?? "Admin";
+    // Try to match role based on current path
+    let activeRole = normalisedRoles.find(r => {
+        if (r === "FIN_ADMIN" && pathname?.includes("/finance")) return true;
+        if (r === "ADMIN" && pathname?.includes("/admin")) return true;
+        if (r === "RECRUITER" && pathname?.includes("/recruiter")) return true;
+        if (r === "POD_LEAD" && (pathname?.includes("/pod-lead") || pathname?.includes("/pod_lead"))) return true;
+        if (r === "ACCOUNT_MANAGER" && (pathname?.includes("/account-manager") || pathname?.includes("/account_manager"))) return true;
+        if (r === "DELIVERY_HEAD" && (pathname?.includes("/delivery-head") || pathname?.includes("/delivery_head"))) return true;
+        return false;
+    });
+
+    // Fallback if no path match
+    if (!activeRole) {
+        const isPodLeadRecruiter =
+            normalisedRoles.includes("POD_LEAD") &&
+            normalisedRoles.includes("RECRUITER");
+
+        if (isPodLeadRecruiter) {
+            activeRole = "POD_LEAD";
+        } else {
+            activeRole = normalisedRoles.find((r) => validRoles.includes(r)) ?? "ADMIN";
+        }
     }
+
+    const roleLabel = ROLE_LABELS[activeRole] ?? "Admin";
 
     return (
         <div className='flex flex-wrap items-center justify-between gap-2 mb-6'>
@@ -60,7 +90,7 @@ const DashboardBreadcrumb = ({ title, text }: BreadcrumbData) => {
                     {/* Role root crumb */}
                     <BreadcrumbItem>
                         <BreadcrumbLink
-                            href='/'
+                            href={ROLE_PATHS[activeRole] || '/'}
                             className='flex items-center gap-2 font-medium text-base text-neutral-600 hover:text-primary dark:text-white dark:hover:text-primary'
                         >
                             <House size={16} />
@@ -73,7 +103,7 @@ const DashboardBreadcrumb = ({ title, text }: BreadcrumbData) => {
                     {/* Dashboard crumb */}
                     <BreadcrumbItem>
                         <BreadcrumbLink
-                            href='/'
+                            href={ROLE_PATHS[activeRole] || '/'}
                             className='font-medium text-base text-neutral-600 hover:text-primary dark:text-white dark:hover:text-primary'
                         >
                             Dashboard

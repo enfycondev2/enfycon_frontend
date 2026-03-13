@@ -54,13 +54,13 @@ function FinanceNav() {
 
                 {/* Back to Admin */}
                 <Link
-                    href="/dashboard"
+                    href="/admin/dashboard"
                     className="shrink-0 text-xs text-gray-400 hover:text-violet-600 transition flex items-center gap-1"
                 >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    Admin
+                    Back to Sync
                 </Link>
             </div>
         </header>
