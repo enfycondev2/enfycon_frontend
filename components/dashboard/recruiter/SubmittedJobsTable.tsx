@@ -412,6 +412,17 @@ export default function SubmittedJobsTable({
     const [l3Filter, setL3Filter] = useState("all");
     const [dateFilter, setDateFilter] = useState("");
     const itemsPerPage = 10;
+    const isInteractiveTarget = (target: EventTarget | null) => {
+        if (!target || !(target instanceof HTMLElement)) return false;
+        return (
+            target.closest("button") ||
+            target.closest("a") ||
+            target.closest("input") ||
+            target.closest("select") ||
+            target.closest("[role='menuitem']") ||
+            target.closest(".interactive")
+        );
+    };
 
     // Derived Statistics
     const stats = useMemo(() => {
@@ -816,8 +827,8 @@ export default function SubmittedJobsTable({
                                                             ? "bg-white dark:bg-slate-900/20 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                                                             : "bg-slate-50/70 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75"
                                                     )}
-                                                    onClick={() => {
-                                                        if (baseUrl) {
+                                                    onClick={(e) => {
+                                                        if (baseUrl && !isInteractiveTarget(e.target)) {
                                                             router.push(`${baseUrl}/${sub.jobId}`);
                                                         }
                                                     }}
