@@ -14,6 +14,7 @@ const NAV_LINKS = [
     { href: "/finance/payments", label: "Payments" },
     { href: "/finance/projects", label: "Projects" },
     { href: "/finance/hours", label: "Hours" },
+    { href: "/finance/candidate-onboard", label: "Onboard" },
 ];
 
 function FinanceNav() {

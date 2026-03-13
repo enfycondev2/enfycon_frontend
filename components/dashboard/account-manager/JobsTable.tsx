@@ -120,6 +120,8 @@ interface JobsTableProps {
     showFilters?: boolean;
     showEstCreatedDateTime?: boolean;
     showCfrExtend?: boolean;
+    /** Whether to show Bill and Pay rates (finance sensitive data) */
+    showRates?: boolean;
     onRefresh?: () => void;
     /** Called with the saved job's ID after an inline edit — lets the parent silently patch just that row */
     onJobUpdated?: (jobId: string) => void;
@@ -372,6 +374,7 @@ export default function JobsTable({
     showFilters = false,
     showEstCreatedDateTime = false,
     showCfrExtend = false,
+    showRates = true,
     onRefresh,
     onJobUpdated,
     serverPaginated = false,
@@ -883,9 +886,11 @@ export default function JobsTable({
                             <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-center">
                                 CFR Age
                             </TableHead>
-                            <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
-                                Rates
-                            </TableHead>
+                            {showRates && (
+                                <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
+                                    Rates
+                                </TableHead>
+                            )}
                             <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
                                 Created Date
                             </TableHead>
@@ -911,7 +916,7 @@ export default function JobsTable({
                         {currentJobs.length === 0 ? (
                             <TableRow>
                                 <TableCell
-                                    colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)}
+                                    colSpan={(showRates ? 14 : 13) + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)}
                                     className="h-24 text-center text-muted-foreground italic"
                                 >
                                     No jobs found.
@@ -965,7 +970,7 @@ export default function JobsTable({
                                         <React.Fragment key={job.id}>
                                             {showTodayHeader && (
                                                 <TableRow className="bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20">
-                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)} className="py-2 px-0">
+                                                    <TableCell colSpan={(showRates ? 14 : 13) + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)} className="py-2 px-0">
                                                         <div className="sticky left-0 px-4 flex items-center gap-2 w-max">
                                                             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                                                             <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">Today's Jobs</span>
@@ -975,7 +980,7 @@ export default function JobsTable({
                                             )}
                                             {showNewSubHeader && (
                                                 <TableRow className="bg-emerald-100/10 dark:bg-emerald-900/5 hover:bg-emerald-100/10 dark:hover:bg-emerald-900/5 border-0">
-                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)} className="py-1 px-0 border-b border-emerald-50 dark:border-emerald-900/20 text-start">
+                                                    <TableCell colSpan={(showRates ? 14 : 13) + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)} className="py-1 px-0 border-b border-emerald-50 dark:border-emerald-900/20 text-start">
                                                         <div className="sticky left-0 px-6 w-max">
                                                             <span className="text-[10px] font-bold text-emerald-600/80 dark:text-emerald-500/80 uppercase tracking-widest italic">New Requirements</span>
                                                         </div>
@@ -984,7 +989,7 @@ export default function JobsTable({
                                             )}
                                             {showCfrExtSubHeader && (
                                                 <TableRow className="bg-amber-100/10 dark:bg-amber-900/5 hover:bg-amber-100/10 dark:hover:bg-amber-900/5 border-0">
-                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)} className="py-1 px-0 border-b border-amber-50 dark:border-amber-900/20 text-start">
+                                                    <TableCell colSpan={(showRates ? 14 : 13) + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)} className="py-1 px-0 border-b border-amber-50 dark:border-amber-900/20 text-start">
                                                         <div className="sticky left-0 px-6 w-max">
                                                             <span className="text-[10px] font-bold text-amber-600/80 dark:text-amber-500/80 uppercase tracking-widest italic">Requirement Extensions (CFR)</span>
                                                         </div>
@@ -993,7 +998,7 @@ export default function JobsTable({
                                             )}
                                             {showPastHeader && (
                                                 <TableRow className="bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50/50 dark:hover:bg-red-950/20 shadow-sm border-0">
-                                                    <TableCell colSpan={14 + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)} className="py-2 px-0 border-b border-red-100 dark:border-red-900/30">
+                                                    <TableCell colSpan={(showRates ? 14 : 13) + (showAccountManager ? 1 : 0) + (showPod ? 1 : 0) + (showActions ? 1 : 0) + (canEditByRole ? 1 : 0)} className="py-2 px-0 border-b border-red-100 dark:border-red-900/30">
                                                         <div className="sticky left-0 px-4 w-max">
                                                             <span className="text-sm font-bold text-red-700 dark:text-red-400 uppercase tracking-widest">Past Jobs</span>
                                                         </div>
@@ -1193,19 +1198,21 @@ export default function JobsTable({
                                                     <span className="text-sm font-medium">{job.carryForwardAge ?? 0}</span>
                                                 </TableCell>
                                                 {/* Rates */}
-                                                <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
-                                                    {isEditing ? (
-                                                        <div className="flex flex-col gap-1">
-                                                            <Input className={inputCls} value={editForm.clientBillRate ?? ""} onChange={ef("clientBillRate")} placeholder="Bill rate" />
-                                                            <Input className={inputCls} value={editForm.payRate ?? ""} onChange={ef("payRate")} placeholder="Pay rate" />
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex flex-col gap-0.5 text-xs">
-                                                            <span><span className="text-muted-foreground">Bill:</span> {job.clientBillRate ? `$${job.clientBillRate}` : "-"}</span>
-                                                            <span><span className="text-muted-foreground">Pay:</span> {job.payRate ? `$${job.payRate}` : "-"}</span>
-                                                        </div>
-                                                    )}
-                                                </TableCell>
+                                                {showRates && (
+                                                    <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
+                                                        {isEditing ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                <Input className={inputCls} value={editForm.clientBillRate ?? ""} onChange={ef("clientBillRate")} placeholder="Bill rate" />
+                                                                <Input className={inputCls} value={editForm.payRate ?? ""} onChange={ef("payRate")} placeholder="Pay rate" />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex flex-col gap-0.5 text-xs">
+                                                                <span><span className="text-muted-foreground">Bill:</span> {job.clientBillRate ? `$${job.clientBillRate}` : "-"}</span>
+                                                                <span><span className="text-muted-foreground">Pay:</span> {job.payRate ? `$${job.payRate}` : "-"}</span>
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
+                                                )}
                                                 {/* Created Date */}
                                                 <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">
                                                     {showEstCreatedDateTime ? (

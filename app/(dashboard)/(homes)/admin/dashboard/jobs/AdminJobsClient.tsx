@@ -156,6 +156,7 @@ export default function AdminJobsClient() {
                     showFilters={true}
                     showEstCreatedDateTime={true}
                     showCfrExtend={true}
+                    showRates={false}
                     serverPaginated={false}
                     serverTotal={meta.total}
                     onRefresh={refresh}

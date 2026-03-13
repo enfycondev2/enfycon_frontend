@@ -119,11 +119,6 @@ export const getSidebarData = (role: string) => {
         },
       ],
     },
-    {
-      title: "Full Onboard",
-      url: "/finance/candidate-onboard",
-      icon: StickyNote,
-    },
   ];
 
   const deliveryHeadNav = [
@@ -233,11 +228,6 @@ export const getSidebarData = (role: string) => {
         },
       ],
     },
-    {
-      title: "Full Onboard",
-      url: "/finance/candidate-onboard",
-      icon: StickyNote,
-    },
   ];
 
   const podLeadNav = [
@@ -289,11 +279,6 @@ export const getSidebarData = (role: string) => {
           icon: ClipboardList,
         },
       ],
-    },
-    {
-      title: "Full Onboard",
-      url: "/finance/candidate-onboard",
-      icon: StickyNote,
     },
   ];
 

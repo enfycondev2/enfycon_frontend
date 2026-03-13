@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -26,7 +26,7 @@ function Card({ title, action, children }: { title: string; action?: React.React
     );
 }
 
-// ─── Log Hours inline form ────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Log Hours inline form ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogged: () => void }) {
     const now = new Date();
     const [entryMode, setEntryMode] = useState<"MONTHLY" | "WEEKLY">("MONTHLY");
@@ -85,16 +85,16 @@ function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogg
                     <input type="number" step="0.5" required className={iCls} value={form.hours} placeholder={entryMode === "WEEKLY" ? "40" : "160"} onChange={e => setForm(f => ({ ...f, hours: e.target.value }))} />
                 </div>
                 <div className="flex items-end gap-2">
-                    <button type="submit" disabled={saving} className={`${btnPrimary} w-full`}>{saving ? "Saving…" : "Log"}</button>
+                    <button type="submit" disabled={saving} className={`${btnPrimary} w-full`}>{saving ? "SavingΓÇª" : "Log"}</button>
                 </div>
             </div>
             {error && <p className="text-red-500 text-xs">{error}</p>}
-            {ok && <p className="text-green-600 text-xs">✓ Hours saved!</p>}
+            {ok && <p className="text-green-600 text-xs">Γ£ô Hours saved!</p>}
         </form>
     );
 }
 
-// ─── Create Invoice inline form ───────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Create Invoice inline form ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function CreateInvoiceForm({ projects, hours: allHours, onCreated }: { projects: any[]; hours: any[]; onCreated: () => void }) {
     const now = new Date();
 
@@ -185,16 +185,16 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated }: { projects:
                 <input type="number" step="0.01" required className={`${iCls} ${form.billRate ? 'ring-1 ring-violet-300' : ''}`} value={form.billRate} placeholder="95" onChange={e => setForm(f => ({ ...f, billRate: e.target.value }))} />
             </div>
             <div className="col-span-full flex items-center gap-4">
-                <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "Saving…" : "Generate Invoice"}</button>
+                <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "SavingΓÇª" : "Generate Invoice"}</button>
                 {previewTotal > 0 && <span className="text-sm font-semibold text-gray-600 dark:text-gray-300">Total: <span className="text-emerald-600">${previewTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></span>}
             </div>
             {error && <p className="col-span-full text-red-500 text-xs">{error}</p>}
-            {ok && <p className="col-span-full text-green-600 text-xs">✓ Invoice created!</p>}
+            {ok && <p className="col-span-full text-green-600 text-xs">Γ£ô Invoice created!</p>}
         </form>
     );
 }
 
-// ─── Record Payment inline form ───────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Record Payment inline form ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function RecordPaymentForm({ projects, onRecorded }: { projects: any[]; onRecorded: () => void }) {
     const now = new Date();
     const pendingInvoices = projects.flatMap((p: any) => (p.invoices ?? []).filter((inv: any) => inv.status !== "PAID").map((inv: any) => ({ ...inv, project: p.clientName ?? "Project" })));
@@ -238,7 +238,7 @@ function RecordPaymentForm({ projects, onRecorded }: { projects: any[]; onRecord
                 <label className="block text-xs text-gray-500 mb-1">Invoice</label>
                 <select className={iCls} value={form.invoiceId} onChange={e => handleInvoiceChange(e.target.value)}>
                     {pendingInvoices.map((inv: any) => (
-                        <option key={inv.id} value={inv.id}>{inv.project} — {MONTHS[(inv.invoiceMonth ?? 1) - 1]} {inv.invoiceYear} (${Number(inv.totalAmount).toFixed(0)})</option>
+                        <option key={inv.id} value={inv.id}>{inv.project} ΓÇö {MONTHS[(inv.invoiceMonth ?? 1) - 1]} {inv.invoiceYear} (${Number(inv.totalAmount).toFixed(0)})</option>
                     ))}
                 </select>
             </div>
@@ -255,15 +255,15 @@ function RecordPaymentForm({ projects, onRecorded }: { projects: any[]; onRecord
                 <input type="text" className={iCls} value={form.referenceNumber} placeholder="ACH-20260401-001" onChange={e => setForm(f => ({ ...f, referenceNumber: e.target.value }))} />
             </div>
             <div className="col-span-2 flex items-end">
-                <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "Saving…" : "Record Payment"}</button>
+                <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "SavingΓÇª" : "Record Payment"}</button>
             </div>
             {error && <p className="col-span-full text-red-500 text-xs">{error}</p>}
-            {ok && <p className="col-span-full text-green-600 text-xs">✓ Payment recorded!</p>}
+            {ok && <p className="col-span-full text-green-600 text-xs">Γ£ô Payment recorded!</p>}
         </form>
     );
 }
 
-// ─── Add/Edit Contract inline form ───────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Add/Edit Contract inline form ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function AddContractForm({ projects, onCreated }: { projects: any[]; onCreated: () => void }) {
     // Helper: get the latest contract for a project
     function getExistingContract(projectId: string) {
@@ -355,11 +355,11 @@ function AddContractForm({ projects, onCreated }: { projects: any[]; onCreated: 
                 <input type="text" className={iCls} value={form.vendorName} placeholder="Vendor name" onChange={e => setForm(f => ({ ...f, vendorName: e.target.value }))} />
             </div>
             <div className="col-span-full flex gap-2 items-center">
-                <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "Saving…" : hasExisting ? "Update Rates" : "Set Rates"}</button>
-                {hasExisting && <span className="text-xs text-gray-400">ℹ Existing contract found — values pre-filled</span>}
+                <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "SavingΓÇª" : hasExisting ? "Update Rates" : "Set Rates"}</button>
+                {hasExisting && <span className="text-xs text-gray-400">Γä╣ Existing contract found ΓÇö values pre-filled</span>}
             </div>
             {error && <p className="col-span-full text-red-500 text-xs">{error}</p>}
-            {ok && <p className="col-span-full text-green-600 text-xs">✓ Contract saved!</p>}
+            {ok && <p className="col-span-full text-green-600 text-xs">Γ£ô Contract saved!</p>}
         </form>
     );
 }
@@ -368,7 +368,7 @@ const STEPS = ["Consultant Info", "Billing & Rates"];
 
 
 
-// ─── Main Detail ──────────────────────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Main Detail ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function ConsultantDetailContent() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
@@ -567,7 +567,7 @@ function ConsultantDetailContent() {
         catch (err: any) { alert(err.message); }
     }
 
-    if (loading) return <div className="p-12 text-center text-gray-400 animate-pulse">Loading…</div>;
+    if (loading) return <div className="p-12 text-center text-gray-400 animate-pulse">LoadingΓÇª</div>;
     if (error) return <div className="p-12 text-center text-red-500">{error} <button onClick={() => router.back()} className="underline ml-2">Go back</button></div>;
     if (!data) return null;
 
@@ -613,13 +613,13 @@ function ConsultantDetailContent() {
                                         </Field>
                                         <Field label="Immigration Status">
                                             <select className={selectCls} value={editForm.immigrationStatus} onChange={(e) => setEditForm((f: any) => ({ ...f, immigrationStatus: e.target.value }))}>
-                                                <option value="">— Select —</option>
+                                                <option value="">ΓÇö Select ΓÇö</option>
                                                 {["H1B", "OPT", "GC", "US_CITIZEN", "TN", "CPT"].map((v) => <option key={v} value={v}>{v.replace("_", " ")}</option>)}
                                             </select>
                                         </Field>
                                         <Field label="Engagement Type">
                                             <select className={selectCls} value={editForm.engagementType} onChange={(e) => setEditForm((f: any) => ({ ...f, engagementType: e.target.value }))}>
-                                                <option value="">— Select —</option>
+                                                <option value="">ΓÇö Select ΓÇö</option>
                                                 {["W2", "C2C", "1099"].map((v) => <option key={v} value={v}>{v}</option>)}
                                             </select>
                                         </Field>
@@ -635,19 +635,19 @@ function ConsultantDetailContent() {
                                     <div className="border-t border-gray-100 dark:border-gray-700 pt-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                         <Field label="Recruiter">
                                             <select className={selectCls} value={editForm.recruiterId} onChange={(e) => setEditForm((f: any) => ({ ...f, recruiterId: e.target.value }))}>
-                                                <option value="">— Unassigned —</option>
+                                                <option value="">ΓÇö Unassigned ΓÇö</option>
                                                 {options.recruiters.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
                                             </select>
                                         </Field>
                                         <Field label="Account Manager">
                                             <select className={selectCls} value={editForm.accountManagerId} onChange={(e) => setEditForm((f: any) => ({ ...f, accountManagerId: e.target.value }))}>
-                                                <option value="">— Unassigned —</option>
+                                                <option value="">ΓÇö Unassigned ΓÇö</option>
                                                 {options.accountManagers.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
                                             </select>
                                         </Field>
                                         <Field label="Pod Head">
                                             <select className={selectCls} value={editForm.podHeadId} onChange={(e) => setEditForm((f: any) => ({ ...f, podHeadId: e.target.value }))}>
-                                                <option value="">— Unassigned —</option>
+                                                <option value="">ΓÇö Unassigned ΓÇö</option>
                                                 {options.podHeads.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
                                             </select>
                                         </Field>
@@ -680,7 +680,7 @@ function ConsultantDetailContent() {
                                     )}
                                     <div className="flex justify-end pt-4">
                                         <button type="submit" disabled={saving} className="bg-violet-600 hover:bg-violet-700 text-white font-semibold px-8 py-2.5 rounded-xl transition flex items-center gap-2">
-                                            {saving ? "Saving…" : <>Next Step <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></>}
+                                            {saving ? "SavingΓÇª" : <>Next Step <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></>}
                                         </button>
                                     </div>
                                 </form>
@@ -722,7 +722,7 @@ function ConsultantDetailContent() {
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Previous
                                         </button>
                                         <button type="submit" disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-8 py-2.5 rounded-xl transition flex items-center gap-2">
-                                            {saving ? "Saving…" : <>Finish & Save <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></>}
+                                            {saving ? "SavingΓÇª" : <>Finish & Save <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></>}
                                         </button>
                                     </div>
                                 </form>
@@ -739,7 +739,7 @@ function ConsultantDetailContent() {
         <>
             <DashboardBreadcrumb title={data.name} text={`Finance / Consultants / ${data.name}`} />
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                {/* ── Left: Info Card ─────────────────────────────────── */}
+                {/* ΓöÇΓöÇ Left: Info Card ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */}
                 <div className="xl:col-span-1 space-y-4">
                     <Card title="Consultant Info" action={
                         <button onClick={() => setEditing(true)} className="text-xs text-violet-600 hover:underline">
@@ -750,10 +750,10 @@ function ConsultantDetailContent() {
                             {[
                                 { label: "Name", value: data.name },
                                 { label: "Email", value: data.email },
-                                { label: "Phone", value: data.phone ?? "—" },
+                                { label: "Phone", value: data.phone ?? "ΓÇö" },
                                 { label: "Status", value: <StatusBadge status={data.status} /> },
-                                { label: "Recruiter", value: data.recruiter?.fullName ?? "—" },
-                                { label: "Acct Manager", value: data.accountManager?.fullName ?? "—" },
+                                { label: "Recruiter", value: data.recruiter?.fullName ?? "ΓÇö" },
+                                { label: "Acct Manager", value: data.accountManager?.fullName ?? "ΓÇö" },
                                 { label: "Added", value: new Date(data.createdAt).toLocaleDateString() },
                             ].map(({ label, value }) => (
                                 <div key={label} className="flex justify-between gap-2">
@@ -793,7 +793,7 @@ function ConsultantDetailContent() {
                     </div>
                 </div>
 
-                {/* ── Right: Projects, Hours + Inline Forms ───────────── */}
+                {/* ΓöÇΓöÇ Right: Projects, Hours + Inline Forms ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */}
                 <div className="xl:col-span-2 space-y-6">
 
                     {/* Inline forms slide in */}
@@ -835,7 +835,7 @@ function ConsultantDetailContent() {
 
                     {/* Projects & Contracts */}
                     <Card title="Projects & Rates" action={
-                        <Link href={`/finance/projects?consultantId=${id}`} className="text-xs text-violet-600 hover:underline">Manage →</Link>
+                        <Link href={`/finance/projects?consultantId=${id}`} className="text-xs text-violet-600 hover:underline">Manage ΓåÆ</Link>
                     }>
                         {!projects.length ? (
                             <p className="text-gray-400 text-sm">No projects assigned yet.</p>
@@ -871,7 +871,7 @@ function ConsultantDetailContent() {
                                                 ))}
                                             </div>
                                         ) : (
-                                            <p className="text-xs text-amber-500 mt-1">⚠ No rates set — click &quot;+ Set Rates&quot; above</p>
+                                            <p className="text-xs text-amber-500 mt-1">ΓÜá No rates set ΓÇö click &quot;+ Set Rates&quot; above</p>
                                         )}
                                     </div>
                                 ))}
@@ -928,7 +928,7 @@ function ConsultantDetailContent() {
                                                 <td className="py-2 text-gray-600 dark:text-gray-300">{MONTHS[(inv.invoiceMonth ?? 1) - 1]} {inv.invoiceYear}</td>
                                                 <td className="py-2 text-gray-500 dark:text-gray-400">{inv.projectName}</td>
                                                 <td className="py-2 font-semibold text-gray-800 dark:text-white text-right">${Number(inv.totalAmount).toLocaleString()}</td>
-                                                <td className="py-2 text-gray-400 text-xs">{inv.expectedPaymentDate ? new Date(inv.expectedPaymentDate).toLocaleDateString() : "—"}</td>
+                                                <td className="py-2 text-gray-400 text-xs">{inv.expectedPaymentDate ? new Date(inv.expectedPaymentDate).toLocaleDateString() : "ΓÇö"}</td>
                                                 <td className="py-2"><StatusBadge status={inv.status ?? "PENDING"} /></td>
                                                 <td className="py-2 text-right">
                                                     {inv.status === "PAID" ? (
@@ -971,9 +971,9 @@ function ConsultantDetailContent() {
                                                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">{MONTHS[payout.month - 1]} {payout.year}</td>
                                                 <td className="px-4 py-3 text-gray-500 font-mono text-[10px]">{Number(payout.hours)}h</td>
                                                 <td className="px-4 py-3 font-bold text-gray-800 dark:text-gray-100 text-right font-mono">${Number(payout.amount).toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-gray-400 text-[10px]">{payout.consultantInvoiceDate ? new Date(payout.consultantInvoiceDate).toLocaleDateString() : "—"}</td>
-                                                <td className="px-4 py-3 text-emerald-600 text-[10px] font-semibold">{payout.paymentDate ? new Date(payout.paymentDate).toLocaleDateString() : "—"}</td>
-                                                <td className="px-4 py-3 text-gray-500 font-mono text-[10px]">{payout.referenceNumber || "—"}</td>
+                                                <td className="px-4 py-3 text-gray-400 text-[10px]">{payout.consultantInvoiceDate ? new Date(payout.consultantInvoiceDate).toLocaleDateString() : "ΓÇö"}</td>
+                                                <td className="px-4 py-3 text-emerald-600 text-[10px] font-semibold">{payout.paymentDate ? new Date(payout.paymentDate).toLocaleDateString() : "ΓÇö"}</td>
+                                                <td className="px-4 py-3 text-gray-500 font-mono text-[10px]">{payout.referenceNumber || "ΓÇö"}</td>
                                                 <td className="px-4 py-3"><StatusBadge status={payout.status || "PENDING"} /></td>
                                             </tr>
                                         ))}
@@ -984,7 +984,7 @@ function ConsultantDetailContent() {
                     </Card>
                 </div>
 
-                {/* ── Monthly Financial Timeline ──────────────────────────────────── */}
+                {/* ΓöÇΓöÇ Monthly Financial Timeline ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */}
                 <div className="xl:col-span-3 bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-100 dark:border-gray-700 overflow-hidden mt-6">
                     <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-white dark:from-gray-900/40 dark:to-gray-800 flex justify-between items-center">
                         <div className="flex items-center gap-3">
@@ -1026,7 +1026,7 @@ function ConsultantDetailContent() {
                                                     <span className="text-gray-400">Deadline (Pay-In):</span>
                                                     <span className={`font-medium ${m.isOverdue ? "text-red-500 animate-pulse" : "text-gray-600 dark:text-gray-400"}`}>
                                                         {m.expectedPaymentDate ? new Date(m.expectedPaymentDate).toLocaleDateString() : "No Invoice"}
-                                                        {m.isOverdue && " — OVERDUE"}
+                                                        {m.isOverdue && " ΓÇö OVERDUE"}
                                                     </span>
                                                 </div>
                                             </td>
@@ -1039,7 +1039,7 @@ function ConsultantDetailContent() {
                                                     {m.consultantPaid ? (
                                                         <>
                                                             <span className="text-gray-400">Paid on: <strong className="text-emerald-600 font-mono">{m.payoutDate}</strong></span>
-                                                            <span className="text-gray-400 italic">Inv: {m.consultantInvoiceDate || "—"}</span>
+                                                            <span className="text-gray-400 italic">Inv: {m.consultantInvoiceDate || "ΓÇö"}</span>
                                                         </>
                                                     ) : m.consultantInvoiceDate ? (
                                                         <>
@@ -1065,13 +1065,13 @@ function ConsultantDetailContent() {
             </div>
 
             <div className="mt-4">
-                <Link href="/finance/consultants" className="text-sm text-gray-400 hover:text-violet-600 hover:underline">← Back to Consultants</Link>
+                <Link href="/finance/consultants" className="text-sm text-gray-400 hover:text-violet-600 hover:underline">ΓåÉ Back to Consultants</Link>
             </div>
         </>
     );
 }
 
-// ─── Step 1: Log Consultant Invoice ──────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Step 1: Log Consultant Invoice ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded }: { consultantId: string, hours: any[], projects: any[], onRecorded: () => void }) {
     const now = new Date();
     const [form, setForm] = useState({
@@ -1155,16 +1155,16 @@ function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded }:
             <div className="col-span-2 flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700 mt-2">
                 <p className="text-gray-500 text-xs font-medium">Invoice Total: <strong className="text-orange-600 font-bold">${tTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></p>
                 <button type="submit" disabled={saving} className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold px-5 py-2 rounded-xl text-xs transition uppercase tracking-wider">
-                    {saving ? "Logging…" : "Log Invoice"}
+                    {saving ? "LoggingΓÇª" : "Log Invoice"}
                 </button>
             </div>
             {error && <p className="col-span-full text-red-500 text-[10px] font-medium mt-1">{error}</p>}
-            {ok && <p className="col-span-full text-green-600 text-[10px] font-bold mt-1">✓ Invoice logged! Status set to PENDING.</p>}
+            {ok && <p className="col-span-full text-green-600 text-[10px] font-bold mt-1">Γ£ô Invoice logged! Status set to PENDING.</p>}
         </form>
     );
 }
 
-// ─── Step 2: Record Payout / Payment ──────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Step 2: Record Payout / Payment ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 function RecordPayoutForm({ consultantId, payouts, onRecorded }: { consultantId: string, payouts: any[], onRecorded: () => void }) {
     const now = new Date();
     
@@ -1221,7 +1221,7 @@ function RecordPayoutForm({ consultantId, payouts, onRecorded }: { consultantId:
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-1">Select Pending Invoice/Period</label>
                 <select required value={form.payoutId} onChange={(e) => setForm(f => ({ ...f, payoutId: e.target.value }))} className={iCls}>
                     {pendingPayouts.map(p => (
-                        <option key={p.id} value={p.id}>{MONTHS[p.month - 1]} {p.year} — ${Number(p.amount).toLocaleString()} ({Number(p.hours)}h)</option>
+                        <option key={p.id} value={p.id}>{MONTHS[p.month - 1]} {p.year} ΓÇö ${Number(p.amount).toLocaleString()} ({Number(p.hours)}h)</option>
                     ))}
                 </select>
             </div>
@@ -1239,7 +1239,7 @@ function RecordPayoutForm({ consultantId, payouts, onRecorded }: { consultantId:
                 </button>
             </div>
             {error && <p className="col-span-full text-red-500 text-[10px] font-medium mt-1">{error}</p>}
-            {ok && <p className="col-span-full text-emerald-600 text-[10px] font-bold mt-1">✓ Payment recorded. Status set to PAID!</p>}
+            {ok && <p className="col-span-full text-emerald-600 text-[10px] font-bold mt-1">Γ£ô Payment recorded. Status set to PAID!</p>}
         </form>
     );
 }

@@ -1,0 +1,22 @@
+﻿commit 9ba9849ba61de165bddb2198f58697d63066e027
+Author: sahadeb barman <sahadeb@enfycon.com>
+Date:   Fri Mar 13 02:01:19 2026 +0530
+
+    feat: Implement centralized pagination utility and refine user list display and table headers
+
+app/(dashboard)/(homes)/account-manager/dashboard/page.tsx
+app/(dashboard)/(homes)/admin/dashboard/page.tsx
+app/(dashboard)/(homes)/admin/dashboard/pods/page.tsx
+app/(dashboard)/(homes)/admin/dashboard/recruiter/page.tsx
+app/(dashboard)/(homes)/delivery-head/dashboard/account-manager/page.tsx
+app/(dashboard)/(homes)/delivery-head/dashboard/page.tsx
+app/(dashboard)/(homes)/delivery-head/dashboard/pods/page.tsx
+app/(dashboard)/(homes)/delivery-head/dashboard/recruiters/page.tsx
+app/(dashboard)/(homes)/pod-lead/dashboard/page.tsx
+app/(dashboard)/(homes)/pod-lead/dashboard/pod-jobs/TeamJobsClient.tsx
+app/(dashboard)/(homes)/pod-lead/dashboard/pod-jobs/page.tsx
+app/(dashboard)/(homes)/recruiter/dashboard/page.tsx
+components/dashboard/account-manager/JobsTable.tsx
+components/dashboard/recruiter/SubmittedJobsTable.tsx
+components/table/users-list-table.tsx
+lib/pagination.ts
