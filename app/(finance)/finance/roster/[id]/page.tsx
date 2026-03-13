@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet } from "@/lib/financeClient";
 
 const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -415,8 +414,6 @@ function DetailContent({ id }: { id: string }) {
 export default function ConsultantDetailPage() {
     const { id } = useParams<{ id: string }>();
     return (
-        <FinancePinGate>
-            <DetailContent id={id} />
-        </FinancePinGate>
+        <DetailContent id={id} />
     );
 }

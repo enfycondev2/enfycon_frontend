@@ -12,10 +12,12 @@ export default function FinancePinGate({ children }: FinancePinGateProps) {
     const [pin, setPin] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         const stored = getStoredPin();
         if (stored) setUnlocked(true);
+        setMounted(true);
     }, []);
 
     async function handleSubmit(e: React.FormEvent) {
@@ -50,6 +52,8 @@ export default function FinancePinGate({ children }: FinancePinGateProps) {
             setLoading(false);
         }
     }
+
+    if (!mounted) return null;
 
     if (unlocked) return <>{children}</>;
 

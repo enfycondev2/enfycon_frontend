@@ -5,6 +5,8 @@ import { Toaster } from "react-hot-toast";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
+import FinancePinGate from "@/components/finance/FinancePinGate";
+import { clearStoredPin } from "@/lib/financeClient";
 
 const NAV_LINKS = [
     { href: "/finance", label: "Overview", exact: true },
@@ -52,9 +54,10 @@ function FinanceNav() {
                     })}
                 </nav>
 
-                {/* Back to Admin */}
+                {/* Back to Sync */}
                 <Link
                     href="/admin/dashboard"
+                    onClick={() => clearStoredPin()}
                     className="shrink-0 text-xs text-gray-400 hover:text-violet-600 transition flex items-center gap-1"
                 >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,7 +76,9 @@ export default function FinanceShell({ theme, children }: { theme: string; child
             <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
                 <FinanceNav />
                 <main className="flex-1 max-w-screen-2xl mx-auto w-full px-4 sm:px-6 py-6">
-                    {children}
+                    <FinancePinGate>
+                        {children}
+                    </FinancePinGate>
                 </main>
                 <footer className="border-t border-gray-200 dark:border-gray-800 py-3 text-center text-xs text-gray-400">
                     © {new Date().getFullYear()} enfySync Finance
