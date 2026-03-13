@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
 import FinancePinGate from "@/components/finance/FinancePinGate";
-import { clearStoredPin } from "@/lib/financeClient";
+import { clearStoredPin, financeLock } from "@/lib/financeClient";
 
 const NAV_LINKS = [
     { href: "/finance", label: "Overview", exact: true },
@@ -57,7 +57,10 @@ function FinanceNav() {
                 {/* Back to Sync */}
                 <Link
                     href="/admin/dashboard"
-                    onClick={() => clearStoredPin()}
+                    onClick={() => {
+                        clearStoredPin();
+                        financeLock();
+                    }}
                     className="shrink-0 text-xs text-gray-400 hover:text-violet-600 transition flex items-center gap-1"
                 >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

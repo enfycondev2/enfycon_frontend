@@ -26,6 +26,9 @@ export async function serverApiClient(endpoint: string, options: RequestInit = {
     if (token) {
         headers.set("Authorization", `Bearer ${token}`);
     }
+    if (options.body && !headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+    }
 
     const response = await fetch(url, {
         ...options,
