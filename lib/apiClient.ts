@@ -27,6 +27,9 @@ export async function apiClient(endpoint: string, options: RequestInit = {}): Pr
     if (token) {
         headers.set("Authorization", `Bearer ${token}`);
     }
+    if (options.body && !headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+    }
 
     // 2. Make the initial request
     let response = await fetch(url, {

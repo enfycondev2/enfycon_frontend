@@ -2,6 +2,7 @@
 
 import { useState, useEffect, ReactNode } from "react";
 import { getStoredPin, setStoredPin } from "@/lib/financeClient";
+import { apiClient } from "@/lib/apiClient";
 
 interface FinancePinGateProps {
     children: ReactNode;
@@ -30,12 +31,9 @@ export default function FinancePinGate({ children }: FinancePinGateProps) {
         setError("");
         try {
             // Validate by hitting the dashboard endpoint with the code in the header
-            const res = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/finance/dashboard`,
-                {
-                    headers: { "x-finance-pin": pin, Authorization: `Bearer ` },
-                }
-            );
+            const res = await apiClient("/finance/dashboard", {
+                headers: { "x-finance-pin": pin },
+            });
             
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));

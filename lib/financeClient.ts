@@ -57,3 +57,11 @@ export async function financePatch(endpoint: string, body?: any, pin?: string): 
     }
     return res.json();
 }
+
+export async function financeLock(): Promise<void> {
+    try {
+        await apiClient("/finance/lock", { method: "POST" });
+    } catch {
+        // Silently fail if lock fails
+    }
+}
