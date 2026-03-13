@@ -22,6 +22,7 @@ import {
     Edit,
 } from "lucide-react";
 import Link from "next/link";
+import JobEditDialog from "@/components/dashboard/delivery-head/JobEditDialog";
 
 const statusMap: Record<string, { label: string; color: string }> = {
     ACTIVE: { label: "Active", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
@@ -61,9 +62,11 @@ export default function AccountManagerJobDetailPage() {
     const [job, setJob] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-    useEffect(() => {
+    const fetchJob = () => {
         if (!id) return;
+        setLoading(true);
         apiClient(`/jobs/${id}`)
             .then(async (res) => {
                 if (!res.ok) {
@@ -75,6 +78,10 @@ export default function AccountManagerJobDetailPage() {
             .then(setJob)
             .catch((e) => setError(e.message || "Failed to load job"))
             .finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        fetchJob();
     }, [id]);
 
     if (loading) {
@@ -136,12 +143,10 @@ export default function AccountManagerJobDetailPage() {
                         </div>
                         <Button
                             className="shrink-0 gap-2 h-10 px-5"
-                            asChild
+                            onClick={() => setIsEditDialogOpen(true)}
                         >
-                            <Link href={`/account-manager/dashboard/jobs/${job.id}/edit`}>
-                                <Edit className="h-4 w-4" />
-                                Edit Job
-                            </Link>
+                            <Edit className="h-4 w-4" />
+                            Edit Job
                         </Button>
                     </div>
 
@@ -311,6 +316,13 @@ export default function AccountManagerJobDetailPage() {
                     </div>
                 </div>
             </div>
+
+            <JobEditDialog 
+                job={job}
+                isOpen={isEditDialogOpen}
+                onClose={() => setIsEditDialogOpen(false)}
+                onSuccess={fetchJob}
+            />
         </>
     );
 }
