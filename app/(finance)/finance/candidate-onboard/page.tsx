@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
 import FinancePinGate from "@/components/finance/FinancePinGate";
-import { financePost } from "@/lib/financeClient";
+import { financeGet, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -77,8 +77,15 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
         c2cVendorName: "", c2cContactPerson: "", c2cContactEmail: "",
         c2cAddress: "", c2cPhoneFax: "", clientPaymentTermsDays: "30", c2cProjectStartDate: ""
     });
+    const [options, setOptions] = useState<{ recruiters: any[], accountManagers: any[], podHeads: any[] }>({ recruiters: [], accountManagers: [], podHeads: [] });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
+
+    useEffect(() => {
+        financeGet("finance/options/staff")
+            .then(res => setOptions(res))
+            .catch(err => console.error("Failed to fetch staff options", err));
+    }, []);
 
     function set(field: keyof Section1Data, value: string) {
         setForm((f) => ({ ...f, [field]: value }));
@@ -89,9 +96,10 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
         setSaving(true); setError("");
         try {
             const payload: any = {
-                name: form.name, email: form.email,
-                recruiterId: form.recruiterId, accountManagerId: form.accountManagerId
+                name: form.name, email: form.email
             };
+            if (form.recruiterId) payload.recruiterId = form.recruiterId;
+            if (form.accountManagerId) payload.accountManagerId = form.accountManagerId;
             if (form.podHeadId) payload.podHeadId = form.podHeadId;
             if (form.phone) payload.phone = form.phone;
             if (form.immigrationStatus) payload.immigrationStatus = form.immigrationStatus;
@@ -165,15 +173,24 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
                 </Field>
             </div>
 
-            <div className="border-t border-gray-100 dark:border-gray-700 pt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-                <Field label="Recruiter ID *" hint={<>UUID: <span className="select-all font-mono text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-1 py-0.5 rounded cursor-copy">0b9bd656-c6de-4cba-b479-02fea5b7602c</span></>}>
-                    <input required className={inputCls} placeholder="Select & copy the UUID below" value={form.recruiterId} onChange={(e) => set("recruiterId", e.target.value)} />
+            <div className="border-t border-gray-100 dark:border-gray-700 pt-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <Field label="Recruiter">
+                    <select className={selectCls} value={form.recruiterId} onChange={(e) => set("recruiterId", e.target.value)}>
+                        <option value="">— Select / Unassigned —</option>
+                        {options.recruiters.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
                 </Field>
-                <Field label="Account Manager ID *" hint={<>UUID: <span className="select-all font-mono text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-1 py-0.5 rounded cursor-copy">01464156-5bcc-4456-a13a-f81f2099418d</span></>}>
-                    <input required className={inputCls} placeholder="Select & copy the UUID below" value={form.accountManagerId} onChange={(e) => set("accountManagerId", e.target.value)} />
+                <Field label="Account Manager">
+                    <select className={selectCls} value={form.accountManagerId} onChange={(e) => set("accountManagerId", e.target.value)}>
+                        <option value="">— Select / Unassigned —</option>
+                        {options.accountManagers.map((am: any) => <option key={am.id} value={am.id}>{am.name}</option>)}
+                    </select>
                 </Field>
-                <Field label="Pod Head ID" hint={<>UUID: <span className="select-all font-mono text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-1 py-0.5 rounded cursor-copy">00599e45-0266-47e2-99b7-5c5657b0ff03</span></>}>
-                    <input className={inputCls} placeholder="Select & copy the UUID below" value={form.podHeadId} onChange={(e) => set("podHeadId", e.target.value)} />
+                <Field label="Pod Head">
+                    <select className={selectCls} value={form.podHeadId} onChange={(e) => set("podHeadId", e.target.value)}>
+                        <option value="">— Select / Unassigned —</option>
+                        {options.podHeads.map((ph: any) => <option key={ph.id} value={ph.id}>{ph.name}</option>)}
+                    </select>
                 </Field>
             </div>
 

@@ -754,6 +754,7 @@ function ConsultantDetailContent() {
                                 { label: "Status", value: <StatusBadge status={data.status} /> },
                                 { label: "Recruiter", value: data.recruiter?.fullName ?? "—" },
                                 { label: "Acct Manager", value: data.accountManager?.fullName ?? "—" },
+                                { label: "Pod Head", value: data.podHead?.fullName ?? "—" },
                                 { label: "Added", value: new Date(data.createdAt).toLocaleDateString() },
                             ].map(({ label, value }) => (
                                 <div key={label} className="flex justify-between gap-2">
