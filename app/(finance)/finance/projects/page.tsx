@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet, financePost, financePatch } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 
@@ -213,8 +212,6 @@ function ProjectsContent() {
 
 export default function ProjectsPage() {
     return (
-        <FinancePinGate>
-            <ProjectsContent />
-        </FinancePinGate>
+        <ProjectsContent />
     );
 }

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/apiClient";
-import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 
@@ -396,8 +395,6 @@ function CandidateOnboardContent() {
 
 export default function CandidateOnboardPage() {
     return (
-        <FinancePinGate>
-            <CandidateOnboardContent />
-        </FinancePinGate>
+        <CandidateOnboardContent />
     );
 }

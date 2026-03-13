@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 
@@ -149,8 +148,6 @@ function HoursContent() {
 
 export default function HoursPage() {
     return (
-        <FinancePinGate>
-            <HoursContent />
-        </FinancePinGate>
+        <HoursContent />
     );
 }

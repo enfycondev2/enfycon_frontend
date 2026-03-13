@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet } from "@/lib/financeClient";
 
 const MN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -391,8 +390,6 @@ function FinanceDashboardContent() {
 
 export default function FinancePage() {
     return (
-        <FinancePinGate>
-            <FinanceDashboardContent />
-        </FinancePinGate>
+        <FinanceDashboardContent />
     );
 }

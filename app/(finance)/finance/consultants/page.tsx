@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { StatusBadge, inputCls } from "@/components/finance/FinanceUI";
@@ -111,8 +110,6 @@ function ConsultantsContent() {
 
 export default function ConsultantsPage() {
     return (
-        <FinancePinGate>
-            <ConsultantsContent />
-        </FinancePinGate>
+        <ConsultantsContent />
     );
 }
