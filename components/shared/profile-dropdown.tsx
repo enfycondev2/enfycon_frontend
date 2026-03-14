@@ -8,7 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import { apiClient } from "@/lib/apiClient";
 import userImg from "@/public/assets/images/user.png";
-import { ChevronDown, Mail, Settings, Sparkles, User, House, BriefcaseBusiness } from "lucide-react";
+import { ChevronDown, Mail, Settings, Sparkles, User, House, BriefcaseBusiness, Banknote } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -38,7 +38,8 @@ const ProfileDropdown = () => {
     "POD_LEAD", "POD-LEAD",
     "ACCOUNT_MANAGER", "ACCOUNT-MANAGER",
     "RECRUITER",
-    "DELIVERY_HEAD", "DELIVERY-HEAD"
+    "DELIVERY_HEAD", "DELIVERY-HEAD",
+    "FIN_ADMIN", "FIN-ADMIN"
   ];
 
   const displayRolesRaw = rawRoles
@@ -62,6 +63,8 @@ const ProfileDropdown = () => {
     urlRole = "POD_LEAD";
   } else if (pathname?.startsWith("/admin")) {
     urlRole = "ADMIN";
+  } else if (pathname?.startsWith("/finance")) {
+    urlRole = "FIN_ADMIN";
   }
 
   const activeRole = urlRole && selectedRolesBase.includes(urlRole) ? urlRole : undefined;
@@ -120,6 +123,13 @@ const ProfileDropdown = () => {
       label: "Delivery Head",
       path: "/delivery-head/dashboard",
       icon: House,
+    },
+    FIN_ADMIN: {
+      chip: "text-violet-700 dark:text-violet-200 bg-violet-50/80 dark:bg-violet-950/30 border-violet-100/60 dark:border-violet-900/35",
+      banner: "bg-violet-50/90 dark:bg-violet-950/35",
+      label: "Finance Admin",
+      path: "/finance",
+      icon: Banknote,
     },
   };
 

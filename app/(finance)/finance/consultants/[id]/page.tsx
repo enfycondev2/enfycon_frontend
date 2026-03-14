@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet, financePatch, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { StatusBadge, MONTHS, btnPrimary, btnSecondary, StepIndicator, Field, inputCls, selectCls } from "@/components/finance/FinanceUI";
@@ -1330,8 +1329,6 @@ function RecordPayoutForm({ consultantId, payouts, onRecorded }: { consultantId:
 
 export default function ConsultantDetailPage() {
     return (
-        <FinancePinGate>
-            <ConsultantDetailContent />
-        </FinancePinGate>
+        <ConsultantDetailContent />
     );
 }

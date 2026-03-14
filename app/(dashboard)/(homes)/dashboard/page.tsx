@@ -14,7 +14,9 @@ export default async function DashboardRedirect() {
     // Standardize roles for comparison
     const normalizedRoles = roles.map((r: string) => r.toUpperCase());
 
-    if (normalizedRoles.includes("ADMIN")) {
+    if (normalizedRoles.includes("FIN_ADMIN")) {
+        redirect("/finance");
+    } else if (normalizedRoles.includes("ADMIN")) {
         redirect("/admin/dashboard");
     } else if (normalizedRoles.includes("DELIVERY_HEAD") || normalizedRoles.includes("DELIVERY-HEAD")) {
         redirect("/delivery-head/dashboard");

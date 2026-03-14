@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet, financePost, financePatch } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 
@@ -322,8 +321,6 @@ function InvoicesContent() {
 
 export default function InvoicesPage() {
     return (
-        <FinancePinGate>
-            <InvoicesContent />
-        </FinancePinGate>
+        <InvoicesContent />
     );
 }

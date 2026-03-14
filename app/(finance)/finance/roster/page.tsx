@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet } from "@/lib/financeClient";
 
 import { MONTHS, StatusBadge } from "@/components/finance/FinanceUI";
@@ -356,8 +355,6 @@ function RosterContent() {
 
 export default function RosterPage() {
     return (
-        <FinancePinGate>
-            <RosterContent />
-        </FinancePinGate>
+        <RosterContent />
     );
 }
