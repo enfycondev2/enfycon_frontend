@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import FinancePinGate from "@/components/finance/FinancePinGate";
 import { financeGet, financePatch, financePost } from "@/lib/financeClient";
@@ -126,6 +126,19 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated }: { projects:
         hours: getLoggedHours(defaultMonth, defaultYear),
         billRate: getBillRate(defaultProjectId),
     });
+
+    // Reactive Auto-fill: Update hours and billRate whenever selection or data changes
+    useEffect(() => {
+        const autoHours = getLoggedHours(form.invoiceMonth, form.invoiceYear);
+        const autoBill = getBillRate(form.projectId);
+        
+        setForm(f => ({
+            ...f,
+            hours: autoHours || f.hours,
+            billRate: autoBill || f.billRate
+        }));
+    }, [form.invoiceMonth, form.invoiceYear, form.projectId, allHours, projects]);
+
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [ok, setOk] = useState(false);
@@ -375,6 +388,7 @@ const STEPS = ["Consultant Info", "Billing & Rates"];
 function ConsultantDetailContent() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -419,6 +433,11 @@ function ConsultantDetailContent() {
             setBillingForm((f: any) => ({ ...f, endDate: d.toISOString().split("T")[0] }));
         }
     }
+    useEffect(() => {
+        if (searchParams.get("edit") === "true") {
+            setEditing(true);
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         financeGet("finance/options/staff")
@@ -923,7 +942,8 @@ function ConsultantDetailContent() {
                                         </div>
                                         {(p.contracts && p.contracts.length > 0) ? (
                                             <div className="mt-2 space-y-1">
-                                                {p.contracts.map((c: any) => (
+                                                {/* Only show the latest contract rate to avoid redundancy */}
+                                                {[p.contracts[0]].map((c: any) => (
                                                     <div key={c.id} className="flex flex-wrap items-center gap-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2 text-xs">
                                                         <span className="text-gray-500">Bill: <strong className="text-emerald-600 dark:text-emerald-400">${Number(c.billRate).toFixed(2)}/hr</strong></span>
                                                         <span className="text-gray-500">Pay: <strong className="text-orange-600 dark:text-orange-400">${Number(c.payRate).toFixed(2)}/hr</strong></span>

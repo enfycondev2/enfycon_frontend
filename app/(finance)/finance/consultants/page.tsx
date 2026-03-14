@@ -108,7 +108,8 @@ function ConsultantsContent() {
                                         <td className="px-4 py-3 text-gray-500">{c.phone ?? "—"}</td>
                                         <td className="px-4 py-3 text-center"><StatusBadge status={c.status} /></td>
                                         <td className="px-4 py-3 text-gray-400 text-[11px]">{new Date(c.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</td>
-                                        <td className="px-4 py-3 text-right">
+                                        <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
+                                            <Link href={`/finance/consultants/${c.id}?edit=true`} className="inline-flex items-center gap-1 bg-violet-600 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-violet-700 transition">Edit</Link>
                                             <Link href={`/finance/consultants/${c.id}`} className="inline-flex items-center gap-1 bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 px-3 py-1 rounded-lg text-xs font-bold hover:bg-violet-100 transition">View Details</Link>
                                         </td>
                                     </tr>

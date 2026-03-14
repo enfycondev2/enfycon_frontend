@@ -318,6 +318,17 @@ function DetailContent({ id }: { id: string }) {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Edit / Manage Action */}
+                        <div className="shrink-0 sm:ml-auto">
+                            <Link href={`/finance/consultants/${data.id}`} 
+                                className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition shadow-xl shadow-violet-200 dark:shadow-none">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                Manage Record
+                            </Link>
+                        </div>
                     </div>
                 </div>
 
