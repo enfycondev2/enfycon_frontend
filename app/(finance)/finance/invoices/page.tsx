@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { financeGet, financePost, financePatch } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 
@@ -14,17 +15,24 @@ function InvoicesContent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [status, setStatus] = useState("");
-    const [projectId, setProjectId] = useState("");
-    const [showAdd, setShowAdd] = useState(false);
+    
+    const searchParams = useSearchParams();
+    const queryProjectId = searchParams.get("projectId") || "";
+    const queryMonth = searchParams.get("month") ? Number(searchParams.get("month")) : null;
+    const queryYear = searchParams.get("year") ? Number(searchParams.get("year")) : null;
+
+    const [projectId, setProjectId] = useState(queryProjectId);
+    const [showAdd, setShowAdd] = useState(!!queryProjectId);
 
     const now = new Date();
     const [form, setForm] = useState({
-        projectId: "",
-        invoiceMonth: now.getMonth() + 1,
-        invoiceYear: now.getFullYear(),
+        projectId: queryProjectId,
+        invoiceMonth: queryMonth || (now.getMonth() + 1),
+        invoiceYear: queryYear || now.getFullYear(),
         invoiceDate: now.toISOString().slice(0, 10),
         hours: "",
         billRate: "",
+        referenceNumber: "",
     });
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState("");
@@ -60,6 +68,7 @@ function InvoicesContent() {
                 invoiceDate: form.invoiceDate,
                 hours: +form.hours,
                 billRate: +form.billRate,
+                referenceNumber: form.referenceNumber,
             });
             setShowAdd(false);
             load();
@@ -232,6 +241,11 @@ function InvoicesContent() {
                             <input required type="number" step="0.01" placeholder="95" value={form.billRate} onChange={(e) => setForm((f) => ({ ...f, billRate: e.target.value }))}
                                 className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white w-28 focus:outline-none focus:ring-2 focus:ring-violet-500" />
                         </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Invoice # (Ref)</label>
+                            <input value={form.referenceNumber} onChange={(e) => setForm((f) => ({ ...f, referenceNumber: e.target.value }))}
+                                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white w-28 focus:outline-none focus:ring-2 focus:ring-violet-500" />
+                        </div>
                         {saveError && <p className="text-red-500 text-xs w-full">{saveError}</p>}
                         <div className="flex gap-2">
                             <button type="submit" disabled={saving} className="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-xl transition">
@@ -296,6 +310,21 @@ function InvoicesContent() {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-right space-x-2">
+                                                <button onClick={() => {
+                                                    setForm({
+                                                        projectId: inv.projectId,
+                                                        invoiceMonth: inv.invoiceMonth,
+                                                        invoiceYear: inv.invoiceYear,
+                                                        invoiceDate: inv.invoiceDate ? new Date(inv.invoiceDate).toISOString().slice(0, 10) : now.toISOString().slice(0, 10),
+                                                        hours: String(inv.hours),
+                                                        billRate: String(inv.billRate),
+                                                        referenceNumber: inv.referenceNumber || "",
+                                                    });
+                                                    setShowAdd(true);
+                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                }} className="text-xs text-violet-600 hover:underline">
+                                                    Edit
+                                                </button>
                                                 {inv.status === "PENDING" && (
                                                     <button onClick={() => handleMarkPaid(inv.id)} className="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg transition">
                                                         Mark Paid
@@ -321,6 +350,8 @@ function InvoicesContent() {
 
 export default function InvoicesPage() {
     return (
-        <InvoicesContent />
+        <Suspense fallback={<div>Loading...</div>}>
+            <InvoicesContent />
+        </Suspense>
     );
 }

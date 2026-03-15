@@ -28,6 +28,8 @@ function initials(name: string) {
 interface MonthEntry {
     month: number; year: number; hours: number;
     revenue: number; amountReceived: number; invoiceTotal: number;
+    invoiceId: string | null;
+    projectId: string | null;
     invoiceDate: string | null;
     clientPaid: boolean; invoiceStatus: string | null;
     expectedPaymentDate: string | null; isOverdue: boolean;
@@ -150,13 +152,23 @@ function MonthRow({ m }: { m: MonthEntry }) {
             </td>
             {/* Invoice Status */}
             <td className="px-4 py-3">
-                {m.invoiceStatus === "PAID" ? (
-                    <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-2 py-0.5 rounded-full text-[11px] font-bold">PAID</span>
-                ) : m.invoiceStatus === "PENDING" ? (
-                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${m.isOverdue ? "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300 animate-pulse" : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"}`}>
-                        {m.isOverdue ? "OVERDUE" : "PENDING"}
-                    </span>
-                ) : <span className="text-gray-300 text-xs">—</span>}
+                <div className="flex items-center gap-2">
+                    {m.invoiceStatus === "PAID" ? (
+                        <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-2 py-0.5 rounded-full text-[11px] font-bold">PAID</span>
+                    ) : m.invoiceStatus === "PENDING" ? (
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${m.isOverdue ? "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300 animate-pulse" : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"}`}>
+                            {m.isOverdue ? "OVERDUE" : "PENDING"}
+                        </span>
+                    ) : <span className="text-gray-300 text-xs">—</span>}
+
+                    {m.invoiceId && (
+                        <Link href={`/finance/invoices?projectId=${m.projectId}&year=${m.year}&month=${m.month}`} 
+                            title="Edit Invoice"
+                            className="text-gray-400 hover:text-violet-600 transition p-1 hover:bg-violet-50 dark:hover:bg-violet-900/40 rounded-lg">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        </Link>
+                    )}
+                </div>
             </td>
             {/* Pay-Out (AP) */}
             <td className="px-4 py-3">

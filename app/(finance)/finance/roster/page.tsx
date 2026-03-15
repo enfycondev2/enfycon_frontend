@@ -69,6 +69,7 @@ function RosterContent() {
     const [displayMonths, setDisplayMonths] = useState<{ month: number; year: number }[]>([]);
     const [availableMonths, setAvailableMonths] = useState<{ month: number; year: number }[]>([]);
     const [filterMonth, setFilterMonth] = useState("ALL");
+    const [filterYear, setFilterYear] = useState("ALL");
     const [filterStatus, setFilterStatus] = useState("ALL");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -93,26 +94,28 @@ function RosterContent() {
     const filteredRows = rows.filter(r => {
         const matchesStatus = filterStatus === "ALL" || r.consultantStatus === filterStatus;
         if (!matchesStatus) return false;
+
+        // Year Filtering
+        if (filterYear !== "ALL") {
+            const y = Number(filterYear);
+            const hasDataInYear = r.monthlies.some(m => m.year === y && m.hours > 0) || (r.projectStartDate && new Date(r.projectStartDate).getFullYear() <= y);
+            if (!hasDataInYear) return false;
+        }
+
         if (filterMonth === "ALL") return true;
 
         const [fy, fm] = filterMonth.split("-").map(Number);
-
-        // 1. Check if they have actual data for this month
         const hasData = r.monthlies.some(m => m.month === fm && m.year === fy && (m.hours > 0 || m.invoiceStatus));
         if (hasData) return true;
 
-        // 2. Check if their project timeline overlaps this month
         if (!r.projectStartDate) return false;
         const start = new Date(r.projectStartDate);
         const startVal = start.getFullYear() * 12 + start.getMonth();
         const filterVal = fy * 12 + (fm - 1);
-
         if (filterVal < startVal) return false;
-
-        if (!r.projectEndDate) return true; // Ongoing
+        if (!r.projectEndDate) return true;
         const end = new Date(r.projectEndDate);
         const endVal = end.getFullYear() * 12 + end.getMonth();
-
         return filterVal <= endVal;
     });
 
@@ -125,14 +128,21 @@ function RosterContent() {
 
     // Totals footer sums
     const grandTotals = filteredRows.reduce(
-        (agg, r) => ({
-            hours: agg.hours + r.totals.hours,
-            revenue: agg.revenue + r.totals.revenue,
-            cost: agg.cost + r.totals.cost,
-            margin: agg.margin + r.totals.margin,
-            paidIn: agg.paidIn + r.totals.paidIn,
-            paidOut: agg.paidOut + r.totals.paidOut,
-        }),
+        (agg, r) => {
+            const [fy, fm] = filterMonth.split("-").map(Number);
+            const mData = filterMonth === "ALL" 
+                ? r.totals 
+                : r.monthlies.find(m => m.month === fm && m.year === fy) || { hours: 0, revenue: 0, cost: 0, margin: 0, paidIn: 0, paidOut: 0 };
+
+            return {
+                hours: agg.hours + mData.hours,
+                revenue: agg.revenue + mData.revenue,
+                cost: agg.cost + mData.cost,
+                margin: agg.margin + mData.margin,
+                paidIn: agg.paidIn + ("amountReceived" in mData ? mData.amountReceived : (mData as Totals).paidIn),
+                paidOut: agg.paidOut + ("payoutAmount" in mData ? mData.payoutAmount : (mData as Totals).paidOut),
+            };
+        },
         { hours: 0, revenue: 0, cost: 0, margin: 0, paidIn: 0, paidOut: 0 },
     );
 
@@ -182,10 +192,19 @@ function RosterContent() {
                             <option value="ACTIVE">Active only</option>
                             <option value="ENDED">Ended only</option>
                         </select>
+                        <select value={filterYear} onChange={e => setFilterYear(e.target.value)}
+                            className="border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
+                            <option value="ALL">All years</option>
+                            {Array.from(new Set(availableMonths.map(am => am.year))).sort((a,b)=>b-a).map(y => (
+                                <option key={y} value={y}>{y}</option>
+                            ))}
+                        </select>
                         <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
                             className="border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-violet-500">
                             <option value="ALL">All months</option>
-                            {availableMonths.map(am => (
+                            {availableMonths
+                                .filter(am => filterYear === "ALL" || am.year === Number(filterYear))
+                                .map(am => (
                                 <option key={`${am.year}-${am.month}`} value={`${am.year}-${am.month}`}>
                                     {MONTHS[am.month - 1]} {am.year}
                                 </option>
@@ -214,7 +233,7 @@ function RosterContent() {
                                             Ideal 160h/mo
                                         </th>
                                         <th className="px-4 py-3 bg-violet-50/60 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 min-w-[150px]">
-                                            Totals (All)
+                                            {filterMonth === "ALL" ? "Totals (All)" : "Totals (Month)"}
                                         </th>
                                         <th className="px-3 py-3 min-w-[70px]">Terms</th>
                                     </tr>
@@ -287,11 +306,32 @@ function RosterContent() {
                                                 </td>
                                                 {/* Totals */}
                                                 <td className="px-4 py-3 bg-violet-50/20 dark:bg-violet-900/10">
-                                                    <div className="text-[11px] text-gray-400">{row.totals.hours}h total</div>
-                                                    <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{curr(row.totals.revenue)}</div>
-                                                    <div className="text-xs text-orange-500">−{curr(row.totals.cost)}</div>
-                                                    <div className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">{curr(row.totals.margin)}</div>
-                                                    <div className="text-[10px] text-gray-400">{pct(row.totals.marginPerc)} margin</div>
+                                                    <div className="text-[11px] text-gray-400">
+                                                        {filterMonth === "ALL" ? `${row.totals.hours}h total` : "Selected Month"}
+                                                    </div>
+                                                    {(() => {
+                                                        const [fy, fm] = filterMonth.split("-").map(Number);
+                                                        const mData = filterMonth === "ALL" 
+                                                            ? row.totals 
+                                                            : row.monthlies.find(m => m.month === fm && m.year === fy);
+                                                        
+                                                        if (!mData || (filterMonth !== "ALL" && mData.hours === 0)) {
+                                                            return (
+                                                                <div className="py-4 text-center text-gray-300 font-bold">—</div>
+                                                            );
+                                                        }
+
+                                                        return (
+                                                            <>
+                                                                <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{curr(mData.revenue)}</div>
+                                                                <div className="text-xs text-orange-500">−{curr(mData.cost)}</div>
+                                                                <div className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">{curr(mData.margin)}</div>
+                                                                <div className="text-[10px] text-gray-400">
+                                                                    {filterMonth === "ALL" ? pct(row.totals.marginPerc) : (mData.hours + " hours")}
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </td>
                                                 {/* Terms */}
                                                 <td className="px-3 py-3 text-xs space-y-1.5 min-w-[130px]">
