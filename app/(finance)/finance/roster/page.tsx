@@ -87,9 +87,18 @@ function RosterContent() {
 
     useEffect(() => { load(); }, []);
 
-    const visibleMonths = filterMonth === "ALL"
-        ? displayMonths
-        : displayMonths.filter(dm => `${dm.year}-${dm.month}` === filterMonth);
+    const visibleMonths = (() => {
+        if (filterMonth !== "ALL") {
+            const [fy, fm] = filterMonth.split("-").map(Number);
+            return displayMonths.filter(dm => dm.year === fy && dm.month === fm);
+        }
+        if (filterYear !== "ALL") {
+            const y = Number(filterYear);
+            return displayMonths.filter(dm => dm.year === y);
+        }
+        // Default: last 3 months with data
+        return displayMonths.slice(0, 3);
+    })();
 
     const filteredRows = rows.filter(r => {
         const matchesStatus = filterStatus === "ALL" || r.consultantStatus === filterStatus;
