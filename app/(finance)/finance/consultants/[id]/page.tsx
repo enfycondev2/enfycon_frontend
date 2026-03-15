@@ -124,6 +124,7 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated }: { projects:
         invoiceDate: now.toISOString().slice(0, 10),
         hours: getLoggedHours(defaultMonth, defaultYear),
         billRate: getBillRate(defaultProjectId),
+        referenceNumber: "", // New: Client Invoice #
     });
 
     // Reactive Auto-fill: Update hours and billRate whenever selection or data changes
@@ -198,6 +199,10 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated }: { projects:
             <div>
                 <label className="block text-xs text-gray-500 mb-1">Bill Rate ($/hr) <span className="text-violet-500">(auto-filled)</span></label>
                 <input type="number" step="0.01" required className={`${iCls} ${form.billRate ? 'ring-1 ring-violet-300' : ''}`} value={form.billRate} placeholder="95" onChange={e => setForm(f => ({ ...f, billRate: e.target.value }))} />
+            </div>
+            <div>
+                <label className="block text-xs text-gray-500 mb-1">Invoice # <span className="text-gray-400">(optional)</span></label>
+                <input type="text" className={iCls} value={form.referenceNumber} placeholder="INV-2024-001" onChange={e => setForm(f => ({ ...f, referenceNumber: e.target.value }))} />
             </div>
             <div className="col-span-full flex items-center gap-4">
                 <button type="submit" disabled={saving} className={btnPrimary}>{saving ? "Saving…" : "Generate Invoice"}</button>
@@ -1163,6 +1168,7 @@ function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded }:
         hours: "",
         payRate: "",
         consultantInvoiceDate: now.toISOString().slice(0, 10),
+        referenceNumber: "", // New: Consultant Invoice #
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -1192,6 +1198,7 @@ function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded }:
                 hours: +form.hours,
                 payRate: +form.payRate,
                 consultantInvoiceDate: form.consultantInvoiceDate,
+                referenceNumber: form.referenceNumber || undefined,
                 // paymentDate is left out purposely to mark as PENDING
             });
             setOk(true);
@@ -1234,6 +1241,10 @@ function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded }:
             <div className="col-span-2">
                 <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-tight mb-1">Consultant Invoice Received Date</label>
                 <input required type="date" value={form.consultantInvoiceDate} onChange={(e) => setForm(f => ({ ...f, consultantInvoiceDate: e.target.value }))} className={iCls} />
+            </div>
+            <div className="col-span-2">
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-tight mb-1">Consultant Invoice # <span className="text-gray-400">(optional)</span></label>
+                <input type="text" value={form.referenceNumber} onChange={(e) => setForm(f => ({ ...f, referenceNumber: e.target.value }))} className={iCls} placeholder="CONS-12345" />
             </div>
             <div className="col-span-2 flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700 mt-2">
                 <p className="text-gray-500 text-xs font-medium">Invoice Total: <strong className="text-orange-600 font-bold">${tTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong></p>
