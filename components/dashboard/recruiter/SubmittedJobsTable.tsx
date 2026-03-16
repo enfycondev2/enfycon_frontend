@@ -98,6 +98,7 @@ interface SubmittedJobsTableProps {
     isRecruiter?: boolean;
     baseUrl?: string;
     onUpdate?: () => void;
+    statsMode?: "pipeline" | "cleared";
 }
 
 const getBadgeStyles = (status: string) => {
@@ -396,6 +397,7 @@ export default function SubmittedJobsTable({
     isRecruiter = false,
     baseUrl = "/delivery-head/dashboard/jobs",
     onUpdate,
+    statsMode = "pipeline",
 }: SubmittedJobsTableProps) {
     const router = useRouter();
     const { data: session } = useSession();
@@ -439,17 +441,30 @@ export default function SubmittedJobsTable({
             const l3Status = (sub.l3Status || "PENDING").toUpperCase();
             const final = (sub.finalStatus || "").toUpperCase();
 
-            if (final === "SELECTED") selected++;
+            if (statsMode === "cleared") {
+                if (final === "JOIN") {
+                    selected++;
+                } else if (l3Status === "CLEARED") {
+                    l3++;
+                } else if (l2Status === "CLEARED") {
+                    l2++;
+                } else if (l1Status === "CLEARED") {
+                    l1++;
+                }
+            } else {
+                if (final === "SELECTED") selected++;
+                if (l1Status === "PENDING") l1++;
+                if (l1Status === "CLEARED" && l2Status === "PENDING") l2++;
+                if (l1Status === "CLEARED" && l2Status === "CLEARED" && l3Status === "PENDING") l3++;
+            }
+
             if (final === "REJECTED" || l1Status === "REJECTED" || l2Status === "REJECTED" || l3Status === "REJECTED") {
                 rejected++;
             }
-            if (l1Status === "PENDING") l1++;
-            if (l1Status === "CLEARED" && l2Status === "PENDING") l2++;
-            if (l1Status === "CLEARED" && l2Status === "CLEARED" && l3Status === "PENDING") l3++;
         });
 
         return { total, l1, l2, l3, selected, rejected };
-    }, [submissions]);
+    }, [submissions, statsMode]);
 
     // Calculate submission counts per job
     const submissionCountsByJob = useMemo(() => {

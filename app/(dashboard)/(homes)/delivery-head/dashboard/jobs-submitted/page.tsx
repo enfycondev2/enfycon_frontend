@@ -93,7 +93,11 @@ export default function DeliveryHeadSubmittedJobsPage() {
                             <p className="text-sm text-neutral-500 font-medium">Loading submissions...</p>
                         </div>
                     ) : (
-                        <SubmittedJobsTable submissions={submissions} showExtendedDetails={true} />
+                        <SubmittedJobsTable
+                            submissions={submissions}
+                            showExtendedDetails={true}
+                            statsMode="cleared"
+                        />
                     )}
                 </div>
             </div>

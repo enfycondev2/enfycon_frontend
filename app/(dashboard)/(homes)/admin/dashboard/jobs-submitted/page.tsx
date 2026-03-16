@@ -87,6 +87,7 @@ export default function AdminJobsSubmittedPage() {
                             showExtendedDetails={true} 
                             baseUrl="/admin/dashboard/jobs"
                             onUpdate={fetchSubmissions}
+                            statsMode="cleared"
                         />
                     )}
                 </div>
