@@ -23,9 +23,10 @@ import { UserCheck } from "lucide-react";
 
 interface RecruiterPerformanceTableProps {
     jobs: any[];
+    submissions: any[];
 }
 
-const RecruiterPerformanceTable = ({ jobs }: RecruiterPerformanceTableProps) => {
+const RecruiterPerformanceTable = ({ jobs, submissions }: RecruiterPerformanceTableProps) => {
     const [filter, setFilter] = useState("all");
 
     const filteredData = useMemo(() => {
@@ -54,41 +55,29 @@ const RecruiterPerformanceTable = ({ jobs }: RecruiterPerformanceTableProps) => 
         const currentMonth = getESTPart(now, 'month');
         const currentDay = getESTPart(now, 'day');
         const currentWeek = getESTPart(now, 'week');
+        const normalizeStatus = (status?: string) => (status || "").trim().toUpperCase();
+
+        const isInSelectedRange = (date: Date) => {
+            const year = getESTPart(date, 'year');
+            const month = getESTPart(date, 'month');
+            const day = getESTPart(date, 'day');
+            const week = getESTPart(date, 'week');
+
+            if (filter === "all") return true;
+            if (filter === "today") return year === currentYear && month === currentMonth && day === currentDay;
+            if (filter === "week") return year === currentYear && week === currentWeek;
+            if (filter === "month") return year === currentYear && month === currentMonth;
+            if (filter === "year") return year === currentYear;
+            return false;
+        };
 
         jobs.forEach((job) => {
             if (!job || !job.createdAt) return;
 
             const createdAt = parseISO(job.createdAt);
-            const updatedAt = job.updatedAt ? parseISO(job.updatedAt) : null;
 
             if (!isValid(createdAt)) return;
-
-            const jobYear = getESTPart(createdAt, 'year');
-            const jobMonth = getESTPart(createdAt, 'month');
-            const jobDay = getESTPart(createdAt, 'day');
-            const jobWeek = getESTPart(createdAt, 'week');
-
-            let isInRange = false;
-            if (filter === "all") isInRange = true;
-            else if (filter === "today") isInRange = jobYear === currentYear && jobMonth === currentMonth && jobDay === currentDay;
-            else if (filter === "week") isInRange = jobYear === currentYear && jobWeek === currentWeek;
-            else if (filter === "month") isInRange = jobYear === currentYear && jobMonth === currentMonth;
-            else if (filter === "year") isInRange = jobYear === currentYear;
-
-            let isClosedInRange = false;
-            const isClosedStatus = job.status === "CLOSED" || job.status === "FILLED";
-            if (isClosedStatus && updatedAt && isValid(updatedAt)) {
-                const updatedYear = getESTPart(updatedAt, 'year');
-                const updatedMonth = getESTPart(updatedAt, 'month');
-                const updatedDay = getESTPart(updatedAt, 'day');
-                const updatedWeek = getESTPart(updatedAt, 'week');
-
-                if (filter === "all") isClosedInRange = true;
-                else if (filter === "today") isClosedInRange = updatedYear === currentYear && updatedMonth === currentMonth && updatedDay === currentDay;
-                else if (filter === "week") isClosedInRange = updatedYear === currentYear && updatedWeek === currentWeek;
-                else if (filter === "month") isClosedInRange = updatedYear === currentYear && updatedMonth === currentMonth;
-                else if (filter === "year") isClosedInRange = updatedYear === currentYear;
-            }
+            const isInRange = isInSelectedRange(createdAt);
 
             const assignedRecruiters = job.assignedRecruiters || [];
             if (assignedRecruiters.length === 0) return;
@@ -129,10 +118,41 @@ const RecruiterPerformanceTable = ({ jobs }: RecruiterPerformanceTableProps) => 
                     r.totalSubmissions += job.submissionDone || 0;
                 }
 
-                if (isClosedInRange) {
-                    r.closure += 1;
-                }
             });
+        });
+
+        submissions.forEach((submission) => {
+            if (!submission) return;
+            if (normalizeStatus(submission.finalStatus) !== "JOIN") return;
+
+            const closureAtRaw = submission.createdAt || submission.submissionDate;
+            if (!closureAtRaw) return;
+
+            const closureAt = parseISO(closureAtRaw);
+            if (!isValid(closureAt) || !isInSelectedRange(closureAt)) return;
+
+            const recruiterKey = submission.recruiter?.id || submission.recruiterId;
+            if (!recruiterKey) return;
+
+            if (!recruiters[recruiterKey]) {
+                recruiters[recruiterKey] = {
+                    name:
+                        submission.recruiter?.fullName ||
+                        submission.recruiter?.email?.split("@")[0] ||
+                        "Unknown",
+                    email: submission.recruiter?.email,
+                    newReq: 0,
+                    cfr: 0,
+                    totalJobs: 0,
+                    totalPositions: 0,
+                    submissionDone: 0,
+                    submissionRequired: 0,
+                    totalSubmissions: 0,
+                    closure: 0,
+                };
+            }
+
+            recruiters[recruiterKey].closure += 1;
         });
 
         return Object.values(recruiters).map((r: any) => ({
@@ -141,7 +161,7 @@ const RecruiterPerformanceTable = ({ jobs }: RecruiterPerformanceTableProps) => 
                 ? Math.round((r.submissionDone / r.submissionRequired) * 100)
                 : 0
         })).sort((a, b) => b.totalSubmissions - a.totalSubmissions);
-    }, [jobs, filter]);
+    }, [jobs, submissions, filter]);
 
     const getInitials = (name: string) => {
         return name

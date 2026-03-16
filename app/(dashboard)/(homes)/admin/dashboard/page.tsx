@@ -234,13 +234,13 @@ export default async function DashboardPage() {
 
         <div className="xl:col-span-12">
           <Suspense fallback={<LoadingSkeleton />}>
-            <PodPerformanceTable jobs={jobs} />
+            <PodPerformanceTable jobs={jobs} submissions={submissions} />
           </Suspense>
         </div>
 
         <div className="xl:col-span-12">
           <Suspense fallback={<LoadingSkeleton />}>
-            <RecruiterPerformanceTable jobs={jobs} />
+            <RecruiterPerformanceTable jobs={jobs} submissions={submissions} />
           </Suspense>
         </div>
 

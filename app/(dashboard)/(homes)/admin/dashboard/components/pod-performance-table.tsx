@@ -22,9 +22,10 @@ import { Users } from "lucide-react";
 
 interface PodPerformanceTableProps {
     jobs: any[];
+    submissions: any[];
 }
 
-const PodPerformanceTable = ({ jobs }: PodPerformanceTableProps) => {
+const PodPerformanceTable = ({ jobs, submissions }: PodPerformanceTableProps) => {
     const [filter, setFilter] = useState("all");
 
     const filteredData = useMemo(() => {
@@ -53,41 +54,29 @@ const PodPerformanceTable = ({ jobs }: PodPerformanceTableProps) => {
         const currentMonth = getESTPart(now, 'month');
         const currentDay = getESTPart(now, 'day');
         const currentWeek = getESTPart(now, 'week');
+        const normalizeStatus = (status?: string) => (status || "").trim().toUpperCase();
+
+        const isInSelectedRange = (date: Date) => {
+            const year = getESTPart(date, 'year');
+            const month = getESTPart(date, 'month');
+            const day = getESTPart(date, 'day');
+            const week = getESTPart(date, 'week');
+
+            if (filter === "all") return true;
+            if (filter === "today") return year === currentYear && month === currentMonth && day === currentDay;
+            if (filter === "week") return year === currentYear && week === currentWeek;
+            if (filter === "month") return year === currentYear && month === currentMonth;
+            if (filter === "year") return year === currentYear;
+            return false;
+        };
 
         jobs.forEach((job) => {
             if (!job || !job.createdAt) return;
 
             const createdAt = parseISO(job.createdAt);
-            const updatedAt = job.updatedAt ? parseISO(job.updatedAt) : null;
 
             if (!isValid(createdAt)) return;
-
-            const jobYear = getESTPart(createdAt, 'year');
-            const jobMonth = getESTPart(createdAt, 'month');
-            const jobDay = getESTPart(createdAt, 'day');
-            const jobWeek = getESTPart(createdAt, 'week');
-
-            let isInRange = false;
-            if (filter === "all") isInRange = true;
-            else if (filter === "today") isInRange = jobYear === currentYear && jobMonth === currentMonth && jobDay === currentDay;
-            else if (filter === "week") isInRange = jobYear === currentYear && jobWeek === currentWeek;
-            else if (filter === "month") isInRange = jobYear === currentYear && jobMonth === currentMonth;
-            else if (filter === "year") isInRange = jobYear === currentYear;
-
-            let isClosedInRange = false;
-            const isClosedStatus = job.status === "CLOSED" || job.status === "FILLED";
-            if (isClosedStatus && updatedAt && isValid(updatedAt)) {
-                const updatedYear = getESTPart(updatedAt, 'year');
-                const updatedMonth = getESTPart(updatedAt, 'month');
-                const updatedDay = getESTPart(updatedAt, 'day');
-                const updatedWeek = getESTPart(updatedAt, 'week');
-
-                if (filter === "all") isClosedInRange = true;
-                else if (filter === "today") isClosedInRange = updatedYear === currentYear && updatedMonth === currentMonth && updatedDay === currentDay;
-                else if (filter === "week") isClosedInRange = updatedYear === currentYear && updatedWeek === currentWeek;
-                else if (filter === "month") isClosedInRange = updatedYear === currentYear && updatedMonth === currentMonth;
-                else if (filter === "year") isClosedInRange = updatedYear === currentYear;
-            }
+            const isInRange = isInSelectedRange(createdAt);
 
             // Attribute job to all linked pods
             const linkedPods = new Map<string, string>();
@@ -135,10 +124,47 @@ const PodPerformanceTable = ({ jobs }: PodPerformanceTableProps) => {
                     p.submissionRequired += job.submissionRequired || 0;
                     p.totalSubmissions += job.submissionDone || 0;
                 }
+            });
+        });
 
-                if (isClosedInRange) {
-                    p.closure += 1;
+        submissions.forEach((submission) => {
+            if (!submission) return;
+            if (normalizeStatus(submission.finalStatus) !== "JOIN") return;
+
+            const closureAtRaw = submission.createdAt || submission.submissionDate;
+            if (!closureAtRaw) return;
+
+            const closureAt = parseISO(closureAtRaw);
+            if (!isValid(closureAt) || !isInSelectedRange(closureAt)) return;
+
+            const linkedPods = new Map<string, string>();
+            if (submission.job?.pod?.id) {
+                linkedPods.set(submission.job.pod.id, submission.job.pod.name || "Unknown");
+            }
+            if (Array.isArray(submission.job?.pods)) {
+                submission.job.pods.forEach((p: any) => {
+                    if (p?.id) linkedPods.set(p.id, p.name || "Unknown");
+                });
+            }
+            if (submission.recruiter?.pod?.id && !linkedPods.has(submission.recruiter.pod.id)) {
+                linkedPods.set(submission.recruiter.pod.id, submission.recruiter.pod.name || "Unknown");
+            }
+
+            linkedPods.forEach((podName, podId) => {
+                if (!pods[podId]) {
+                    pods[podId] = {
+                        name: podName || "Unknown",
+                        newReq: 0,
+                        cfr: 0,
+                        totalJobs: 0,
+                        totalPositions: 0,
+                        submissionDone: 0,
+                        submissionRequired: 0,
+                        totalSubmissions: 0,
+                        closure: 0,
+                    };
                 }
+                pods[podId].closure += 1;
             });
         });
 
@@ -148,7 +174,7 @@ const PodPerformanceTable = ({ jobs }: PodPerformanceTableProps) => {
                 ? Math.round((p.submissionDone / p.submissionRequired) * 100)
                 : 0
         })).sort((a, b) => a.name.localeCompare(b.name));
-    }, [jobs, filter]);
+    }, [jobs, submissions, filter]);
 
     const totals = useMemo(() => {
         return filteredData.reduce((acc, current) => {
