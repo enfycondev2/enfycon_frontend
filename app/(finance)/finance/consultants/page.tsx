@@ -43,9 +43,13 @@ function ConsultantsContent() {
 
     useEffect(() => { load(); }, []);
 
-    const filteredConsultants = status 
+    const filteredConsultants = (status 
         ? allConsultants.filter(c => c.status === status)
-        : allConsultants;
+        : allConsultants
+    ).sort((a, b) => {
+        if (a.status === b.status) return 0;
+        return a.status === "ACTIVE" ? -1 : 1;
+    });
 
     const counts = {
         ALL: allConsultants.length,

@@ -8,9 +8,9 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { House } from 'lucide-react';
+import { House, ArrowLeft } from 'lucide-react';
 import { useSession } from "next-auth/react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 
 interface BreadcrumbData {
@@ -81,10 +81,20 @@ const DashboardBreadcrumb = ({ title, text }: BreadcrumbData) => {
     }
 
     const roleLabel = ROLE_LABELS[activeRole] ?? "Admin";
+    const router = useRouter();
 
     return (
         <div className='flex flex-wrap items-center justify-between gap-2 mb-6'>
-            <h6 className="text-2xl font-semibold">{title}</h6>
+            <div className="flex items-center gap-3">
+                <button 
+                    onClick={() => router.back()}
+                    className="p-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-600 dark:text-gray-300 shadow-sm border border-gray-200 dark:border-gray-700"
+                    title="Go Back"
+                >
+                    <ArrowLeft size={18} />
+                </button>
+                <h6 className="text-2xl font-semibold">{title}</h6>
+            </div>
             <Breadcrumb>
                 <BreadcrumbList>
                     {/* Role root crumb */}

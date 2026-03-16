@@ -71,7 +71,10 @@ function FinanceDashboardContent() {
     // Revenue breakdown with filter
     const filteredRows = rows.filter(r =>
         statusFilter === "ALL" || r.consultantStatus === statusFilter
-    );
+    ).sort((a, b) => {
+        if (a.consultantStatus === b.consultantStatus) return 0;
+        return a.consultantStatus === "ACTIVE" ? -1 : 1;
+    });
     const activeRows = rows.filter(r => r.consultantStatus === "ACTIVE");
     const endedRows = rows.filter(r => r.consultantStatus === "ENDED");
 

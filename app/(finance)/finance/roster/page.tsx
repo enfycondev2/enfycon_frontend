@@ -126,6 +126,9 @@ function RosterContent() {
         const end = new Date(r.projectEndDate);
         const endVal = end.getFullYear() * 12 + end.getMonth();
         return filterVal <= endVal;
+    }).sort((a, b) => {
+        if (a.consultantStatus === b.consultantStatus) return 0;
+        return a.consultantStatus === "ACTIVE" ? -1 : 1;
     });
 
     // Summary stats
