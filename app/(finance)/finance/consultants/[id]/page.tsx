@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { financeGet, financePatch, financePost } from "@/lib/financeClient";
+import { financeDelete, financeGet, financePatch, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { StatusBadge, MONTHS, btnPrimary, btnSecondary, StepIndicator, Field, inputCls, selectCls } from "@/components/finance/FinanceUI";
 import AutoComplete from "@/components/finance/AutoComplete";
@@ -30,7 +30,7 @@ function Card({ title, action, children }: { title: string; action?: React.React
 // ─── Log Hours inline form ────────────────────────────────────────────────────
 function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogged: () => void }) {
     const now = new Date();
-    const [entryMode, setEntryMode] = useState<"MONTHLY" | "WEEKLY">("MONTHLY");
+    const [entryMode, setEntryMode] = useState<"MONTHLY" | "WEEKLY" | "SEMI_MONTHLY">("MONTHLY");
     const [form, setForm] = useState({ consultantId, month: now.getMonth() + 1, year: now.getFullYear(), week: "1", hours: "" });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -38,7 +38,8 @@ function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogg
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        if (!window.confirm(`Are you sure you want to log ${form.hours} hours?`)) return;
+        const periodLabel = entryMode === "WEEKLY" ? `Week ${form.week}` : entryMode === "SEMI_MONTHLY" ? (form.week === "6" ? "1rd Half" : "2nd Half") : "the Month";
+        if (!window.confirm(`Are you sure you want to log ${form.hours} hours for ${periodLabel}?`)) return;
         setSaving(true); setError(""); setOk(false);
         try {
             const payload = {
@@ -46,7 +47,7 @@ function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogg
                 month: +form.month,
                 year: +form.year,
                 hours: +form.hours,
-                week: entryMode === "WEEKLY" ? +form.week : undefined
+                week: entryMode === "MONTHLY" ? undefined : +form.week
             };
             await financePost("finance/hours", payload);
             setOk(true);
@@ -56,14 +57,21 @@ function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogg
         finally { setSaving(false); }
     }
 
+    const handleModeChange = (mode: "MONTHLY" | "WEEKLY" | "SEMI_MONTHLY") => {
+        setEntryMode(mode);
+        if (mode === "WEEKLY") setForm(f => ({ ...f, week: "1" }));
+        if (mode === "SEMI_MONTHLY") setForm(f => ({ ...f, week: "6" }));
+    };
+
     return (
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl w-fit">
-                <button type="button" onClick={() => setEntryMode("MONTHLY")} className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${entryMode === "MONTHLY" ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>Monthly Total</button>
-                <button type="button" onClick={() => setEntryMode("WEEKLY")} className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${entryMode === "WEEKLY" ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>Weekly Entry</button>
+                <button type="button" onClick={() => handleModeChange("MONTHLY")} className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${entryMode === "MONTHLY" ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>Monthly Total</button>
+                <button type="button" onClick={() => handleModeChange("SEMI_MONTHLY")} className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${entryMode === "SEMI_MONTHLY" ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>Semi-Monthly (15 Days)</button>
+                <button type="button" onClick={() => handleModeChange("WEEKLY")} className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${entryMode === "WEEKLY" ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>Weekly Entry</button>
             </div>
 
-            <div className={`grid gap-3 ${entryMode === "WEEKLY" ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-2 sm:grid-cols-4"}`}>
+            <div className={`grid gap-3 ${entryMode !== "MONTHLY" ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-2 sm:grid-cols-4"}`}>
                 <div>
                     <label className="block text-xs text-gray-500 mb-1">Month</label>
                     <select className={iCls} value={form.month} onChange={e => setForm(f => ({ ...f, month: +e.target.value }))}>
@@ -82,9 +90,18 @@ function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogg
                         </select>
                     </div>
                 )}
+                {entryMode === "SEMI_MONTHLY" && (
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">Period</label>
+                        <select className={iCls} value={form.week} onChange={e => setForm(f => ({ ...f, week: e.target.value }))}>
+                            <option value="6">1st Half (1-15)</option>
+                            <option value="7">2nd Half (16-End)</option>
+                        </select>
+                    </div>
+                )}
                 <div>
                     <label className="block text-xs text-gray-500 mb-1">Hours</label>
-                    <input type="number" step="0.5" required className={iCls} value={form.hours} placeholder={entryMode === "WEEKLY" ? "40" : "160"} onChange={e => setForm(f => ({ ...f, hours: e.target.value }))} />
+                    <input type="number" step="0.5" required className={iCls} value={form.hours} placeholder={entryMode === "MONTHLY" ? "160" : "80"} onChange={e => setForm(f => ({ ...f, hours: e.target.value }))} />
                 </div>
                 <div className="flex items-end gap-2">
                     <button type="submit" disabled={saving} className={`${btnPrimary} w-full`}>{saving ? "Saving…" : "Log"}</button>
@@ -637,12 +654,72 @@ function ConsultantDetailContent() {
         catch (err: any) { alert(err.message); }
     }
 
+    async function handleDeleteInvoice(invoiceId: string) {
+        if (!window.confirm("Are you sure you want to delete this invoice? This will also disconnect any history for this month. You cannot delete an invoice if payments are already recorded.")) return;
+        try {
+            await financeDelete(`finance/invoices/${invoiceId}`);
+            await load();
+        } catch (err: any) {
+            alert(err.message);
+        }
+    }
+
+    async function handleDeletePayment(paymentId: string) {
+        if (!window.confirm("Are you sure you want to delete this payment record? This will reduce the 'Amount Collected' for the invoice.")) return;
+        try {
+            await financeDelete(`finance/payments/${paymentId}`);
+            await load();
+        } catch (err: any) {
+            alert(err.message);
+        }
+    }
+
+    async function handleDeletePayout(payoutId: string) {
+        if (!window.confirm("Are you sure you want to delete this payout/invoice record?")) return;
+        try {
+            await financeDelete(`finance/payouts/${payoutId}`);
+            await load();
+        } catch (err: any) {
+            alert(err.message);
+        }
+    }
+
+    async function handleRevokePayout(payoutId: string) {
+        if (!window.confirm("Move this payout back to PENDING status?")) return;
+        try {
+            await financePatch(`finance/payouts/${payoutId}/revoke`, {});
+            await load();
+        } catch (err: any) { alert(err.message); }
+    }
+
+    async function handleMarkPayoutPaid(payout: any) {
+        if (!window.confirm(`Mark ${MONTHS[payout.month - 1]} ${payout.year} payout of $${Number(payout.amount).toLocaleString()} as PAID?`)) return;
+        try {
+            await financePost("finance/payouts", {
+                consultantId: data.id,
+                month: payout.month,
+                year: payout.year,
+                hours: Number(payout.hours),
+                payRate: Number(payout.payRate),
+                consultantInvoiceDate: payout.consultantInvoiceDate ? new Date(payout.consultantInvoiceDate).toISOString().slice(0, 10) : undefined,
+                paymentDate: new Date().toISOString().slice(0, 10),
+                referenceNumber: "DIRECT_PAY",
+            });
+            await load();
+        } catch (err: any) { alert(err.message); }
+    }
+
     if (loading) return <div className="p-12 text-center text-gray-400 animate-pulse">Loading…</div>;
     if (error) return <div className="p-12 text-center text-red-500">{error} <button onClick={() => router.back()} className="underline ml-2">Go back</button></div>;
     if (!data) return null;
 
     const projects: any[] = data.projects ?? [];
     const allInvoices = projects.flatMap((p: any) => (p.invoices ?? []).map((inv: any) => ({ ...inv, projectName: p.clientName ?? "Project" })));
+    const allPayments = allInvoices.flatMap((inv: any) => (inv.payments ?? [])
+        .map((p: any) => ({ ...p, invoiceMonth: inv.invoiceMonth, invoiceYear: inv.invoiceYear, projectName: inv.projectName })))
+        .sort((a: any, b: any) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
+    const consultantInvoices = (data.payouts ?? []).filter((p: any) => p.status === 'PENDING');
+    const consultantPayouts = (data.payouts ?? []).filter((p: any) => p.status === 'PAID');
 
     if (editing) {
         return (
@@ -690,7 +767,7 @@ function ConsultantDetailContent() {
                                         <Field label="Engagement Type">
                                             <select className={selectCls} value={editForm.engagementType} onChange={(e) => setEditForm((f: any) => ({ ...f, engagementType: e.target.value }))}>
                                                 <option value="">— Select —</option>
-                                                {["W2", "C2C", "1099"].map((v) => <option key={v} value={v}>{v}</option>)}
+                                                {["W2", "C2C", "1099", "Referral"].map((v) => <option key={v} value={v}>{v}</option>)}
                                             </select>
                                         </Field>
                                     </div>
@@ -981,7 +1058,7 @@ function ConsultantDetailContent() {
                                         {data.hours.map((h: any) => (
                                             <tr key={h.id}>
                                                 <td className="py-2 text-gray-600 dark:text-gray-300">
-                                                    {MONTHS[h.month - 1]} {h.week ? <span className="text-xs text-violet-500 font-medium ml-1 bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">W{h.week}</span> : null}
+                                                    {MONTHS[h.month - 1]} {h.week ? <span className="text-xs text-violet-500 font-medium ml-1 bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">{h.week === 6 ? "1st Half (1-15)" : h.week === 7 ? "2nd Half (16-End)" : `W${h.week}`}</span> : null}
                                                 </td>
                                                 <td className="py-2 text-gray-600 dark:text-gray-300">{h.year}</td>
                                                 <td className="py-2 font-semibold text-gray-800 dark:text-white text-right">{h.hours}</td>
@@ -993,8 +1070,8 @@ function ConsultantDetailContent() {
                         )}
                     </Card>
 
-                    {/* Invoices */}
-                    <Card title="Invoices">
+                    {/* Client Invoices */}
+                    <Card title="1. Client Invoices (AR)">
                         {!allInvoices.length ? (
                             <p className="text-gray-400 text-sm">No invoices yet. Use &quot;+ Invoice&quot; above.</p>
                         ) : (
@@ -1004,9 +1081,10 @@ function ConsultantDetailContent() {
                                         <tr>
                                             <th className="pb-2">Period</th>
                                             <th className="pb-2">Project</th>
-                                            <th className="pb-2 text-right">Total</th>
-                                            <th className="pb-2">Due</th>
-                                            <th className="pb-2">Status</th>
+                                            <th className="pb-2 text-right">INVOICE AMT</th>
+                                            <th className="pb-2 text-right">PAID</th>
+                                            <th className="pb-2 text-right">EXPECTED</th>
+                                            <th className="pb-2 pl-4">STATUS</th>
                                             <th className="pb-2"></th>
                                         </tr>
                                     </thead>
@@ -1016,14 +1094,18 @@ function ConsultantDetailContent() {
                                                 <td className="py-2 text-gray-600 dark:text-gray-300">{MONTHS[(inv.invoiceMonth ?? 1) - 1]} {inv.invoiceYear}</td>
                                                 <td className="py-2 text-gray-500 dark:text-gray-400">{inv.projectName}</td>
                                                 <td className="py-2 font-semibold text-gray-800 dark:text-white text-right">${Number(inv.totalAmount).toLocaleString()}</td>
-                                                <td className="py-2 text-gray-400 text-xs">{inv.expectedPaymentDate ? new Date(inv.expectedPaymentDate).toLocaleDateString() : "—"}</td>
-                                                <td className="py-2"><StatusBadge status={inv.status ?? "PENDING"} /></td>
-                                                <td className="py-2 text-right">
+                                                <td className="py-2 font-bold text-emerald-600 text-right">${Number(inv.payments?.reduce((s: any, p: any) => s + Number(p.amountReceived), 0) ?? 0).toLocaleString()}</td>
+                                                <td className="py-2 text-gray-400 text-xs text-right">{inv.expectedPaymentDate ? new Date(inv.expectedPaymentDate).toLocaleDateString() : "—"}</td>
+                                                <td className="py-2 pl-4"><StatusBadge status={inv.status ?? "PENDING"} /></td>
+                                                <td className="py-2 text-right flex items-center justify-end gap-2">
                                                     {inv.status === "PAID" ? (
                                                         <button onClick={() => handleMarkUnpaid(inv.id)} className="text-xs text-orange-500 hover:underline">Revoke Paid</button>
                                                     ) : (
                                                         <button onClick={() => handleMarkPaid(inv.id)} className="text-xs text-violet-600 hover:underline">Mark Paid</button>
                                                     )}
+                                                    <button onClick={() => handleDeleteInvoice(inv.id)} className="text-xs text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition" title="Delete Invoice">
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))}
@@ -1033,36 +1115,112 @@ function ConsultantDetailContent() {
                         )}
                     </Card>
 
-                    {/* Payout History */}
-                    <Card title="Payout History" action={
-                        <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">AP</span>
-                    }>
-                        {!data.payouts?.length ? (
-                            <div className="p-6 text-center text-gray-400 text-sm">No payouts recorded yet.</div>
+                    {/* Client Payments */}
+                    <Card title="2. Client Payments (Received)">
+                        {!allPayments.length ? (
+                            <p className="text-gray-400 text-sm">No payments received yet. Use &quot;+ Payment&quot; above.</p>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
-                                    <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b border-gray-100 dark:border-gray-700">
+                                    <thead className="text-left text-xs text-gray-400 uppercase">
                                         <tr>
-                                            <th className="text-left px-4 py-3">Period</th>
-                                            <th className="text-left px-4 py-3">Hours</th>
-                                            <th className="text-left px-4 py-3 text-right">Amount</th>
-                                            <th className="text-left px-4 py-3">Inv Date</th>
-                                            <th className="text-left px-4 py-3 text-emerald-600">Pay Date</th>
-                                            <th className="text-left px-4 py-3 font-mono">Ref #</th>
-                                            <th className="text-left px-4 py-3">Status</th>
+                                            <th className="pb-2">Date</th>
+                                            <th className="pb-2">Invoice Period</th>
+                                            <th className="pb-2">Reference</th>
+                                            <th className="pb-2 text-right">AMOUNT RECVD</th>
+                                            <th className="pb-2"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                        {data.payouts.map((payout: any) => (
-                                            <tr key={payout.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition border-b border-gray-50 dark:border-gray-800 last:border-0">
-                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">{MONTHS[payout.month - 1]} {payout.year}</td>
-                                                <td className="px-4 py-3 text-gray-500 font-mono text-[10px]">{Number(payout.hours)}h</td>
-                                                <td className="px-4 py-3 font-bold text-gray-800 dark:text-gray-100 text-right font-mono">${Number(payout.amount).toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-gray-400 text-[10px]">{payout.consultantInvoiceDate ? new Date(payout.consultantInvoiceDate).toLocaleDateString() : "—"}</td>
-                                                <td className="px-4 py-3 text-emerald-600 text-[10px] font-semibold">{payout.paymentDate ? new Date(payout.paymentDate).toLocaleDateString() : "—"}</td>
-                                                <td className="px-4 py-3 text-gray-500 font-mono text-[10px]">{payout.referenceNumber || "—"}</td>
-                                                <td className="px-4 py-3"><StatusBadge status={payout.status || "PENDING"} /></td>
+                                        {allPayments.map((p: any) => (
+                                            <tr key={p.id}>
+                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">{new Date(p.paymentDate).toLocaleDateString()}</td>
+                                                <td className="py-2 text-gray-400 text-xs">{MONTHS[p.invoiceMonth - 1]} {p.invoiceYear}</td>
+                                                <td className="py-2 text-gray-500 italic text-xs">{p.referenceNumber || "Bank Transfer"}</td>
+                                                <td className="py-2 font-bold text-emerald-600 text-right font-mono">${Number(p.amountReceived).toLocaleString()}</td>
+                                                <td className="py-2 text-right">
+                                                    <button onClick={() => handleDeletePayment(p.id)} className="text-red-400 hover:text-red-600 transition" title="Delete Payment">
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
+
+                    {/* Consultant Invoices */}
+                    <Card title="3. Consultant Invoices (AP - Pending)">
+                        {!consultantInvoices.length ? (
+                            <p className="text-gray-400 text-sm">No pending consultant invoices.</p>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="text-left text-xs text-gray-400 uppercase">
+                                        <tr>
+                                            <th className="pb-2">Period</th>
+                                            <th className="pb-2">Hours</th>
+                                            <th className="pb-2 text-right">AMOUNT DUE</th>
+                                            <th className="pb-2 text-right">CNSLT INV DATE</th>
+                                            <th className="pb-2 text-right">STATUS</th>
+                                            <th className="pb-2"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                        {consultantInvoices.map((inv: any) => (
+                                            <tr key={inv.id}>
+                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">{MONTHS[inv.month - 1]} {inv.year}</td>
+                                                <td className="py-2 text-gray-400 text-xs font-mono">{Number(inv.hours)}h</td>
+                                                <td className="py-2 font-bold text-orange-600 text-right">${Number(inv.amount).toLocaleString()}</td>
+                                                <td className="py-2 text-gray-400 text-xs text-right italic">{inv.consultantInvoiceDate ? new Date(inv.consultantInvoiceDate).toLocaleDateString() : "Waiting..."}</td>
+                                                <td className="py-2 text-right"><StatusBadge status="PENDING" /></td>
+                                                <td className="py-2 text-right flex items-center justify-end gap-2">
+                                                    <button onClick={() => handleMarkPayoutPaid(inv)} className="text-xs text-violet-600 hover:underline">Pay</button>
+                                                    <button onClick={() => handleDeletePayout(inv.id)} className="text-xs text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition" title="Delete Invoice">
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
+
+                    {/* Consultant Payouts */}
+                    <Card title="4. Consultant Payouts (AP - Paid)">
+                        {!consultantPayouts.length ? (
+                            <p className="text-gray-400 text-sm">No payouts recorded yet. Use &quot;Pay Consultant&quot; above.</p>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="text-left text-xs text-gray-400 uppercase">
+                                        <tr>
+                                            <th className="pb-2">Period</th>
+                                            <th className="pb-2 text-right">PAID AMOUNT</th>
+                                            <th className="pb-2 text-right">PAY DATE</th>
+                                            <th className="pb-2 text-right">REF #</th>
+                                            <th className="pb-2 text-right pr-4">STATUS</th>
+                                            <th className="pb-2"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                        {consultantPayouts.map((p: any) => (
+                                            <tr key={p.id}>
+                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">{MONTHS[p.month - 1]} {p.year} {p.hours > 0 ? <span className="text-[10px] text-gray-400">({Number(p.hours)}h)</span> : null}</td>
+                                                <td className="py-2 font-bold text-gray-800 dark:text-gray-100 text-right font-mono">${Number(p.amount).toLocaleString()}</td>
+                                                <td className="py-2 text-emerald-600 text-xs font-semibold text-right">{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : "—"}</td>
+                                                <td className="py-2 text-gray-500 font-mono text-[10px] text-right">{p.referenceNumber || "—"}</td>
+                                                <td className="py-2 text-right pr-4"><StatusBadge status="PAID" /></td>
+                                                <td className="py-2 text-right flex items-center justify-end gap-2">
+                                                    <button onClick={() => handleRevokePayout(p.id)} className="text-xs text-orange-500 hover:underline">Revoke</button>
+                                                    <button onClick={() => handleDeletePayout(p.id)} className="text-xs text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition" title="Delete Payout">
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                    </button>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -1093,8 +1251,8 @@ function ConsultantDetailContent() {
                                 <thead className="bg-gray-50/50 dark:bg-gray-700/30 text-gray-500 dark:text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b border-gray-100 dark:border-gray-700">
                                     <tr>
                                         <th className="px-4 py-3 text-left">Period & Hours</th>
-                                        <th className="px-4 py-3 text-left">Pay-In (Client)</th>
-                                        <th className="px-4 py-3 text-left">Pay-Out (Consultant)</th>
+                                        <th className="px-4 py-3 text-left">Client AR & Pay-In</th>
+                                        <th className="px-4 py-3 text-left">Cnslt AP & Pay-Out</th>
                                         <th className="px-4 py-3 text-right">Net Margin</th>
                                     </tr>
                                 </thead>
@@ -1102,7 +1260,14 @@ function ConsultantDetailContent() {
                                     {data.months.map((m: any, idx: number) => (
                                         <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition">
                                             <td className="px-4 py-4">
-                                                <div className="font-bold text-gray-800 dark:text-gray-100">{MONTHS[m.month - 1]} {m.year}</div>
+                                                <div className="font-bold text-gray-800 dark:text-gray-100">
+                                                    {MONTHS[m.month - 1]} {m.year}
+                                                    {m.week && (
+                                                        <span className="ml-2 text-[10px] bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded uppercase font-bold">
+                                                            {m.week === 6 ? "1st Half" : m.week === 7 ? "2nd Half" : `W${m.week}`}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="text-xs text-violet-500 font-medium">{m.hours} hrs @ ${data.rates?.bill}/hr</div>
                                             </td>
                                             <td className="px-4 py-4 space-y-1">
@@ -1111,7 +1276,7 @@ function ConsultantDetailContent() {
                                                     <span className="font-semibold text-emerald-600">${m.revenue.toLocaleString()}</span>
                                                 </div>
                                                 <div className="text-[10px] flex flex-col">
-                                                    <span className="text-gray-400">Deadline (Pay-In):</span>
+                                                    <span className="text-gray-400">Expected Pay-In from Client:</span>
                                                     <span className={`font-medium ${m.isOverdue ? "text-red-500 animate-pulse" : "text-gray-600 dark:text-gray-400"}`}>
                                                         {m.expectedPaymentDate ? new Date(m.expectedPaymentDate).toLocaleDateString() : "No Invoice"}
                                                         {m.isOverdue && " — OVERDUE"}
@@ -1135,7 +1300,7 @@ function ConsultantDetailContent() {
                                                             <span className="text-gray-400">Due by: <strong className={m.isConsultantDueOverdue ? "text-red-500 underline" : "text-gray-600 dark:text-gray-400"}>{m.consultantDueDate}</strong></span>
                                                         </>
                                                     ) : (
-                                                        <span className="text-gray-400 italic font-medium">Wait for consultant invoice</span>
+                                                        <span className="text-gray-400 italic font-medium">Waiting for Cnslt Invoice</span>
                                                     )}
                                                 </div>
                                             </td>

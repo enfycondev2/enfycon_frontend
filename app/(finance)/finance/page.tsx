@@ -22,6 +22,7 @@ interface Summary {
 interface RosterRow {
     id: string; name: string; consultantStatus: "ACTIVE" | "ENDED";
     clientName: string;
+    rates: { bill: number; pay: number };
     totals: { hours: number; revenue: number; cost: number; margin: number; marginPerc: number; paidIn: number; paidOut: number };
 }
 
@@ -98,10 +99,30 @@ function FinanceDashboardContent() {
         <>
             <DashboardBreadcrumb title="Finance Overview" text="Finance / Overview" />
 
+            <style>{`
+                @keyframes blink-pulse {
+                    0% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.7; transform: scale(1.02); }
+                    100% { opacity: 1; transform: scale(1); }
+                }
+                .animate-blink {
+                    animation: blink-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+                    box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+                }
+            `}</style>
+            
             <div className="space-y-6">
-
+                
                 {/* ── Balance Sheet ─────────────────────────────────────── */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    <div className="animate-blink">
+                        <StatCard
+                            label="⚡ Hourly Billing"
+                            value={fmt(activeRows.reduce((sum, r) => sum + (r.rates.bill - r.rates.pay), 0))}
+                            sub={`${activeRows.length} active consultant${activeRows.length !== 1 ? 's' : ''} · total margin`}
+                            color="bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300"
+                        />
+                    </div>
                     <StatCard
                         label="📥 Accounts Receivable"
                         value={fmt(data.receivable.total)}

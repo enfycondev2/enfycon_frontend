@@ -1081,9 +1081,10 @@ export default function JobsTable({
                                                                     <div className="flex flex-col gap-1.5">
                                                                         <PodAssignCell
                                                                             jobId={job.id}
+                                                                            jobCode={job.jobCode}
                                                                             assignedPods={resolvedAssignedPods}
-                                                                            assignedRecruiters={job.assignedRecruiters}
                                                                             availablePods={availablePods}
+                                                                            assignedRecruiters={job.assignedRecruiters || []}
                                                                             canEdit={canEdit}
                                                                             onSuccess={() => refreshJob(job.id)}
                                                                         />

@@ -160,7 +160,7 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
                 <Field label="Engagement Type">
                     <select className={selectCls} value={form.engagementType} onChange={(e) => set("engagementType", e.target.value)}>
                         <option value="">— Select —</option>
-                        {["W2", "C2C", "1099"].map((v) => <option key={v} value={v}>{v}</option>)}
+                        {["W2", "C2C", "1099", "Referral"].map((v) => <option key={v} value={v}>{v}</option>)}
                     </select>
                 </Field>
             </div>
@@ -351,7 +351,7 @@ function Section3({ consultantId, onDone, onBack }: { consultantId: string; onDo
                 <Field label="Bill Rate ($/hr) *">
                     <input required type="number" min="0" step="0.01" className={inputCls} placeholder="60" value={form.billingRate} onChange={(e) => set("billingRate", e.target.value)} />
                 </Field>
-                <Field label="Pay Rate ($/hr) *">
+                <Field label="Pay Rate ($/hr) *" hint="Enter 0 for referral cases (no payout)">
                     <input required type="number" min="0" step="0.01" className={inputCls} placeholder="50" value={form.payRate} onChange={(e) => set("payRate", e.target.value)} />
                 </Field>
                 <Field label="Currency">

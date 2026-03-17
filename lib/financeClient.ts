@@ -60,6 +60,14 @@ export async function financePatch(endpoint: string, body?: any, pin?: string): 
     return handleFinanceResponse(res, endpoint);
 }
 
+export async function financeDelete(endpoint: string, pin?: string): Promise<any> {
+    const res = await apiClient(endpoint, {
+        method: "DELETE",
+        headers: financeHeaders(pin),
+    });
+    return handleFinanceResponse(res, endpoint);
+}
+
 export async function financeLock(): Promise<void> {
     try {
         await apiClient("/finance/lock", { method: "POST" });

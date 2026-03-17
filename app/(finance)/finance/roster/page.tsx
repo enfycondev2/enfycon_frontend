@@ -160,15 +160,35 @@ function RosterContent() {
 
     return (
         <>
-            <DashboardBreadcrumb title="Consultant Roster" text="Finance / Live Consultant Roster" />
-            <div className="space-y-5">
+            <DashboardBreadcrumb title="Consultant Roster" text="Finance / Roster" />
+
+        <style>{`
+            @keyframes blink-pulse {
+                0% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.7; transform: scale(1.02); }
+                100% { opacity: 1; transform: scale(1); }
+            }
+            .animate-blink {
+                animation: blink-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+                box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+            }
+        `}</style>
+        
+        <div className="p-6 space-y-5">
 
                 {/* KPI Summary */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
                     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
                         <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Consultants</p>
                         <p className="text-3xl font-black text-gray-800 dark:text-white mt-1">{rows.length}</p>
                         <p className="text-[11px] text-emerald-500 mt-0.5 font-semibold">{activeCount} active</p>
+                    </div>
+                    <div className="animate-blink bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-200 dark:border-indigo-800 p-4 shadow-sm">
+                        <p className="text-[10px] text-indigo-600 dark:text-indigo-400 uppercase tracking-widest font-bold">⚡ Hourly Billing</p>
+                        <p className="text-2xl font-black text-indigo-700 dark:text-indigo-300 mt-1">
+                            {curr(rows.filter(r => r.consultantStatus === "ACTIVE").reduce((sum, r) => sum + (r.rates.bill - r.rates.pay), 0))}
+                        </p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">Active margin / hr</p>
                     </div>
                     <div className={`rounded-2xl border p-4 shadow-sm ${overdueCount > 0 ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700"}`}>
                         <p className="text-[10px] text-red-500 uppercase tracking-widest font-bold">⚠ Overdue</p>
