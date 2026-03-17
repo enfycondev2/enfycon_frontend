@@ -30,15 +30,27 @@ function Card({ title, action, children }: { title: string; action?: React.React
 // ─── Log Hours inline form ────────────────────────────────────────────────────
 function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogged: () => void }) {
     const now = new Date();
-    const [entryMode, setEntryMode] = useState<"MONTHLY" | "WEEKLY" | "SEMI_MONTHLY">("MONTHLY");
-    const [form, setForm] = useState({ consultantId, month: now.getMonth() + 1, year: now.getFullYear(), week: "1", hours: "" });
+    const [entryMode, setEntryMode] = useState<"MONTHLY" | "WEEKLY" | "SEMI_MONTHLY" | "CUSTOM">("MONTHLY");
+    const [form, setForm] = useState({ 
+        consultantId, 
+        month: now.getMonth() + 1, 
+        year: now.getFullYear(), 
+        week: "1", 
+        hours: "",
+        startDate: now.toISOString().slice(0, 10),
+        endDate: now.toISOString().slice(0, 10)
+    });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [ok, setOk] = useState(false);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        const periodLabel = entryMode === "WEEKLY" ? `Week ${form.week}` : entryMode === "SEMI_MONTHLY" ? (form.week === "6" ? "1rd Half" : "2nd Half") : "the Month";
+        const periodLabel = entryMode === "WEEKLY" ? `Week ${form.week}` 
+            : entryMode === "SEMI_MONTHLY" ? (form.week === "6" ? "1rd Half" : "2nd Half") 
+            : entryMode === "CUSTOM" ? `${form.startDate} to ${form.endDate}`
+            : "the Month";
+        
         if (!window.confirm(`Are you sure you want to log ${form.hours} hours for ${periodLabel}?`)) return;
         setSaving(true); setError(""); setOk(false);
         try {
@@ -47,7 +59,9 @@ function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogg
                 month: +form.month,
                 year: +form.year,
                 hours: +form.hours,
-                week: entryMode === "MONTHLY" ? undefined : +form.week
+                week: entryMode === "MONTHLY" ? undefined : +form.week,
+                startDate: entryMode === "CUSTOM" ? form.startDate : undefined,
+                endDate: entryMode === "CUSTOM" ? form.endDate : undefined
             };
             await financePost("finance/hours", payload);
             setOk(true);
@@ -57,10 +71,11 @@ function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogg
         finally { setSaving(false); }
     }
 
-    const handleModeChange = (mode: "MONTHLY" | "WEEKLY" | "SEMI_MONTHLY") => {
+    const handleModeChange = (mode: "MONTHLY" | "WEEKLY" | "SEMI_MONTHLY" | "CUSTOM") => {
         setEntryMode(mode);
         if (mode === "WEEKLY") setForm(f => ({ ...f, week: "1" }));
         if (mode === "SEMI_MONTHLY") setForm(f => ({ ...f, week: "6" }));
+        if (mode === "CUSTOM") setForm(f => ({ ...f, week: "8" })); // 8 as discriminator for custom
     };
 
     return (
@@ -69,6 +84,7 @@ function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogg
                 <button type="button" onClick={() => handleModeChange("MONTHLY")} className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${entryMode === "MONTHLY" ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>Monthly Total</button>
                 <button type="button" onClick={() => handleModeChange("SEMI_MONTHLY")} className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${entryMode === "SEMI_MONTHLY" ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>Semi-Monthly (15 Days)</button>
                 <button type="button" onClick={() => handleModeChange("WEEKLY")} className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${entryMode === "WEEKLY" ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>Weekly Entry</button>
+                <button type="button" onClick={() => handleModeChange("CUSTOM")} className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${entryMode === "CUSTOM" ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>Custom Range</button>
             </div>
 
             <div className={`grid gap-3 ${entryMode !== "MONTHLY" ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-2 sm:grid-cols-4"}`}>
@@ -99,6 +115,18 @@ function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogg
                         </select>
                     </div>
                 )}
+                {entryMode === "CUSTOM" && (
+                    <>
+                        <div>
+                            <label className="block text-xs text-gray-500 mb-1">Start Date</label>
+                            <input type="date" required className={iCls} value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} />
+                        </div>
+                        <div>
+                            <label className="block text-xs text-gray-500 mb-1">End Date</label>
+                            <input type="date" required className={iCls} value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} />
+                        </div>
+                    </>
+                )}
                 <div>
                     <label className="block text-xs text-gray-500 mb-1">Hours</label>
                     <input type="number" step="0.5" required className={iCls} value={form.hours} placeholder={entryMode === "MONTHLY" ? "160" : "80"} onChange={e => setForm(f => ({ ...f, hours: e.target.value }))} />
@@ -124,10 +152,16 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated }: { projects:
         return contract ? String(Number(contract.billRate)) : "";
     }
 
-    // Helper: get logged hours for a consultant in a given month/year
-    function getLoggedHours(month: number, year: number) {
-        const entry = allHours?.find((h: any) => h.month === month && h.year === year);
-        return entry ? String(Number(entry.hours)) : "";
+    // Helper: get logged hours for a consultant in a given month/year (sum all entries or filter by week)
+    function getLoggedHours(month: number, year: number, week?: number) {
+        const matches = allHours?.filter((h: any) => 
+            h.month === month && 
+            h.year === year && 
+            (week === undefined || week === 0 ? true : h.week === week)
+        );
+        if (!matches || matches.length === 0) return "";
+        const sum = matches.reduce((acc: number, curr: any) => acc + Number(curr.hours), 0);
+        return String(sum);
     }
 
     const defaultProjectId = projects[0]?.id ?? "";
@@ -142,11 +176,12 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated }: { projects:
         hours: getLoggedHours(defaultMonth, defaultYear),
         billRate: getBillRate(defaultProjectId),
         referenceNumber: "", // New: Client Invoice #
+        week: 0, // 0 for full month, 1-5 for W1-W5, 6-7 for halves, 8 for custom
     });
 
     // Reactive Auto-fill: Update hours and billRate whenever selection or data changes
     useEffect(() => {
-        const autoHours = getLoggedHours(form.invoiceMonth, form.invoiceYear);
+        const autoHours = getLoggedHours(form.invoiceMonth, form.invoiceYear, form.week === 0 ? undefined : form.week);
         const autoBill = getBillRate(form.projectId);
         
         setForm(f => ({
@@ -154,7 +189,7 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated }: { projects:
             hours: autoHours || f.hours,
             billRate: autoBill || f.billRate
         }));
-    }, [form.invoiceMonth, form.invoiceYear, form.projectId, allHours, projects]);
+    }, [form.invoiceMonth, form.invoiceYear, form.projectId, form.week, allHours, projects]);
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -178,7 +213,14 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated }: { projects:
         e.preventDefault();
         setSaving(true); setError(""); setOk(false);
         try {
-            await financePost("finance/invoices", { ...form, invoiceMonth: +form.invoiceMonth, invoiceYear: +form.invoiceYear, hours: +form.hours, billRate: +form.billRate });
+            await financePost("finance/invoices", { 
+                ...form, 
+                invoiceMonth: +form.invoiceMonth, 
+                invoiceYear: +form.invoiceYear, 
+                hours: +form.hours, 
+                billRate: +form.billRate,
+                week: form.week === 0 ? undefined : +form.week
+            });
             setOk(true);
             onCreated();
         } catch (err: any) { setError(err.message); }
@@ -204,6 +246,16 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated }: { projects:
             <div>
                 <label className="block text-xs text-gray-500 mb-1">Year</label>
                 <input type="number" className={iCls} value={form.invoiceYear} onChange={e => handleYearChange(+e.target.value)} />
+            </div>
+            <div>
+                <label className="block text-xs text-gray-500 mb-1">Period</label>
+                <select className={iCls} value={form.week} onChange={e => setForm(f => ({ ...f, week: +e.target.value }))}>
+                    <option value="0">Full Month</option>
+                    <option value="6">1st Half (1-15)</option>
+                    <option value="7">2nd Half (16-End)</option>
+                    <option value="8">Custom Range</option>
+                    {[1,2,3,4,5].map(w => <option key={w} value={w}>Week {w}</option>)}
+                </select>
             </div>
             <div>
                 <label className="block text-xs text-gray-500 mb-1">Invoice Date</label>
@@ -1052,15 +1104,39 @@ function ConsultantDetailContent() {
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead className="text-left text-xs text-gray-400 uppercase">
-                                        <tr><th className="pb-2">Month</th><th className="pb-2">Year</th><th className="pb-2 text-right">Hours</th></tr>
+                                        <tr>
+                                            <th className="pb-2">Month</th>
+                                            <th className="pb-2">Period</th>
+                                            <th className="pb-2">Year</th>
+                                            <th className="pb-2 text-right">Hours</th>
+                                        </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {data.hours.map((h: any) => (
                                             <tr key={h.id}>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300">
-                                                    {MONTHS[h.month - 1]} {h.week ? <span className="text-xs text-violet-500 font-medium ml-1 bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">{h.week === 6 ? "1st Half (1-15)" : h.week === 7 ? "2nd Half (16-End)" : `W${h.week}`}</span> : null}
+                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">
+                                                    {MONTHS[h.month - 1]} 
                                                 </td>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300">{h.year}</td>
+                                                <td className="py-2">
+                                                    {h.week === 8 ? (
+                                                        h.startDate && h.endDate ? (
+                                                            <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">
+                                                                {new Date(h.startDate).toLocaleDateString()} - {new Date(h.endDate).toLocaleDateString()}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">Custom Range</span>
+                                                        )
+                                                    ) : h.week === 6 ? (
+                                                        <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">1st Half (1-15)</span>
+                                                    ) : h.week === 7 ? (
+                                                        <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">2nd Half (16-End)</span>
+                                                    ) : h.week ? (
+                                                        <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">Week {h.week}</span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-gray-400 font-medium bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 rounded">Full Month</span>
+                                                    )}
+                                                </td>
+                                                <td className="py-2 text-gray-600 dark:text-gray-300 text-xs">{h.year}</td>
                                                 <td className="py-2 font-semibold text-gray-800 dark:text-white text-right">{h.hours}</td>
                                             </tr>
                                         ))}
@@ -1091,7 +1167,13 @@ function ConsultantDetailContent() {
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {allInvoices.map((inv: any) => (
                                             <tr key={inv.id}>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300">{MONTHS[(inv.invoiceMonth ?? 1) - 1]} {inv.invoiceYear}</td>
+                                                <td className="py-2 text-gray-600 dark:text-gray-300">
+                                                    {MONTHS[(inv.invoiceMonth ?? 1) - 1]} {inv.invoiceYear}
+                                                    {inv.week === 6 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">1st Half</span>
+                                                        : inv.week === 7 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">2nd Half</span>
+                                                        : inv.week === 8 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">Custom</span>
+                                                        : inv.week ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">W{inv.week}</span> : null}
+                                                </td>
                                                 <td className="py-2 text-gray-500 dark:text-gray-400">{inv.projectName}</td>
                                                 <td className="py-2 font-semibold text-gray-800 dark:text-white text-right">${Number(inv.totalAmount).toLocaleString()}</td>
                                                 <td className="py-2 font-bold text-emerald-600 text-right">${Number(inv.payments?.reduce((s: any, p: any) => s + Number(p.amountReceived), 0) ?? 0).toLocaleString()}</td>
@@ -1171,7 +1253,13 @@ function ConsultantDetailContent() {
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {consultantInvoices.map((inv: any) => (
                                             <tr key={inv.id}>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">{MONTHS[inv.month - 1]} {inv.year}</td>
+                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">
+                                                    {MONTHS[inv.month - 1]} {inv.year}
+                                                    {inv.week === 6 ? <span className="ml-1 text-[10px] bg-violet-50 text-violet-500 px-1 rounded">1st Half</span>
+                                                        : inv.week === 7 ? <span className="ml-1 text-[10px] bg-violet-50 text-violet-500 px-1 rounded">2nd Half</span>
+                                                        : inv.week === 8 ? <span className="ml-1 text-[10px] bg-violet-50 text-violet-500 px-1 rounded">Custom</span>
+                                                        : inv.week ? <span className="ml-1 text-[10px] bg-violet-50 text-violet-500 px-1 rounded">W{inv.week}</span> : null}
+                                                </td>
                                                 <td className="py-2 text-gray-400 text-xs font-mono">{Number(inv.hours)}h</td>
                                                 <td className="py-2 font-bold text-orange-600 text-right">${Number(inv.amount).toLocaleString()}</td>
                                                 <td className="py-2 text-gray-400 text-xs text-right italic">{inv.consultantInvoiceDate ? new Date(inv.consultantInvoiceDate).toLocaleDateString() : "Waiting..."}</td>
@@ -1210,7 +1298,14 @@ function ConsultantDetailContent() {
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {consultantPayouts.map((p: any) => (
                                             <tr key={p.id}>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">{MONTHS[p.month - 1]} {p.year} {p.hours > 0 ? <span className="text-[10px] text-gray-400">({Number(p.hours)}h)</span> : null}</td>
+                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">
+                                                    {MONTHS[p.month - 1]} {p.year}
+                                                    {p.week === 6 ? <span className="ml-1 text-[10px] bg-emerald-50 text-emerald-600 px-1 rounded">1st Half</span>
+                                                        : p.week === 7 ? <span className="ml-1 text-[10px] bg-emerald-50 text-emerald-600 px-1 rounded">2nd Half</span>
+                                                        : p.week === 8 ? <span className="ml-1 text-[10px] bg-emerald-50 text-emerald-600 px-1 rounded">Custom</span>
+                                                        : p.week ? <span className="ml-1 text-[10px] bg-emerald-50 text-emerald-600 px-1 rounded">W{p.week}</span> : null}
+                                                    {p.hours > 0 ? <span className="text-[10px] text-gray-400">({Number(p.hours)}h)</span> : null}
+                                                </td>
                                                 <td className="py-2 font-bold text-gray-800 dark:text-gray-100 text-right font-mono">${Number(p.amount).toLocaleString()}</td>
                                                 <td className="py-2 text-emerald-600 text-xs font-semibold text-right">{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : "—"}</td>
                                                 <td className="py-2 text-gray-500 font-mono text-[10px] text-right">{p.referenceNumber || "—"}</td>
@@ -1264,7 +1359,7 @@ function ConsultantDetailContent() {
                                                     {MONTHS[m.month - 1]} {m.year}
                                                     {m.week && (
                                                         <span className="ml-2 text-[10px] bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded uppercase font-bold">
-                                                            {m.week === 6 ? "1st Half" : m.week === 7 ? "2nd Half" : `W${m.week}`}
+                                                            {m.week === 6 ? "1st Half" : m.week === 7 ? "2nd Half" : m.week === 8 ? "Custom" : `W${m.week}`}
                                                         </span>
                                                     )}
                                                 </div>
@@ -1334,14 +1429,19 @@ function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded }:
         payRate: "",
         consultantInvoiceDate: now.toISOString().slice(0, 10),
         referenceNumber: "", // New: Consultant Invoice #
+        week: 0, // 0 for full month, 1-5 for W1-W5, 6-7 for halves, 8 for custom
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
     const [ok, setOk] = useState(false);
 
-    // Auto-fill hours & pay rate based on month/year
+    // Auto-fill hours & pay rate based on month/year/week
     useEffect(() => {
-        const foundHour = hours.find(h => h.month === form.month && h.year === form.year);
+        const foundHour = hours.find(h => 
+            h.month === form.month && 
+            h.year === form.year && 
+            (form.week === 0 ? !h.week : h.week === form.week)
+        );
         const autoHours = foundHour ? Number(foundHour.hours).toString() : "";
         let autoPayRate = "";
         if (projects.length > 0) {
@@ -1350,7 +1450,7 @@ function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded }:
             if (contract) autoPayRate = Number(contract.payRate).toString();
         }
         setForm(f => ({ ...f, hours: autoHours, payRate: autoPayRate }));
-    }, [form.month, form.year, hours, projects]);
+    }, [form.month, form.year, form.week, hours, projects]);
 
     async function handleSave(e: React.FormEvent) {
         e.preventDefault();
@@ -1364,6 +1464,7 @@ function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded }:
                 payRate: +form.payRate,
                 consultantInvoiceDate: form.consultantInvoiceDate,
                 referenceNumber: form.referenceNumber || undefined,
+                week: form.week === 0 ? undefined : +form.week,
                 // paymentDate is left out purposely to mark as PENDING
             });
             setOk(true);
@@ -1386,6 +1487,16 @@ function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded }:
             <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-1">Year</label>
                 <input required type="number" value={form.year} onChange={(e) => setForm(f => ({ ...f, year: +e.target.value }))} className={iCls} />
+            </div>
+            <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-1">Period</label>
+                <select required value={form.week} onChange={(e) => setForm(f => ({ ...f, week: +e.target.value }))} className={iCls}>
+                    <option value="0">Full Month</option>
+                    <option value="6">1st Half (1-15)</option>
+                    <option value="7">2nd Half (16-End)</option>
+                    <option value="8">Custom Range</option>
+                    {[1,2,3,4,5].map(w => <option key={w} value={w}>Week {w}</option>)}
+                </select>
             </div>
             <div>
                 <label className="block text-[10px] font-bold text-orange-600 uppercase tracking-tight mb-1 flex items-center justify-between">
@@ -1458,6 +1569,7 @@ function RecordPayoutForm({ consultantId, payouts, onRecorded }: { consultantId:
                 consultantInvoiceDate: selected.consultantInvoiceDate ? new Date(selected.consultantInvoiceDate).toISOString().slice(0, 10) : undefined,
                 paymentDate: form.paymentDate,
                 referenceNumber: form.referenceNumber || undefined,
+                week: selected.week, // preserve the period
             });
             setOk(true);
             setTimeout(() => setOk(false), 3000);
@@ -1480,7 +1592,11 @@ function RecordPayoutForm({ consultantId, payouts, onRecorded }: { consultantId:
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-1">Select Pending Invoice/Period</label>
                 <select required value={form.payoutId} onChange={(e) => setForm(f => ({ ...f, payoutId: e.target.value }))} className={iCls}>
                     {pendingPayouts.map(p => (
-                        <option key={p.id} value={p.id}>{MONTHS[p.month - 1]} {p.year} — ${Number(p.amount).toLocaleString()} ({Number(p.hours)}h)</option>
+                        <option key={p.id} value={p.id}>
+                            {MONTHS[p.month - 1]} {p.year} 
+                            {p.week === 6 ? " (1st Half)" : p.week === 7 ? " (2nd Half)" : p.week === 8 ? " (Custom)" : p.week ? ` (W${p.week})` : ""}
+                            — ${Number(p.amount).toLocaleString()} ({Number(p.hours)}h)
+                        </option>
                     ))}
                 </select>
             </div>

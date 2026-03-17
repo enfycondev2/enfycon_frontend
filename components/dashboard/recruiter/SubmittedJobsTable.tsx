@@ -305,6 +305,9 @@ function EditStatusDialog({
                             <Textarea
                                 value={form.remarks}
                                 onChange={e => setForm(p => ({ ...p, remarks: e.target.value }))}
+                                onKeyDown={e => {
+                                    if (e.key === " ") e.stopPropagation();
+                                }}
                                 placeholder="Provide detailed feedback on the recruitment process..."
                                 className="text-sm min-h-[160px] resize-none border-neutral-200 focus:ring-blue-500 rounded-lg p-3"
                             />
@@ -312,6 +315,9 @@ function EditStatusDialog({
                             <Input
                                 value={form.remarks}
                                 onChange={e => setForm(p => ({ ...p, remarks: e.target.value }))}
+                                onKeyDown={e => {
+                                    if (e.key === " ") e.stopPropagation();
+                                }}
                                 placeholder="Add technical or process remarks..."
                                 className="h-10 text-sm border-neutral-200 focus:ring-blue-500 rounded-lg px-3"
                             />
