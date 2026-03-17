@@ -133,16 +133,7 @@ export default function AccountManagerCreateJobPage() {
                                 </Select>
                             </div>
 
-                            <div>
-                                <Label htmlFor="visaType" className="text-[#4b5563] dark:text-white mb-2">Visa Type *</Label>
-                                <MultiSelect
-                                    options={visaOptions}
-                                    selected={selectedVisaTypes}
-                                    onChange={setSelectedVisaTypes}
-                                    placeholder="Select visa type(s)"
-                                />
-                                <input type="hidden" name="visaType" value={selectedVisaTypes.join(",")} required />
-                            </div>
+                         
 
                             <div>
                                 <Label className="text-[#4b5563] dark:text-white mb-2">Client Name *</Label>
@@ -160,6 +151,16 @@ export default function AccountManagerCreateJobPage() {
                                     value={endClientName}
                                     onChange={setEndClientName}
                                 />
+                            </div>
+                               <div>
+                                <Label htmlFor="visaType" className="text-[#4b5563] dark:text-white mb-2">Visa Type *</Label>
+                                <MultiSelect
+                                    options={visaOptions}
+                                    selected={selectedVisaTypes}
+                                    onChange={setSelectedVisaTypes}
+                                    placeholder="Select visa type(s)"
+                                />
+                                <input type="hidden" name="visaType" value={selectedVisaTypes.join(",")} required />
                             </div>
 
                             <div>
