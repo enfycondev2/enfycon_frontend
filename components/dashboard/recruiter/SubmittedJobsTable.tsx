@@ -301,27 +301,18 @@ function EditStatusDialog({
 
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block">Feedback & Remarks</label>
-                        {isRecruiter ? (
-                            <Textarea
-                                value={form.remarks}
-                                onChange={e => setForm(p => ({ ...p, remarks: e.target.value }))}
-                                onKeyDown={e => {
-                                    if (e.key === " ") e.stopPropagation();
-                                }}
-                                placeholder="Provide detailed feedback on the recruitment process..."
-                                className="text-sm min-h-[160px] resize-none border-neutral-200 focus:ring-blue-500 rounded-lg p-3"
-                            />
-                        ) : (
-                            <Input
-                                value={form.remarks}
-                                onChange={e => setForm(p => ({ ...p, remarks: e.target.value }))}
-                                onKeyDown={e => {
-                                    if (e.key === " ") e.stopPropagation();
-                                }}
-                                placeholder="Add technical or process remarks..."
-                                className="h-10 text-sm border-neutral-200 focus:ring-blue-500 rounded-lg px-3"
-                            />
-                        )}
+                        <Textarea
+                            value={form.remarks}
+                            onChange={e => setForm(p => ({ ...p, remarks: e.target.value }))}
+                            onKeyDown={e => {
+                                if (e.key === "Enter" || e.key === " ") e.stopPropagation();
+                            }}
+                            placeholder={isRecruiter ? "Provide detailed feedback on the recruitment process..." : "Add technical or process remarks..."}
+                            className={cn(
+                                "text-sm border-neutral-200 focus:ring-blue-500 rounded-lg p-3",
+                                isRecruiter ? "min-h-[160px]" : "min-h-[100px]"
+                            )}
+                        />
                     </div>
                 </div>
 
@@ -426,6 +417,7 @@ export default function SubmittedJobsTable({
             target.closest("button") ||
             target.closest("a") ||
             target.closest("input") ||
+            target.closest("textarea") ||
             target.closest("select") ||
             target.closest("[role='menuitem']") ||
             target.closest(".interactive")
