@@ -41,7 +41,7 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
 function FinanceDashboardContent() {
     const [data, setData] = useState<Summary | null>(null);
     const [rows, setRows] = useState<RosterRow[]>([]);
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>("ACTIVE");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 

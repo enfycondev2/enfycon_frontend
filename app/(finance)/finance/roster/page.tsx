@@ -69,7 +69,7 @@ function RosterContent() {
     const [availableMonths, setAvailableMonths] = useState<{ month: number; year: number }[]>([]);
     const [filterMonth, setFilterMonth] = useState("ALL");
     const [filterYear, setFilterYear] = useState("ALL");
-    const [filterStatus, setFilterStatus] = useState("ALL");
+    const [filterStatus, setFilterStatus] = useState("ACTIVE");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
