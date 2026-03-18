@@ -168,7 +168,7 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
                 <Field label="Job Code (Optional)" hint="Link to a job submission">
                     <input className={inputCls} placeholder="e.g. JOB-001" value={form.jobCode} onChange={(e) => set("jobCode", e.target.value)} />
                 </Field>
-                <Field label="Client Payment Terms (Days) *">
+                <Field label="Consultant Payment Terms (Days) *">
                     <input required type="number" min="0" className={inputCls} placeholder="30" value={form.clientPaymentTermsDays} onChange={(e) => set("clientPaymentTermsDays", e.target.value)} />
                 </Field>
             </div>
@@ -360,7 +360,7 @@ function Section3({ consultantId, onDone, onBack }: { consultantId: string; onDo
                     </select>
                 </Field>
                 {(form.currency !== "W2") && ( // Reusing currency check since W2 usually has fixed terms
-                    <Field label="Consultant Payment Terms (Days) *">
+                    <Field label="Client Payment Terms (Days) *">
                         <input required type="number" min="1" step="1" className={inputCls} placeholder="30" value={form.paymentTermsDays} onChange={(e) => set("paymentTermsDays", e.target.value)} />
                     </Field>
                 )}

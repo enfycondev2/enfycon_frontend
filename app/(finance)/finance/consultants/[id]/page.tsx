@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { financeDelete, financeGet, financePatch, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import { StatusBadge, MONTHS, btnPrimary, btnSecondary, StepIndicator, Field, inputCls, selectCls } from "@/components/finance/FinanceUI";
+import { StatusBadge, MONTHS, btnPrimary, btnSecondary, StepIndicator, Field, inputCls, selectCls, formatDateUS } from "@/components/finance/FinanceUI";
 import AutoComplete from "@/components/finance/AutoComplete";
 import { apiClient } from "@/lib/apiClient";
 
@@ -827,7 +827,7 @@ function ConsultantDetailContent() {
                                         <Field label="Job Code (Optional)" hint="Link to a job submission">
                                             <input className={inputCls} placeholder="e.g. JOB-001" value={editForm.jobCode || ""} onChange={(e) => setEditForm((f: any) => ({ ...f, jobCode: e.target.value }))} />
                                         </Field>
-                                        <Field label="Client Payment Terms (Days) *">
+                                        <Field label="Consultant Payment Terms (Days) *">
                                             <input required type="number" min="0" className={inputCls} value={editForm.clientPaymentTermsDays} onChange={(e) => setEditForm((f: any) => ({ ...f, clientPaymentTermsDays: e.target.value }))} />
                                         </Field>
                                     </div>
@@ -927,7 +927,7 @@ function ConsultantDetailContent() {
                                             </select>
                                         </Field>
                                         {editForm.engagementType !== "W2" && (
-                                            <Field label="Consultant Payment Terms (Days) *">
+                                            <Field label="Client Payment Terms (Days) *">
                                                 <input required type="number" className={inputCls} value={billingForm.paymentTermsDays} onChange={(e) => setBillingForm((f: any) => ({ ...f, paymentTermsDays: e.target.value }))} />
                                             </Field>
                                         )}
@@ -970,7 +970,7 @@ function ConsultantDetailContent() {
                                 { label: "Recruiter", value: data.recruiter?.fullName ?? "—" },
                                 { label: "Acct Manager", value: data.accountManager?.fullName ?? "—" },
                                 { label: "Pod Head", value: data.podHead?.fullName ?? "—" },
-                                { label: "Added", value: new Date(data.createdAt).toLocaleDateString() },
+                                { label: "Added", value: formatDateUS(data.createdAt) },
                             ].map(({ label, value }) => (
                                 <div key={label} className="flex justify-between gap-2">
                                     <dt className="text-gray-400">{label}</dt>
@@ -1121,7 +1121,7 @@ function ConsultantDetailContent() {
                                                     {h.week === 8 ? (
                                                         h.startDate && h.endDate ? (
                                                             <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">
-                                                                {new Date(h.startDate).toLocaleDateString()} - {new Date(h.endDate).toLocaleDateString()}
+                                                                {formatDateUS(h.startDate)} - {formatDateUS(h.endDate)}
                                                             </span>
                                                         ) : (
                                                             <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">Custom Range</span>
@@ -1177,7 +1177,7 @@ function ConsultantDetailContent() {
                                                 <td className="py-2 text-gray-500 dark:text-gray-400">{inv.projectName}</td>
                                                 <td className="py-2 font-semibold text-gray-800 dark:text-white text-right">${Number(inv.totalAmount).toLocaleString()}</td>
                                                 <td className="py-2 font-bold text-emerald-600 text-right">${Number(inv.payments?.reduce((s: any, p: any) => s + Number(p.amountReceived), 0) ?? 0).toLocaleString()}</td>
-                                                <td className="py-2 text-gray-400 text-xs text-right">{inv.expectedPaymentDate ? new Date(inv.expectedPaymentDate).toLocaleDateString() : "—"}</td>
+                                                <td className="py-2 text-gray-400 text-xs text-right">{formatDateUS(inv.expectedPaymentDate)}</td>
                                                 <td className="py-2 pl-4"><StatusBadge status={inv.status ?? "PENDING"} /></td>
                                                 <td className="py-2 text-right flex items-center justify-end gap-2">
                                                     {inv.status === "PAID" ? (
@@ -1216,7 +1216,7 @@ function ConsultantDetailContent() {
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {allPayments.map((p: any) => (
                                             <tr key={p.id}>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">{new Date(p.paymentDate).toLocaleDateString()}</td>
+                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">{formatDateUS(p.paymentDate)}</td>
                                                 <td className="py-2 text-gray-400 text-xs">{MONTHS[p.invoiceMonth - 1]} {p.invoiceYear}</td>
                                                 <td className="py-2 text-gray-500 italic text-xs">{p.referenceNumber || "Bank Transfer"}</td>
                                                 <td className="py-2 font-bold text-emerald-600 text-right font-mono">${Number(p.amountReceived).toLocaleString()}</td>
@@ -1262,7 +1262,7 @@ function ConsultantDetailContent() {
                                                 </td>
                                                 <td className="py-2 text-gray-400 text-xs font-mono">{Number(inv.hours)}h</td>
                                                 <td className="py-2 font-bold text-orange-600 text-right">${Number(inv.amount).toLocaleString()}</td>
-                                                <td className="py-2 text-gray-400 text-xs text-right italic">{inv.consultantInvoiceDate ? new Date(inv.consultantInvoiceDate).toLocaleDateString() : "Waiting..."}</td>
+                                                <td className="py-2 text-gray-400 text-xs text-right italic">{inv.consultantInvoiceDate ? formatDateUS(inv.consultantInvoiceDate) : "Waiting..."}</td>
                                                 <td className="py-2 text-right"><StatusBadge status="PENDING" /></td>
                                                 <td className="py-2 text-right flex items-center justify-end gap-2">
                                                     <button onClick={() => handleMarkPayoutPaid(inv)} className="text-xs text-violet-600 hover:underline">Pay</button>
@@ -1307,7 +1307,7 @@ function ConsultantDetailContent() {
                                                     {p.hours > 0 ? <span className="text-[10px] text-gray-400">({Number(p.hours)}h)</span> : null}
                                                 </td>
                                                 <td className="py-2 font-bold text-gray-800 dark:text-gray-100 text-right font-mono">${Number(p.amount).toLocaleString()}</td>
-                                                <td className="py-2 text-emerald-600 text-xs font-semibold text-right">{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : "—"}</td>
+                                                <td className="py-2 text-emerald-600 text-xs font-semibold text-right">{formatDateUS(p.paymentDate)}</td>
                                                 <td className="py-2 text-gray-500 font-mono text-[10px] text-right">{p.referenceNumber || "—"}</td>
                                                 <td className="py-2 text-right pr-4"><StatusBadge status="PAID" /></td>
                                                 <td className="py-2 text-right flex items-center justify-end gap-2">
@@ -1373,7 +1373,7 @@ function ConsultantDetailContent() {
                                                 <div className="text-[10px] flex flex-col">
                                                     <span className="text-gray-400">Expected Pay-In from Client:</span>
                                                     <span className={`font-medium ${m.isOverdue ? "text-red-500 animate-pulse" : "text-gray-600 dark:text-gray-400"}`}>
-                                                        {m.expectedPaymentDate ? new Date(m.expectedPaymentDate).toLocaleDateString() : "No Invoice"}
+                                                        {m.expectedPaymentDate ? formatDateUS(m.expectedPaymentDate) : "No Invoice"}
                                                         {m.isOverdue && " — OVERDUE"}
                                                     </span>
                                                 </div>

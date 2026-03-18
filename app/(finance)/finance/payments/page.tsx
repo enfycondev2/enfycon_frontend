@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { financeGet, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import { formatDateUS } from "@/components/finance/FinanceUI";
 
 function PaymentsContent() {
     const [payments, setPayments] = useState<any[]>([]);
@@ -109,7 +110,7 @@ function PaymentsContent() {
                                             <td className="px-4 py-3 font-mono text-xs text-gray-400">{p.id?.slice(0, 8)}…</td>
                                             <td className="px-4 py-3 font-mono text-xs text-gray-400">{p.invoiceId?.slice(0, 8)}…</td>
                                             <td className="px-4 py-3 font-semibold text-gray-800 dark:text-white">${Number(p.amountReceived).toLocaleString()}</td>
-                                            <td className="px-4 py-3 text-gray-500 text-xs">{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : "—"}</td>
+                                            <td className="px-4 py-3 text-gray-500 text-xs">{formatDateUS(p.paymentDate)}</td>
                                             <td className="px-4 py-3 text-gray-400 text-xs">{p.referenceNumber ?? "—"}</td>
                                         </tr>
                                     ))}

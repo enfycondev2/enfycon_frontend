@@ -2,6 +2,25 @@ import React from "react";
 
 export const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+export function formatDateUS(dateInput: string | Date | null | undefined): string {
+    if (!dateInput) return "—";
+    
+    // Check if it's a date-only string (YYYY-MM-DD or Prisma's T00:00:00.000Z)
+    const isDateOnly = typeof dateInput === "string" && (
+        /^\d{4}-\d{2}-\d{2}$/.test(dateInput) || 
+        dateInput.endsWith("T00:00:00.000Z")
+    );
+
+    const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+
+    return date.toLocaleDateString("en-US", {
+        timeZone: isDateOnly ? "UTC" : "America/New_York",
+        month: "2-digit",
+        day: "2-digit",
+        year: "numeric"
+    });
+}
+
 // Shared Tailwind Classes
 export const inputCls = "w-full border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2.5 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm transition";
 export const selectCls = `${inputCls} cursor-pointer`;

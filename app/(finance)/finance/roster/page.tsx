@@ -5,7 +5,7 @@ import Link from "next/link";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { financeGet } from "@/lib/financeClient";
 
-import { MONTHS, StatusBadge } from "@/components/finance/FinanceUI";
+import { MONTHS, StatusBadge, formatDateUS } from "@/components/finance/FinanceUI";
 
 interface MonthActual {
     month: number; year: number; hours: number;
@@ -41,8 +41,6 @@ const curr = (v: number) =>
     "$" + v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const pct = (v: number) => v.toFixed(1) + "%";
 const label = (dm: { month: number; year: number }) => `${MONTHS[dm.month - 1]} ${dm.year}`;
-const fmtDate = (s: string | null) =>
-    s ? new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
 
 // ─── Avatar ──────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = [
@@ -315,9 +313,9 @@ function RosterContent() {
                                                     <div className="text-[10px] text-gray-400 mt-0.5">AM: {row.accountManagerName}</div>
                                                     {row.projectStartDate && (
                                                         <div className="text-[10px] text-blue-500 mt-1 font-medium">
-                                                            📅 {fmtDate(row.projectStartDate)}
+                                                            📅 {formatDateUS(row.projectStartDate)}
                                                             {row.projectEndDate
-                                                                ? ` → ${fmtDate(row.projectEndDate)}`
+                                                                ? ` → ${formatDateUS(row.projectEndDate)}`
                                                                 : " → Ongoing"}
                                                         </div>
                                                     )}

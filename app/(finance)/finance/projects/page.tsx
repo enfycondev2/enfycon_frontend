@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { financeGet, financePost, financePatch } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
+import { formatDateUS } from "@/components/finance/FinanceUI";
 
 function AddProjectModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
     const [form, setForm] = useState({ consultantId: "", clientName: "", endClientName: "", startDate: "" });
@@ -183,7 +184,7 @@ function ProjectsContent() {
                                 <div className="flex items-start justify-between gap-4">
                                     <div>
                                         <p className="font-semibold text-gray-800 dark:text-white">{p.clientName ?? p.title ?? "Project"}</p>
-                                        <p className="text-xs text-gray-400 mt-0.5">Started: {p.startDate ? new Date(p.startDate).toLocaleDateString() : "—"}</p>
+                                        <p className="text-xs text-gray-400 mt-0.5">Started: {formatDateUS(p.startDate)}</p>
                                         <button onClick={() => toggleContracts(p.id)} className="text-xs text-violet-600 hover:underline mt-1">
                                             {expandedContracts.has(p.id) ? "Hide Contracts ▲" : "View Contracts ▼"}
                                         </button>

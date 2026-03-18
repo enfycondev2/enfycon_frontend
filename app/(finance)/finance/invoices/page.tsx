@@ -6,7 +6,7 @@ import { financeGet, financePost, financePatch, financeDelete } from "@/lib/fina
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 
 const STATUS_OPTIONS = ["", "PENDING", "PAID"];
-import { MONTHS } from "@/components/finance/FinanceUI";
+import { MONTHS, formatDateUS } from "@/components/finance/FinanceUI";
 const curr = (v: number) => `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function InvoicesContent() {
@@ -305,7 +305,7 @@ function InvoicesContent() {
                                             <td className="px-4 py-3 font-semibold text-gray-800 dark:text-white">${Number(inv.totalAmount).toLocaleString()}</td>
                                             <td className="px-4 py-3 text-xs">
                                                 <span className={overdue ? "text-red-600 font-bold" : "text-gray-400"}>
-                                                    {inv.expectedPaymentDate ? new Date(inv.expectedPaymentDate).toLocaleDateString() : "—"}
+                                                    {formatDateUS(inv.expectedPaymentDate)}
                                                 </span>
                                                 {overdue && <span className="ml-1 text-red-500 text-[10px]">({Math.abs(days!)}d overdue)</span>}
                                                 {!overdue && days !== null && days >= 0 && days <= 7 && inv.status === "PENDING" && (
