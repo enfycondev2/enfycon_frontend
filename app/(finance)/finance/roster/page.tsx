@@ -26,6 +26,7 @@ interface Totals {
 interface Row {
     id: string; name: string; email: string; phone: string;
     consultantStatus: "ACTIVE" | "ENDED";
+    engagementType: string | null;
     clientName: string; endClientName: string | null;
     projectStartDate: string | null; projectEndDate: string | null;
     recruiterName: string; accountManagerName: string;
