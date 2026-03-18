@@ -70,7 +70,7 @@ const selectCls = `${inputCls} cursor-pointer`;
 
 // ─── Section 1 ───────────────────────────────────────────────────────────────
 
-function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
+function Section1({ onSaved }: { onSaved: (consultantId: string, engType: string) => void }) {
     const [form, setForm] = useState<Section1Data>({
         name: "", email: "", phone: "", immigrationStatus: "", engagementType: "",
         recruiterId: "", accountManagerId: "", podHeadId: "", jobCode: "",
@@ -106,7 +106,11 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
 
             if (form.engagementType) {
                 payload.engagementType = form.engagementType;
-                if (form.clientPaymentTermsDays) payload.clientPaymentTermsDays = parseInt(form.clientPaymentTermsDays, 10);
+                if (form.engagementType === "Referral") {
+                    payload.clientPaymentTermsDays = 0;
+                } else if (form.clientPaymentTermsDays) {
+                    payload.clientPaymentTermsDays = parseInt(form.clientPaymentTermsDays, 10);
+                }
                 
                 if (form.engagementType === "C2C") {
                     payload.c2cVendorName = form.c2cVendorName;
@@ -134,7 +138,7 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
                 }
             }
             
-            onSaved(returnedId);
+            onSaved(returnedId, form.engagementType);
         } catch (err: any) { setError(err.message); }
         finally { setSaving(false); }
     }
@@ -168,9 +172,11 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
                 <Field label="Job Code (Optional)" hint="Link to a job submission">
                     <input className={inputCls} placeholder="e.g. JOB-001" value={form.jobCode} onChange={(e) => set("jobCode", e.target.value)} />
                 </Field>
-                <Field label="Consultant Payment Terms (Days) *">
-                    <input required type="number" min="0" className={inputCls} placeholder="30" value={form.clientPaymentTermsDays} onChange={(e) => set("clientPaymentTermsDays", e.target.value)} />
-                </Field>
+                {form.engagementType !== "Referral" && (
+                    <Field label="Consultant Payment Terms (Days) *">
+                        <input required type="number" min="0" className={inputCls} placeholder="30" value={form.clientPaymentTermsDays} onChange={(e) => set("clientPaymentTermsDays", e.target.value)} />
+                    </Field>
+                )}
             </div>
 
             <div className="border-t border-gray-100 dark:border-gray-700 pt-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -236,7 +242,7 @@ function Section1({ onSaved }: { onSaved: (consultantId: string) => void }) {
 
 // ─── Section 3 ───────────────────────────────────────────────────────────────
 
-function Section3({ consultantId, onDone, onBack }: { consultantId: string; onDone: () => void; onBack: () => void }) {
+function Section3({ consultantId, engagementType, onDone, onBack }: { consultantId: string; engagementType: string; onDone: () => void; onBack: () => void }) {
     const [form, setForm] = useState<Section3Data>({
         clientName: "", endClientName: "", startDate: "", endDate: "",
         billingRate: "", payRate: "", currency: "USD", paymentTermsDays: "30"
@@ -308,7 +314,7 @@ function Section3({ consultantId, onDone, onBack }: { consultantId: string; onDo
             await financePost("finance/contracts", {
                 projectId,
                 billRate: parseFloat(form.billingRate),
-                payRate: parseFloat(form.payRate),
+                payRate: engagementType === "Referral" ? 0 : parseFloat(form.payRate || "0"),
                 currency: form.currency,
                 paymentTermsDays: parseInt(form.paymentTermsDays, 10)
             });
@@ -352,7 +358,7 @@ function Section3({ consultantId, onDone, onBack }: { consultantId: string; onDo
                     <input required type="number" min="0" step="0.01" className={inputCls} placeholder="60" value={form.billingRate} onChange={(e) => set("billingRate", e.target.value)} />
                 </Field>
                 <Field label="Pay Rate ($/hr) *" hint="Enter 0 for referral cases (no payout)">
-                    <input required type="number" min="0" step="0.01" className={inputCls} placeholder="50" value={form.payRate} onChange={(e) => set("payRate", e.target.value)} />
+                    <input required disabled={engagementType === "Referral"} type="number" min="0" step="0.01" className={inputCls} placeholder={engagementType === "Referral" ? "0 (Referral)" : "50"} value={engagementType === "Referral" ? "0" : form.payRate} onChange={(e) => set("payRate", e.target.value)} />
                 </Field>
                 <Field label="Currency">
                     <select className={selectCls} value={form.currency} onChange={(e) => set("currency", e.target.value)}>
@@ -392,6 +398,7 @@ const STEPS = ["Candidate Info", "Billing & Rates"];
 function CandidateOnboardContent() {
     const [step, setStep] = useState(0);
     const [consultantId, setConsultantId] = useState("");
+    const [engagementType, setEngagementType] = useState("");
     const [done, setDone] = useState(false);
 
     if (done) {
@@ -438,8 +445,8 @@ function CandidateOnboardContent() {
                     </div>
 
                     <div className="p-6">
-                        {step === 0 && <Section1 onSaved={(id) => { setConsultantId(id); setStep(1); }} />}
-                        {step === 1 && <Section3 consultantId={consultantId} onDone={() => setDone(true)} onBack={() => setStep(0)} />}
+                        {step === 0 && <Section1 onSaved={(id, engType) => { setConsultantId(id); setEngagementType(engType); setStep(1); }} />}
+                        {step === 1 && <Section3 consultantId={consultantId} engagementType={engagementType} onDone={() => setDone(true)} onBack={() => setStep(0)} />}
                     </div>
                 </div>
 

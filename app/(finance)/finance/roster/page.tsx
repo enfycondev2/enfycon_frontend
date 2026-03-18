@@ -298,8 +298,13 @@ function RosterContent() {
                                                                 </Link>
                                                             </div>
                                                             <div className="text-[11px] text-gray-400 truncate">{row.email}</div>
-                                                            <div className="mt-1">
+                                                            <div className="mt-1 flex items-center gap-2">
                                                                 <StatusBadge status={row.consultantStatus} />
+                                                                {row.engagementType && (
+                                                                    <span className="px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-[9px] uppercase tracking-widest font-bold shadow-sm">
+                                                                        {row.engagementType}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>

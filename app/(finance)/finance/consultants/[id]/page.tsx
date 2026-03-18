@@ -549,7 +549,7 @@ function ConsultantDetailContent() {
                 c2cContactEmail: res.c2cContactEmail ?? "",
                 c2cAddress: res.c2cAddress ?? "",
                 c2cPhoneFax: res.c2cPhoneFax ?? "",
-                clientPaymentTermsDays: res.clientPaymentTermsDays ? String(res.clientPaymentTermsDays) : "30",
+                clientPaymentTermsDays: (res.clientPaymentTermsDays !== null && res.clientPaymentTermsDays !== undefined) ? String(res.clientPaymentTermsDays) : "30",
                 c2cProjectStartDate: res.c2cProjectStartDate ? new Date(res.c2cProjectStartDate).toISOString().slice(0, 10) : ""
             });
 
@@ -599,8 +599,13 @@ function ConsultantDetailContent() {
                 else payload.c2cProjectStartDate = new Date(payload.c2cProjectStartDate).toISOString();
             }
             
-            if (payload.clientPaymentTermsDays) payload.clientPaymentTermsDays = parseInt(payload.clientPaymentTermsDays, 10);
-            else payload.clientPaymentTermsDays = 0;
+            if (payload.engagementType === "Referral") {
+                payload.clientPaymentTermsDays = 0;
+            } else if (payload.clientPaymentTermsDays) {
+                payload.clientPaymentTermsDays = parseInt(payload.clientPaymentTermsDays, 10);
+            } else {
+                payload.clientPaymentTermsDays = 0;
+            }
             
             // Convert empty strings to null for optional references
             if (payload.podHeadId === "") payload.podHeadId = null;
@@ -673,7 +678,7 @@ function ConsultantDetailContent() {
             await financePost("finance/contracts", {
                 projectId,
                 billRate: parseFloat(billingForm.billingRate),
-                payRate: parseFloat(billingForm.payRate),
+                payRate: editForm.engagementType === "Referral" ? 0 : parseFloat(billingForm.payRate || "0"),
                 currency: billingForm.currency,
                 paymentTermsDays: parseInt(billingForm.paymentTermsDays, 10)
             });
@@ -827,9 +832,11 @@ function ConsultantDetailContent() {
                                         <Field label="Job Code (Optional)" hint="Link to a job submission">
                                             <input className={inputCls} placeholder="e.g. JOB-001" value={editForm.jobCode || ""} onChange={(e) => setEditForm((f: any) => ({ ...f, jobCode: e.target.value }))} />
                                         </Field>
-                                        <Field label="Consultant Payment Terms (Days) *">
-                                            <input required type="number" min="0" className={inputCls} value={editForm.clientPaymentTermsDays} onChange={(e) => setEditForm((f: any) => ({ ...f, clientPaymentTermsDays: e.target.value }))} />
-                                        </Field>
+                                        {editForm.engagementType !== "Referral" && (
+                                            <Field label="Consultant Payment Terms (Days) *">
+                                                <input required type="number" min="0" className={inputCls} value={editForm.clientPaymentTermsDays} onChange={(e) => setEditForm((f: any) => ({ ...f, clientPaymentTermsDays: e.target.value }))} />
+                                            </Field>
+                                        )}
                                     </div>
                                     <div className="border-t border-gray-100 dark:border-gray-700 pt-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                         <Field label="Recruiter">
@@ -919,7 +926,7 @@ function ConsultantDetailContent() {
                                             <input required type="number" step="0.01" className={inputCls} value={billingForm.billingRate} onChange={(e) => setBillingForm((f: any) => ({ ...f, billingRate: e.target.value }))} />
                                         </Field>
                                         <Field label="Pay Rate ($/hr) *">
-                                            <input required type="number" step="0.01" className={inputCls} value={billingForm.payRate} onChange={(e) => setBillingForm((f: any) => ({ ...f, payRate: e.target.value }))} />
+                                            <input required disabled={editForm.engagementType === "Referral"} type="number" step="0.01" className={inputCls} value={editForm.engagementType === "Referral" ? "0" : billingForm.payRate} onChange={(e) => setBillingForm((f: any) => ({ ...f, payRate: e.target.value }))} />
                                         </Field>
                                         <Field label="Currency">
                                             <select className={selectCls} value={billingForm.currency} onChange={(e) => setBillingForm((f: any) => ({ ...f, currency: e.target.value }))}>
