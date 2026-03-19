@@ -481,6 +481,89 @@ function ConsultantDetailContent() {
     const [duration, setDuration] = useState("ONGOING");
     const [options, setOptions] = useState<{ recruiters: any[], accountManagers: any[], podHeads: any[] }>({ recruiters: [], accountManagers: [], podHeads: [] });
 
+    const [activeMarkPaid, setActiveMarkPaid] = useState<any>(null); // For Invoice
+    const [activeMarkPaidPayout, setActiveMarkPaidPayout] = useState<any>(null);
+    const [activeEditInvoice, setActiveEditInvoice] = useState<any>(null);
+    const [activeEditPayment, setActiveEditPayment] = useState<any>(null);
+    const [activeEditPayout, setActiveEditPayout] = useState<any>(null);
+
+    const [modalForm, setModalForm] = useState({
+        paymentDate: new Date().toISOString().slice(0, 10),
+        referenceNumber: "",
+        amount: ""
+    });
+
+    async function handleMarkPaid(invoiceId: string) {
+        try {
+            await financePatch(`finance/invoices/${invoiceId}/mark-paid`, {
+                paymentDate: modalForm.paymentDate,
+                referenceNumber: modalForm.referenceNumber || "MANUAL_MARK_PAID"
+            });
+            setActiveMarkPaid(null);
+            await load();
+        } catch (err: any) { alert(err.message); }
+    }
+
+    async function handleMarkPayoutPaidSubmit() {
+        if (!activeMarkPaidPayout) return;
+        try {
+            await financePost("finance/payouts", {
+                consultantId: data.id,
+                month: activeMarkPaidPayout.month,
+                year: activeMarkPaidPayout.year,
+                hours: Number(activeMarkPaidPayout.hours),
+                payRate: Number(activeMarkPaidPayout.payRate),
+                consultantInvoiceDate: activeMarkPaidPayout.consultantInvoiceDate ? new Date(activeMarkPaidPayout.consultantInvoiceDate).toISOString().slice(0, 10) : undefined,
+                paymentDate: modalForm.paymentDate,
+                referenceNumber: modalForm.referenceNumber || "DIRECT_PAY",
+            });
+            setActiveMarkPaidPayout(null);
+            await load();
+        } catch (err: any) { alert(err.message); }
+    }
+
+    async function handleUpdateInvoice(e: React.FormEvent) {
+        e.preventDefault();
+        try {
+            await financePatch(`finance/invoices/${activeEditInvoice.id}`, {
+                hours: Number(activeEditInvoice.hours),
+                billRate: Number(activeEditInvoice.billRate),
+                invoiceDate: activeEditInvoice.invoiceDate,
+                referenceNumber: activeEditInvoice.referenceNumber
+            });
+            setActiveEditInvoice(null);
+            await load();
+        } catch (err: any) { alert(err.message); }
+    }
+
+    async function handleUpdatePayment(e: React.FormEvent) {
+        e.preventDefault();
+        try {
+            await financePatch(`finance/payments/${activeEditPayment.id}`, {
+                amountReceived: Number(activeEditPayment.amountReceived),
+                paymentDate: activeEditPayment.paymentDate,
+                referenceNumber: activeEditPayment.referenceNumber
+            });
+            setActiveEditPayment(null);
+            await load();
+        } catch (err: any) { alert(err.message); }
+    }
+
+    async function handleUpdatePayout(e: React.FormEvent) {
+        e.preventDefault();
+        try {
+            await financePatch(`finance/payouts/${activeEditPayout.id}`, {
+                hours: Number(activeEditPayout.hours),
+                payRate: Number(activeEditPayout.payRate),
+                consultantInvoiceDate: activeEditPayout.consultantInvoiceDate,
+                paymentDate: activeEditPayout.paymentDate,
+                referenceNumber: activeEditPayout.referenceNumber
+            });
+            setActiveEditPayout(null);
+            await load();
+        } catch (err: any) { alert(err.message); }
+    }
+
     function handleStartDateChange(val: string) {
         setBillingForm((f: any) => ({ ...f, startDate: val }));
         if (duration === "3_MONTHS" || duration === "6_MONTHS" || duration === "12_MONTHS") {
@@ -690,11 +773,6 @@ function ConsultantDetailContent() {
         finally { setSaving(false); }
     }
 
-    async function handleMarkPaid(invoiceId: string) {
-        try { await financePatch(`finance/invoices/${invoiceId}/mark-paid`, {}); await load(); }
-        catch (err: any) { alert(err.message); }
-    }
-
     async function handleMarkUnpaid(invoiceId: string) {
         try { await financePatch(`finance/invoices/${invoiceId}/mark-unpaid`, {}); await load(); }
         catch (err: any) { alert(err.message); }
@@ -750,20 +828,12 @@ function ConsultantDetailContent() {
     }
 
     async function handleMarkPayoutPaid(payout: any) {
-        if (!window.confirm(`Mark ${MONTHS[payout.month - 1]} ${payout.year} payout of $${Number(payout.amount).toLocaleString()} as PAID?`)) return;
-        try {
-            await financePost("finance/payouts", {
-                consultantId: data.id,
-                month: payout.month,
-                year: payout.year,
-                hours: Number(payout.hours),
-                payRate: Number(payout.payRate),
-                consultantInvoiceDate: payout.consultantInvoiceDate ? new Date(payout.consultantInvoiceDate).toISOString().slice(0, 10) : undefined,
-                paymentDate: new Date().toISOString().slice(0, 10),
-                referenceNumber: "DIRECT_PAY",
-            });
-            await load();
-        } catch (err: any) { alert(err.message); }
+        setModalForm({
+            paymentDate: new Date().toISOString().slice(0, 10),
+            referenceNumber: "",
+            amount: Number(payout.amount).toString()
+        });
+        setActiveMarkPaidPayout(payout);
     }
 
     if (loading) return <div className="p-12 text-center text-gray-400 animate-pulse">Loading…</div>;
@@ -775,8 +845,11 @@ function ConsultantDetailContent() {
     const allPayments = allInvoices.flatMap((inv: any) => (inv.payments ?? [])
         .map((p: any) => ({ ...p, invoiceMonth: inv.invoiceMonth, invoiceYear: inv.invoiceYear, projectName: inv.projectName })))
         .sort((a: any, b: any) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
-    const consultantInvoices = (data.payouts ?? []).filter((p: any) => p.status === 'PENDING');
-    const consultantPayouts = (data.payouts ?? []).filter((p: any) => p.status === 'PAID');
+    const consultantInvoices = (data.payouts ?? [])
+        .sort((a: any, b: any) => (b.year - a.year) || (b.month - a.month) || (b.week - a.week));
+    const consultantPayouts = (data.payouts ?? [])
+        .filter((p: any) => p.status === 'PAID')
+        .sort((a: any, b: any) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
 
     if (editing) {
         return (
@@ -1190,8 +1263,11 @@ function ConsultantDetailContent() {
                                                     {inv.status === "PAID" ? (
                                                         <button onClick={() => handleMarkUnpaid(inv.id)} className="text-xs text-orange-500 hover:underline">Revoke Paid</button>
                                                     ) : (
-                                                        <button onClick={() => handleMarkPaid(inv.id)} className="text-xs text-violet-600 hover:underline">Mark Paid</button>
+                                                        <button onClick={() => { setActiveMarkPaid(inv); setModalForm({ paymentDate: new Date().toISOString().slice(0, 10), referenceNumber: "", amount: inv.totalAmount.toString() }); }} className="text-xs text-violet-600 hover:underline">Mark Paid</button>
                                                     )}
+                                                    <button onClick={() => setActiveEditInvoice(inv)} className="text-gray-400 hover:text-violet-600 p-1" title="Edit Invoice">
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                    </button>
                                                     <button onClick={() => handleDeleteInvoice(inv.id)} className="text-xs text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition" title="Delete Invoice">
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                     </button>
@@ -1227,7 +1303,10 @@ function ConsultantDetailContent() {
                                                 <td className="py-2 text-gray-400 text-xs">{MONTHS[p.invoiceMonth - 1]} {p.invoiceYear}</td>
                                                 <td className="py-2 text-gray-500 italic text-xs">{p.referenceNumber || "Bank Transfer"}</td>
                                                 <td className="py-2 font-bold text-emerald-600 text-right font-mono">${Number(p.amountReceived).toLocaleString()}</td>
-                                                <td className="py-2 text-right">
+                                                <td className="py-2 text-right flex items-center justify-end gap-2">
+                                                    <button onClick={() => setActiveEditPayment(p)} className="text-gray-400 hover:text-violet-600 p-1" title="Edit Payment">
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                    </button>
                                                     <button onClick={() => handleDeletePayment(p.id)} className="text-red-400 hover:text-red-600 transition" title="Delete Payment">
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                     </button>
@@ -1241,9 +1320,9 @@ function ConsultantDetailContent() {
                     </Card>
 
                     {/* Consultant Invoices */}
-                    <Card title="3. Consultant Invoices (AP - Pending)">
+                    <Card title="3. Consultant Invoices (AP)">
                         {!consultantInvoices.length ? (
-                            <p className="text-gray-400 text-sm">No pending consultant invoices.</p>
+                            <p className="text-gray-400 text-sm">No consultant invoices recorded yet.</p>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
@@ -1251,9 +1330,9 @@ function ConsultantDetailContent() {
                                         <tr>
                                             <th className="pb-2">Period</th>
                                             <th className="pb-2">Hours</th>
-                                            <th className="pb-2 text-right">AMOUNT DUE</th>
+                                            <th className="pb-2 text-right">INV AMOUNT</th>
                                             <th className="pb-2 text-right">CNSLT INV DATE</th>
-                                            <th className="pb-2 text-right">STATUS</th>
+                                            <th className="pb-2 text-right pr-4">STATUS</th>
                                             <th className="pb-2"></th>
                                         </tr>
                                     </thead>
@@ -1262,18 +1341,25 @@ function ConsultantDetailContent() {
                                             <tr key={inv.id}>
                                                 <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">
                                                     {MONTHS[inv.month - 1]} {inv.year}
-                                                    {inv.week === 6 ? <span className="ml-1 text-[10px] bg-violet-50 text-violet-500 px-1 rounded">1st Half</span>
-                                                        : inv.week === 7 ? <span className="ml-1 text-[10px] bg-violet-50 text-violet-500 px-1 rounded">2nd Half</span>
-                                                        : inv.week === 8 ? <span className="ml-1 text-[10px] bg-violet-50 text-violet-500 px-1 rounded">Custom</span>
-                                                        : inv.week ? <span className="ml-1 text-[10px] bg-violet-50 text-violet-500 px-1 rounded">W{inv.week}</span> : null}
+                                                    {inv.week === 6 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">1st Half</span>
+                                                        : inv.week === 7 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">2nd Half</span>
+                                                        : inv.week === 8 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">Custom</span>
+                                                        : inv.week ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">W{inv.week}</span> : null}
                                                 </td>
                                                 <td className="py-2 text-gray-400 text-xs font-mono">{Number(inv.hours)}h</td>
                                                 <td className="py-2 font-bold text-orange-600 text-right">${Number(inv.amount).toLocaleString()}</td>
-                                                <td className="py-2 text-gray-400 text-xs text-right italic">{inv.consultantInvoiceDate ? formatDateUS(inv.consultantInvoiceDate) : "Waiting..."}</td>
-                                                <td className="py-2 text-right"><StatusBadge status="PENDING" /></td>
+                                                <td className="py-2 text-gray-400 text-xs text-right italic">{inv.consultantInvoiceDate ? formatDateUS(inv.consultantInvoiceDate) : "—"}</td>
+                                                <td className="py-2 text-right pr-4"><StatusBadge status={inv.status ?? "PENDING"} /></td>
                                                 <td className="py-2 text-right flex items-center justify-end gap-2">
-                                                    <button onClick={() => handleMarkPayoutPaid(inv)} className="text-xs text-violet-600 hover:underline">Pay</button>
-                                                    <button onClick={() => handleDeletePayout(inv.id)} className="text-xs text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition" title="Delete Invoice">
+                                                    {inv.status === "PAID" ? (
+                                                        <button onClick={() => handleRevokePayout(inv.id)} className="text-xs text-orange-500 hover:underline">Revoke</button>
+                                                    ) : (
+                                                        <button onClick={() => handleMarkPayoutPaid(inv)} className="text-xs text-violet-600 hover:underline">Mark Paid</button>
+                                                    )}
+                                                    <button onClick={() => setActiveEditPayout(inv)} className="text-gray-400 hover:text-violet-600 p-1" title="Edit Payout">
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                    </button>
+                                                    <button onClick={() => handleDeletePayout(inv.id)} className="text-xs text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition" title="Delete record">
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                     </button>
                                                 </td>
@@ -1286,40 +1372,36 @@ function ConsultantDetailContent() {
                     </Card>
 
                     {/* Consultant Payouts */}
-                    <Card title="4. Consultant Payouts (AP - Paid)">
+                    <Card title="4. Consultant Payouts (Processed)">
                         {!consultantPayouts.length ? (
-                            <p className="text-gray-400 text-sm">No payouts recorded yet. Use &quot;Pay Consultant&quot; above.</p>
+                            <p className="text-gray-400 text-sm">No payouts processed yet.</p>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead className="text-left text-xs text-gray-400 uppercase">
                                         <tr>
-                                            <th className="pb-2">Period</th>
-                                            <th className="pb-2 text-right">PAID AMOUNT</th>
-                                            <th className="pb-2 text-right">PAY DATE</th>
-                                            <th className="pb-2 text-right">REF #</th>
-                                            <th className="pb-2 text-right pr-4">STATUS</th>
+                                            <th className="pb-2">Date</th>
+                                            <th className="pb-2">Invoice Period</th>
+                                            <th className="pb-2">Reference</th>
+                                            <th className="pb-2 text-right pr-4">AMOUNT PAID</th>
                                             <th className="pb-2"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {consultantPayouts.map((p: any) => (
                                             <tr key={p.id}>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">
+                                                <td className="py-2 text-emerald-600 dark:text-emerald-400 font-semibold">{formatDateUS(p.paymentDate)}</td>
+                                                <td className="py-2 text-gray-600 dark:text-gray-300">
                                                     {MONTHS[p.month - 1]} {p.year}
-                                                    {p.week === 6 ? <span className="ml-1 text-[10px] bg-emerald-50 text-emerald-600 px-1 rounded">1st Half</span>
-                                                        : p.week === 7 ? <span className="ml-1 text-[10px] bg-emerald-50 text-emerald-600 px-1 rounded">2nd Half</span>
-                                                        : p.week === 8 ? <span className="ml-1 text-[10px] bg-emerald-50 text-emerald-600 px-1 rounded">Custom</span>
-                                                        : p.week ? <span className="ml-1 text-[10px] bg-emerald-50 text-emerald-600 px-1 rounded">W{p.week}</span> : null}
-                                                    {p.hours > 0 ? <span className="text-[10px] text-gray-400">({Number(p.hours)}h)</span> : null}
+                                                    {p.week === 6 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">1st Half</span>
+                                                        : p.week === 7 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">2nd Half</span>
+                                                        : p.week === 8 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">Custom</span>
+                                                        : p.week ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">W{p.week}</span> : null}
                                                 </td>
-                                                <td className="py-2 font-bold text-gray-800 dark:text-gray-100 text-right font-mono">${Number(p.amount).toLocaleString()}</td>
-                                                <td className="py-2 text-emerald-600 text-xs font-semibold text-right">{formatDateUS(p.paymentDate)}</td>
-                                                <td className="py-2 text-gray-500 font-mono text-[10px] text-right">{p.referenceNumber || "—"}</td>
-                                                <td className="py-2 text-right pr-4"><StatusBadge status="PAID" /></td>
-                                                <td className="py-2 text-right flex items-center justify-end gap-2">
-                                                    <button onClick={() => handleRevokePayout(p.id)} className="text-xs text-orange-500 hover:underline">Revoke</button>
-                                                    <button onClick={() => handleDeletePayout(p.id)} className="text-xs text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition" title="Delete Payout">
+                                                <td className="py-2 text-gray-500 font-mono text-xs">{p.referenceNumber || "—"}</td>
+                                                <td className="py-2 font-bold text-gray-800 dark:text-gray-100 text-right pr-4 font-mono">${Number(p.amount).toLocaleString()}</td>
+                                                <td className="py-2 text-right">
+                                                    <button onClick={() => handleRevokePayout(p.id)} className="text-gray-400 hover:text-orange-500 p-1 rounded hover:bg-orange-50 transition" title="Revoke Payment (Return to Pending)">
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                     </button>
                                                 </td>
@@ -1422,6 +1504,115 @@ function ConsultantDetailContent() {
             <div className="mt-4">
                 <Link href="/finance/consultants" className="text-sm text-gray-400 hover:text-violet-600 hover:underline">← Back to Consultants</Link>
             </div>
+
+            {activeMarkPaid && (
+                <Modal title="Mark Invoice as Paid" onClose={() => setActiveMarkPaid(null)}>
+                    <div className="space-y-4">
+                        <p className="text-sm text-gray-500">Record a payment for this invoice. This will automatically update the invoice status to PAID.</p>
+                        <Field label="Payment Date">
+                            <input type="date" className={inputCls} value={modalForm.paymentDate} onChange={e => setModalForm(f => ({ ...f, paymentDate: e.target.value }))} />
+                        </Field>
+                        <Field label="Reference Number (Check # / ACH)">
+                            <input type="text" className={inputCls} placeholder="e.g. ACH-9982" value={modalForm.referenceNumber} onChange={e => setModalForm(f => ({ ...f, referenceNumber: e.target.value }))} />
+                        </Field>
+                        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <button onClick={() => setActiveMarkPaid(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-gray-600">Cancel</button>
+                            <button onClick={() => handleMarkPaid(activeMarkPaid.id)} className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-violet-100 dark:shadow-none transition hover:bg-violet-700">Confirm Payment</button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {activeMarkPaidPayout && (
+                <Modal title="Mark Consultant Payout as Paid" onClose={() => setActiveMarkPaidPayout(null)}>
+                    <div className="space-y-4">
+                        <p className="text-sm text-gray-500">Confirm payment of <strong>${Number(activeMarkPaidPayout.amount).toLocaleString()}</strong> to the consultant.</p>
+                        <Field label="Payment Date">
+                            <input type="date" className={inputCls} value={modalForm.paymentDate} onChange={e => setModalForm(f => ({ ...f, paymentDate: e.target.value }))} />
+                        </Field>
+                        <Field label="Reference Number (Check # / ACH / Ref)">
+                            <input type="text" className={inputCls} placeholder="e.g. Bank Transfer" value={modalForm.referenceNumber} onChange={e => setModalForm(f => ({ ...f, referenceNumber: e.target.value }))} />
+                        </Field>
+                        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <button onClick={() => setActiveMarkPaidPayout(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-gray-600">Cancel</button>
+                            <button onClick={handleMarkPayoutPaidSubmit} className="bg-emerald-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-100 dark:shadow-none transition hover:bg-emerald-700">Confirm Payment</button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {activeEditInvoice && (
+                <Modal title="Edit Invoice Details" onClose={() => setActiveEditInvoice(null)}>
+                    <form onSubmit={handleUpdateInvoice} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <Field label="Hours Worked">
+                                <input type="number" step="0.5" className={inputCls} value={activeEditInvoice.hours} onChange={e => setActiveEditInvoice({ ...activeEditInvoice, hours: e.target.value })} />
+                            </Field>
+                            <Field label="Bill Rate ($/hr)">
+                                <input type="number" step="0.01" className={inputCls} value={activeEditInvoice.billRate} onChange={e => setActiveEditInvoice({ ...activeEditInvoice, billRate: e.target.value })} />
+                            </Field>
+                        </div>
+                        <Field label="Invoice Date">
+                            <input type="date" className={inputCls} value={activeEditInvoice.invoiceDate?.slice(0, 10)} onChange={e => setActiveEditInvoice({ ...activeEditInvoice, invoiceDate: e.target.value })} />
+                        </Field>
+                        <Field label="Reference / Invoice #">
+                            <input type="text" className={inputCls} value={activeEditInvoice.referenceNumber || ""} onChange={e => setActiveEditInvoice({ ...activeEditInvoice, referenceNumber: e.target.value })} />
+                        </Field>
+                        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <button type="button" onClick={() => setActiveEditInvoice(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-gray-600">Cancel</button>
+                            <button type="submit" className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg transition hover:bg-violet-700">Save Changes</button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
+            {activeEditPayment && (
+                <Modal title="Edit Payment Record" onClose={() => setActiveEditPayment(null)}>
+                    <form onSubmit={handleUpdatePayment} className="space-y-4">
+                        <Field label="Amount Received ($)">
+                            <input type="number" step="0.01" className={inputCls} value={activeEditPayment.amountReceived} onChange={e => setActiveEditPayment({ ...activeEditPayment, amountReceived: e.target.value })} />
+                        </Field>
+                        <Field label="Payment Date">
+                            <input type="date" className={inputCls} value={activeEditPayment.paymentDate?.slice(0, 10)} onChange={e => setActiveEditPayment({ ...activeEditPayment, paymentDate: e.target.value })} />
+                        </Field>
+                        <Field label="Reference #">
+                            <input type="text" className={inputCls} value={activeEditPayment.referenceNumber || ""} onChange={e => setActiveEditPayment({ ...activeEditPayment, referenceNumber: e.target.value })} />
+                        </Field>
+                        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <button type="button" onClick={() => setActiveEditPayment(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-gray-600">Cancel</button>
+                            <button type="submit" className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg transition hover:bg-violet-700">Save Changes</button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
+            {activeEditPayout && (
+                <Modal title="Edit Consultant Payout/AP" onClose={() => setActiveEditPayout(null)}>
+                    <form onSubmit={handleUpdatePayout} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <Field label="Hours">
+                                <input type="number" step="0.5" className={inputCls} value={activeEditPayout.hours} onChange={e => setActiveEditPayout({ ...activeEditPayout, hours: e.target.value })} />
+                            </Field>
+                            <Field label="Pay Rate ($/hr)">
+                                <input type="number" step="0.01" className={inputCls} value={activeEditPayout.payRate} onChange={e => setActiveEditPayout({ ...activeEditPayout, payRate: e.target.value })} />
+                            </Field>
+                        </div>
+                        <Field label="Consultant Invoice Date">
+                            <input type="date" className={inputCls} value={activeEditPayout.consultantInvoiceDate?.slice(0, 10) || ""} onChange={e => setActiveEditPayout({ ...activeEditPayout, consultantInvoiceDate: e.target.value })} />
+                        </Field>
+                        <Field label="Payment Date (if paid)">
+                            <input type="date" className={inputCls} value={activeEditPayout.paymentDate?.slice(0, 10) || ""} onChange={e => setActiveEditPayout({ ...activeEditPayout, paymentDate: e.target.value })} />
+                        </Field>
+                        <Field label="Reference / Payment #">
+                            <input type="text" className={inputCls} value={activeEditPayout.referenceNumber || ""} onChange={e => setActiveEditPayout({ ...activeEditPayout, referenceNumber: e.target.value })} />
+                        </Field>
+                        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <button type="button" onClick={() => setActiveEditPayout(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-gray-600">Cancel</button>
+                            <button type="submit" className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg transition hover:bg-violet-700">Save Changes</button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
         </>
     );
 }
@@ -1623,6 +1814,24 @@ function RecordPayoutForm({ consultantId, payouts, onRecorded }: { consultantId:
             {error && <p className="col-span-full text-red-500 text-[10px] font-medium mt-1">{error}</p>}
             {ok && <p className="col-span-full text-emerald-600 text-[10px] font-bold mt-1">✓ Payment recorded. Status set to PAID!</p>}
         </form>
+    );
+}
+
+function Modal({ title, onClose, children }: { title: string, onClose: () => void, children: React.ReactNode }) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/20">
+                    <h3 className="font-bold text-gray-800 dark:text-white uppercase tracking-wider text-sm">{title}</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div className="p-6">
+                    {children}
+                </div>
+            </div>
+        </div>
     );
 }
 
