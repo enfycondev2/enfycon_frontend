@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { financeDelete, financeGet, financePatch, financePost } from "@/lib/financeClient";
@@ -142,7 +142,7 @@ function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogg
 }
 
 // ─── Create Invoice inline form ───────────────────────────────────────────────
-function CreateInvoiceForm({ projects, hours: allHours, onCreated }: { projects: any[]; hours: any[]; onCreated: () => void }) {
+function CreateInvoiceForm({ projects, hours: allHours, onCreated, initialPeriod }: { projects: any[]; hours: any[]; onCreated: () => void; initialPeriod?: any }) {
     const now = new Date();
 
     // Helper: get bill rate from project's latest contract
@@ -153,15 +153,33 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated }: { projects:
     }
 
     // Helper: get logged hours for a consultant in a given month/year (sum all entries or filter by week)
+    // Helper: get logged hours for a consultant in a given month/year
     function getLoggedHours(month: number, year: number, week?: number) {
-        const matches = allHours?.filter((h: any) => 
-            h.month === month && 
-            h.year === year && 
-            (week === undefined || week === 0 ? true : h.week === week)
-        );
-        if (!matches || matches.length === 0) return "";
-        const sum = matches.reduce((acc: number, curr: any) => acc + Number(curr.hours), 0);
-        return String(sum);
+        if (!allHours?.length) return "";
+        
+        // Filter by month and year first
+        const monthMatches = allHours.filter(h => h.month === month && h.year === year);
+        if (monthMatches.length === 0) return "";
+
+        // If a specific period is requested (W1, 1st Half, etc.), find that exact match
+        if (week !== undefined && week !== 0) {
+            const exact = monthMatches.find(h => h.week === week);
+            return exact ? String(Number(exact.hours)) : "";
+        }
+
+        // For "Full Month" (week === 0 or undefined):
+        // 1. Check if there's an explicit "Full Month" log (no week)
+        const fullMonthLog = monthMatches.find(h => !h.week || h.week === 0);
+        if (fullMonthLog) return String(Number(fullMonthLog.hours));
+
+        // 2. If no full month log, sum up all specific period logs (weeks/halves/custom)
+        const periodLogs = monthMatches.filter(h => h.week && h.week > 0);
+        if (periodLogs.length > 0) {
+            const sum = periodLogs.reduce((acc, curr) => acc + Number(curr.hours), 0);
+            return String(sum);
+        }
+
+        return "";
     }
 
     const defaultProjectId = projects[0]?.id ?? "";
@@ -169,14 +187,14 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated }: { projects:
     const defaultYear = now.getFullYear();
 
     const [form, setForm] = useState({
-        projectId: defaultProjectId,
-        invoiceMonth: defaultMonth,
-        invoiceYear: defaultYear,
+        projectId: initialPeriod?.projectId ?? defaultProjectId,
+        invoiceMonth: initialPeriod?.month ?? defaultMonth,
+        invoiceYear: initialPeriod?.year ?? defaultYear,
         invoiceDate: now.toISOString().slice(0, 10),
-        hours: getLoggedHours(defaultMonth, defaultYear),
-        billRate: getBillRate(defaultProjectId),
+        hours: initialPeriod?.hours ? String(initialPeriod.hours) : getLoggedHours(initialPeriod?.month ?? defaultMonth, initialPeriod?.year ?? defaultYear, initialPeriod?.week ?? 0),
+        billRate: getBillRate(initialPeriod?.projectId ?? defaultProjectId),
         referenceNumber: "", // New: Client Invoice #
-        week: 0, // 0 for full month, 1-5 for W1-W5, 6-7 for halves, 8 for custom
+        week: initialPeriod?.week ?? 0, // 0 for full month, 1-5 for W1-W5, 6-7 for halves, 8 for custom
     });
 
     // Reactive Auto-fill: Update hours and billRate whenever selection or data changes
@@ -609,10 +627,15 @@ function ConsultantDetailContent() {
     const [showContract, setShowContract] = useState(false);
     const [showLogInvoice, setShowLogInvoice] = useState(false);
     const [showRecordPayout, setShowRecordPayout] = useState(false);
+    const [prefillPeriod, setPrefillPeriod] = useState<any>(null);
+    const [activeEditHours, setActiveEditHours] = useState<any>(null);
+    const topRef = useRef<HTMLDivElement>(null);
 
     function clearForms() { 
         setShowLogHours(false); setShowInvoice(false); setShowPayment(false); setShowContract(false); 
         setShowLogInvoice(false); setShowRecordPayout(false);
+        setPrefillPeriod(null);
+        setActiveEditHours(null);
     }
 
     async function load() {
@@ -772,7 +795,30 @@ function ConsultantDetailContent() {
         } catch (err: any) { setSaveError(err.message); }
         finally { setSaving(false); }
     }
+    async function handleReactivateProject(id: string) {
+        try { await financePatch(`finance/projects/${id}/reactivate`, {}); load(); } catch (err) { console.error(err); }
+    }
 
+    async function handleUpdateHours(e: React.FormEvent) {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            await financePatch(`finance/hours/${activeEditHours.id}`, {
+                hours: activeEditHours.hours,
+                month: activeEditHours.month,
+                year: activeEditHours.year,
+                startDate: activeEditHours.startDate,
+                endDate: activeEditHours.endDate,
+                week: activeEditHours.week
+            });
+            setActiveEditHours(null);
+            load();
+        } catch (err) {
+            console.error("Failed to update hours", err);
+        } finally {
+            setSaving(false);
+        }
+    }
     async function handleMarkUnpaid(invoiceId: string) {
         try { await financePatch(`finance/invoices/${invoiceId}/mark-unpaid`, {}); await load(); }
         catch (err: any) { alert(err.message); }
@@ -784,12 +830,7 @@ function ConsultantDetailContent() {
         catch (err: any) { alert(err.message); }
     }
 
-    async function handleReactivateProject(projectId: string) {
-        try { await financePatch(`finance/projects/${projectId}/reactivate`, {}); await load(); }
-        catch (err: any) { alert(err.message); }
-    }
-
-    async function handleDeleteInvoice(invoiceId: string) {
+     async function handleDeleteInvoice(invoiceId: string) {
         if (!window.confirm("Are you sure you want to delete this invoice? This will also disconnect any history for this month. You cannot delete an invoice if payments are already recorded.")) return;
         try {
             await financeDelete(`finance/invoices/${invoiceId}`);
@@ -813,6 +854,18 @@ function ConsultantDetailContent() {
         if (!window.confirm("Are you sure you want to delete this payout/invoice record?")) return;
         try {
             await financeDelete(`finance/payouts/${payoutId}`);
+            await load();
+        } catch (err: any) {
+            alert(err.message);
+        }
+    }
+
+    async function handleDeleteHours(h: any) {
+        const period = h.week === 6 ? "1st Half" : h.week === 7 ? "2nd Half" : h.week === 8 ? "Custom Range" : h.week ? `Week ${h.week}` : "Full Month";
+        const label = `${MONTHS[h.month - 1]} ${h.year} (${period})`;
+        if (!window.confirm(`Delete these hours for ${label}?\n\nThis will ALSO automatically delete:\n1. Associated Client Invoice (AR)\n2. Associated Consultant Payout (AP)\n\nThis is necessary to keep your books in sync. Continue?`)) return;
+        try {
+            await financeDelete(`finance/hours/${h.id}`);
             await load();
         } catch (err: any) {
             alert(err.message);
@@ -855,7 +908,7 @@ function ConsultantDetailContent() {
         return (
             <>
                 <DashboardBreadcrumb title={`Edit ${data.name}`} text={`Finance / Consultants / ${data.name} / Edit`} />
-                <div className="max-w-3xl mx-auto py-4">
+                <div className="max-w-7xl mx-auto px-4 py-8 space-y-8" ref={topRef}>
                     <StepIndicator current={editStep} steps={STEPS} />
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow border border-gray-100 dark:border-gray-700 overflow-hidden">
                         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-violet-50 to-white dark:from-violet-900/20 dark:to-gray-800 flex justify-between items-center">
@@ -1033,7 +1086,7 @@ function ConsultantDetailContent() {
     return (
         <>
             <DashboardBreadcrumb title={data.name} text={`Finance / Consultants / ${data.name}`} />
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6" ref={topRef}>
                 {/* ── Left: Info Card ─────────────────────────────────── */}
                 <div className="xl:col-span-1 space-y-4">
                     <Card title="Consultant Info" action={
@@ -1107,7 +1160,7 @@ function ConsultantDetailContent() {
 
                     {showInvoice && (
                         <Card title="Create Invoice">
-                            <CreateInvoiceForm projects={projects} hours={data.hours ?? []} onCreated={load} />
+                            <CreateInvoiceForm projects={projects} hours={data.hours ?? []} initialPeriod={prefillPeriod} onCreated={load} />
                         </Card>
                     )}
 
@@ -1119,7 +1172,7 @@ function ConsultantDetailContent() {
 
                     {showLogInvoice && (
                         <Card title="Log Consultant Invoice">
-                            <LogConsultantInvoiceForm consultantId={id!} hours={data.hours ?? []} projects={projects} onRecorded={load} />
+                            <LogConsultantInvoiceForm consultantId={id!} hours={data.hours ?? []} projects={projects} initialPeriod={prefillPeriod} onRecorded={load} />
                         </Card>
                     )}
 
@@ -1188,38 +1241,94 @@ function ConsultantDetailContent() {
                                             <th className="pb-2">Month</th>
                                             <th className="pb-2">Period</th>
                                             <th className="pb-2">Year</th>
-                                            <th className="pb-2 text-right">Hours</th>
+                                            <th className="pb-2 text-right pr-4">Hours</th>
+                                            <th className="pb-2 text-center">Client Inv</th>
+                                            <th className="pb-2 text-center">Cnslt Inv</th>
+                                            <th className="pb-2"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                        {data.hours.map((h: any) => (
-                                            <tr key={h.id}>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">
-                                                    {MONTHS[h.month - 1]} 
-                                                </td>
-                                                <td className="py-2">
-                                                    {h.week === 8 ? (
-                                                        h.startDate && h.endDate ? (
-                                                            <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">
-                                                                {formatDateUS(h.startDate)} - {formatDateUS(h.endDate)}
+                                        {data.hours.map((h: any) => {
+                                            // A row is "accounted for" ONLY if there's an exact period match (e.g. Week 1 hours -> Week 1 invoice)
+                                            const hasInv = allInvoices.some((inv: any) => 
+                                                inv.invoiceMonth === h.month && 
+                                                inv.invoiceYear === h.year && 
+                                                (h.week || 0) === (inv.week || 0)
+                                            );
+                                            const hasPay = consultantInvoices.some((p: any) => 
+                                                p.month === h.month && 
+                                                p.year === h.year && 
+                                                (h.week || 0) === (p.week || 0)
+                                            );
+                                            return (
+                                                <tr key={h.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition">
+                                                    <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">
+                                                        {MONTHS[h.month - 1]} 
+                                                    </td>
+                                                    <td className="py-2">
+                                                        {h.week === 8 ? (
+                                                            h.startDate && h.endDate ? (
+                                                                <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">
+                                                                    {formatDateUS(h.startDate)} - {formatDateUS(h.endDate)}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">Custom Range</span>
+                                                            )
+                                                        ) : h.week === 6 ? (
+                                                            <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">1st Half (1-15)</span>
+                                                        ) : h.week === 7 ? (
+                                                            <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">2nd Half (16-End)</span>
+                                                        ) : h.week ? (
+                                                            <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">Week {h.week}</span>
+                                                        ) : (
+                                                            <span className="text-[10px] text-gray-400 font-medium bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 rounded">Full Month</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-2 text-gray-600 dark:text-gray-300 text-xs">{h.year}</td>
+                                                    <td className="py-2 font-semibold text-gray-800 dark:text-white text-right pr-4">{h.hours}</td>
+                                                    <td className="py-2 text-center">
+                                                        {hasInv ? (
+                                                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/30">
+                                                                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg> INV
                                                             </span>
                                                         ) : (
-                                                            <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">Custom Range</span>
-                                                        )
-                                                    ) : h.week === 6 ? (
-                                                        <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">1st Half (1-15)</span>
-                                                    ) : h.week === 7 ? (
-                                                        <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">2nd Half (16-End)</span>
-                                                    ) : h.week ? (
-                                                        <span className="text-[10px] text-violet-500 font-medium bg-violet-50 dark:bg-violet-900/30 px-1.5 py-0.5 rounded">Week {h.week}</span>
-                                                    ) : (
-                                                        <span className="text-[10px] text-gray-400 font-medium bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 rounded">Full Month</span>
-                                                    )}
-                                                </td>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300 text-xs">{h.year}</td>
-                                                <td className="py-2 font-semibold text-gray-800 dark:text-white text-right">{h.hours}</td>
-                                            </tr>
-                                        ))}
+                                                            <button 
+                                                                onClick={() => { clearForms(); setPrefillPeriod(h); setShowInvoice(true); topRef.current?.scrollIntoView({ behavior: 'smooth' }); }}
+                                                                className="p-1 text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/30 rounded transition flex mx-auto"
+                                                                title="Generate Client Invoice for this period"
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-2 text-center">
+                                                        {hasPay ? (
+                                                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 bg-orange-50 dark:bg-orange-900/20 px-1.5 py-0.5 rounded border border-orange-100 dark:border-orange-900/30">
+                                                                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg> AP
+                                                            </span>
+                                                        ) : (
+                                                            <button 
+                                                                onClick={() => { clearForms(); setPrefillPeriod(h); setShowLogInvoice(true); topRef.current?.scrollIntoView({ behavior: 'smooth' }); }}
+                                                                className="p-1 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded transition flex mx-auto"
+                                                                title="Log Consultant Invoice for this period"
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-2 text-right">
+                                                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button onClick={() => setActiveEditHours(h)} className="text-gray-400 hover:text-violet-500 transition-colors" title="Edit Hours">
+                                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                            </button>
+                                                            <button onClick={() => handleDeleteHours(h)} className="text-gray-400 hover:text-red-500 transition-colors" title="Delete Hours & Sync Books">
+                                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
@@ -1598,17 +1707,53 @@ function ConsultantDetailContent() {
                             </Field>
                         </div>
                         <Field label="Consultant Invoice Date">
-                            <input type="date" className={inputCls} value={activeEditPayout.consultantInvoiceDate?.slice(0, 10) || ""} onChange={e => setActiveEditPayout({ ...activeEditPayout, consultantInvoiceDate: e.target.value })} />
+                            <input type="date" className={inputCls} value={activeEditPayout.consultantInvoiceDate?.slice(0, 10) || ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setActiveEditPayout({ ...activeEditPayout, consultantInvoiceDate: e.target.value })} />
                         </Field>
                         <Field label="Payment Date (if paid)">
-                            <input type="date" className={inputCls} value={activeEditPayout.paymentDate?.slice(0, 10) || ""} onChange={e => setActiveEditPayout({ ...activeEditPayout, paymentDate: e.target.value })} />
+                            <input type="date" className={inputCls} value={activeEditPayout.paymentDate?.slice(0, 10) || ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setActiveEditPayout({ ...activeEditPayout, paymentDate: e.target.value })} />
                         </Field>
                         <Field label="Reference / Payment #">
-                            <input type="text" className={inputCls} value={activeEditPayout.referenceNumber || ""} onChange={e => setActiveEditPayout({ ...activeEditPayout, referenceNumber: e.target.value })} />
+                            <input type="text" className={inputCls} value={activeEditPayout.referenceNumber || ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setActiveEditPayout({ ...activeEditPayout, referenceNumber: e.target.value })} />
                         </Field>
                         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <button type="button" onClick={() => setActiveEditPayout(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-gray-600">Cancel</button>
                             <button type="submit" className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg transition hover:bg-violet-700">Save Changes</button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
+            {activeEditHours && (
+                <Modal title="Edit Hours Log" onClose={() => setActiveEditHours(null)}>
+                    <form onSubmit={handleUpdateHours} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <Field label="Month">
+                                <select className={selectCls} value={activeEditHours.month} onChange={e => setActiveEditHours({ ...activeEditHours, month: e.target.value })}>
+                                    {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                                </select>
+                            </Field>
+                            <Field label="Year">
+                                <input type="number" className={inputCls} value={activeEditHours.year} onChange={e => setActiveEditHours({ ...activeEditHours, year: e.target.value })} />
+                            </Field>
+                        </div>
+                        <Field label="Hours Worked">
+                            <input type="number" step="0.5" className={inputCls} value={activeEditHours.hours} onChange={e => setActiveEditHours({ ...activeEditHours, hours: e.target.value })} />
+                        </Field>
+                        {activeEditHours.week === 8 && (
+                            <div className="grid grid-cols-2 gap-4">
+                                <Field label="Start Date">
+                                    <input type="date" className={inputCls} value={activeEditHours.startDate?.slice(0, 10)} onChange={e => setActiveEditHours({ ...activeEditHours, startDate: e.target.value })} />
+                                </Field>
+                                <Field label="End Date">
+                                    <input type="date" className={inputCls} value={activeEditHours.endDate?.slice(0, 10)} onChange={e => setActiveEditHours({ ...activeEditHours, endDate: e.target.value })} />
+                                </Field>
+                            </div>
+                        )}
+                        <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <button type="button" onClick={() => setActiveEditHours(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-gray-600">Cancel</button>
+                            <button type="submit" disabled={saving} className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg transition hover:bg-violet-700">
+                                {saving ? "Saving…" : "Save Changes"}
+                            </button>
                         </div>
                     </form>
                 </Modal>
@@ -1618,16 +1763,16 @@ function ConsultantDetailContent() {
 }
 
 // ─── Step 1: Log Consultant Invoice ──────────────────────────────────────────────
-function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded }: { consultantId: string, hours: any[], projects: any[], onRecorded: () => void }) {
+function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded, initialPeriod }: { consultantId: string; hours: any[]; projects: any[]; onRecorded: () => void; initialPeriod?: any }) {
     const now = new Date();
     const [form, setForm] = useState({
-        month: now.getMonth() + 1,
-        year: now.getFullYear(),
-        hours: "",
+        month: initialPeriod?.month ?? now.getMonth() + 1,
+        year: initialPeriod?.year ?? now.getFullYear(),
+        hours: initialPeriod?.hours ? String(initialPeriod.hours) : "",
         payRate: "",
         consultantInvoiceDate: now.toISOString().slice(0, 10),
         referenceNumber: "", // New: Consultant Invoice #
-        week: 0, // 0 for full month, 1-5 for W1-W5, 6-7 for halves, 8 for custom
+        week: initialPeriod?.week ?? 0, // 0 for full month, 1-5 for W1-W5, 6-7 for halves, 8 for custom
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -1635,12 +1780,27 @@ function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded }:
 
     // Auto-fill hours & pay rate based on month/year/week
     useEffect(() => {
-        const foundHour = hours.find(h => 
-            h.month === form.month && 
-            h.year === form.year && 
-            (form.week === 0 ? !h.week : h.week === form.week)
-        );
-        const autoHours = foundHour ? Number(foundHour.hours).toString() : "";
+        // Use the same smart summation logic as CreateInvoiceForm
+        const getSum = () => {
+            const m = +form.month;
+            const y = +form.year;
+            const w = +form.week;
+            const monthMatches = hours.filter(h => h.month === m && h.year === y);
+            if (!monthMatches.length) return "";
+
+            if (w !== 0) {
+                const exact = monthMatches.find(h => h.week === w);
+                return exact ? String(Number(exact.hours)) : "";
+            }
+
+            const fullMonthLog = monthMatches.find(h => !h.week || h.week === 0);
+            if (fullMonthLog) return String(Number(fullMonthLog.hours));
+
+            const periodLogs = monthMatches.filter(h => h.week && h.week > 0);
+            return periodLogs.length ? String(periodLogs.reduce((acc, curr) => acc + Number(curr.hours), 0)) : "";
+        };
+
+        const autoHours = getSum();
         let autoPayRate = "";
         if (projects.length > 0) {
             const project = projects.find((p: any) => p.status === "ACTIVE") || projects[0];
