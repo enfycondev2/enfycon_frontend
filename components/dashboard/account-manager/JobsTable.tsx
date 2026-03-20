@@ -848,6 +848,9 @@ export default function JobsTable({
                             <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-start min-w-[220px]">
                                 Job Title
                             </TableHead>
+                            <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-center min-w-[120px]">
+                                Status
+                            </TableHead>
                             {showPod && (
                                 <>
                                     <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
@@ -897,9 +900,7 @@ export default function JobsTable({
                             <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
                                 Last Updated
                             </TableHead>
-                            <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-center">
-                                Status
-                            </TableHead>
+
                             {showActions && (
                                 <TableHead className="bg-slate-100/80 dark:bg-slate-700/90 text-base px-4 h-12 border-b border-r border-neutral-200 dark:border-slate-600 text-end">
                                     Actions
@@ -1013,6 +1014,7 @@ export default function JobsTable({
                                                         : index % 2 === 0
                                                             ? "bg-white dark:bg-slate-900/20 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                                                             : "bg-slate-50/70 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75",
+                                                    job.status === "CLOSED" && "opacity-60 grayscale-[0.2] bg-slate-50/50 dark:bg-slate-900/40",
                                                     !isEditing && "cursor-pointer"
                                                 )}
                                                 onClick={(e) => {
@@ -1060,6 +1062,12 @@ export default function JobsTable({
                                                                 )}
                                                             </div>
                                                         )}
+                                                </TableCell>
+                                                {/* Status */}
+                                                <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-center">
+                                                    <div className="flex justify-center">
+                                                        <JobStatusSelect job={job} onRefresh={() => refreshJob(job.id)} />
+                                                    </div>
                                                 </TableCell>
                                                 {/* Pod & Recruiters */}
                                                 {showPod && (
@@ -1230,12 +1238,7 @@ export default function JobsTable({
                                                         <span className="text-[10px] text-muted-foreground">{estTimeFormatter.format(new Date(job.updatedAt))}</span>
                                                     </div>
                                                 </TableCell>
-                                                {/* Status */}
-                                                <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-center">
-                                                    <div className="flex justify-center">
-                                                        <JobStatusSelect job={job} onRefresh={() => refreshJob(job.id)} />
-                                                    </div>
-                                                </TableCell>
+
                                                 {/* Actions */}
                                                 {showActions && (
                                                     <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-end">
