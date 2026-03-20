@@ -7,6 +7,7 @@ import { financeDelete, financeGet, financePatch, financePost } from "@/lib/fina
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import { StatusBadge, MONTHS, btnPrimary, btnSecondary, StepIndicator, Field, inputCls, selectCls, formatDateUS } from "@/components/finance/FinanceUI";
 import AutoComplete from "@/components/finance/AutoComplete";
+import QuickCalc from "@/components/finance/QuickCalc";
 import { apiClient } from "@/lib/apiClient";
 
 const STATUS_OPTIONS = ["ACTIVE", "ENDED"];
@@ -807,9 +808,9 @@ function ConsultantDetailContent() {
                 hours: activeEditHours.hours,
                 month: activeEditHours.month,
                 year: activeEditHours.year,
-                startDate: activeEditHours.startDate,
-                endDate: activeEditHours.endDate,
-                week: activeEditHours.week
+                startDate: activeEditHours.week === 8 ? activeEditHours.startDate : null,
+                endDate: activeEditHours.week === 8 ? activeEditHours.endDate : null,
+                week: activeEditHours.week === 0 ? null : activeEditHours.week
             });
             setActiveEditHours(null);
             load();
@@ -1139,6 +1140,15 @@ function ConsultantDetailContent() {
                             className={`text-xs font-semibold px-3 py-2 rounded-xl border transition ${showRecordPayout ? "bg-orange-600 text-white border-orange-600" : "border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
                             + Pay Consultant
                         </button>
+                    </div>
+
+                    {/* Quick Calculator */}
+                    <div className="pt-2">
+                        <div className="flex items-center gap-2 mb-3 px-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse"></div>
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400 dark:text-gray-500">Quick Utility</span>
+                        </div>
+                        <QuickCalc />
                     </div>
                 </div>
 
@@ -1726,6 +1736,44 @@ function ConsultantDetailContent() {
             {activeEditHours && (
                 <Modal title="Edit Hours Log" onClose={() => setActiveEditHours(null)}>
                     <form onSubmit={handleUpdateHours} className="space-y-4">
+                        {/* AR/AP Alignment Warning */}
+                        {(() => {
+                            const hasInv = allInvoices.some((inv: any) => 
+                                inv.invoiceMonth === activeEditHours.month && 
+                                inv.invoiceYear === activeEditHours.year && 
+                                (activeEditHours.week || 0) === (inv.week || 0)
+                            );
+                            const hasPay = consultantInvoices.some((p: any) => 
+                                p.month === activeEditHours.month && 
+                                p.year === activeEditHours.year && 
+                                (activeEditHours.week || 0) === (p.week || 0)
+                            );
+                            
+                            if (hasInv || hasPay) {
+                                return (
+                                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 p-3 rounded-xl flex gap-3 items-start animate-in fade-in slide-in-from-top-2">
+                                        <svg className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                        <div className="text-xs text-amber-800 dark:text-amber-200 font-medium leading-relaxed">
+                                            <strong>Caution:</strong> An {hasInv ? "AR (Invoice)" : ""}{hasInv && hasPay ? " and " : ""}{hasPay ? "AP (Payout)" : ""} already exists for this period. 
+                                            If you change these hours, you <strong>MUST</strong> manually update or re-generate those records to ensure your books remain aligned.
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return (
+                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 rounded-xl text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                                    Reminder: Ensure your Client Invoices (AR) and Consultant Payouts (AP) stay aligned with these updated hours.
+                                </div>
+                            );
+                        })()}
+
+                        <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl w-fit mb-4">
+                            <button type="button" onClick={() => setActiveEditHours({ ...activeEditHours, week: 0 })} className={`px-3 py-1 text-[10px] font-bold rounded-lg transition ${(!activeEditHours.week || activeEditHours.week === 0) ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500"}`}>Monthly</button>
+                            <button type="button" onClick={() => setActiveEditHours({ ...activeEditHours, week: 6 })} className={`px-3 py-1 text-[10px] font-bold rounded-lg transition ${(activeEditHours.week === 6 || activeEditHours.week === 7) ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500"}`}>Semi-Monthly</button>
+                            <button type="button" onClick={() => setActiveEditHours({ ...activeEditHours, week: 1 })} className={`px-3 py-1 text-[10px] font-bold rounded-lg transition ${(activeEditHours.week >= 1 && activeEditHours.week <= 5) ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500"}`}>Weekly</button>
+                            <button type="button" onClick={() => setActiveEditHours({ ...activeEditHours, week: 8 })} className={`px-3 py-1 text-[10px] font-bold rounded-lg transition ${(activeEditHours.week === 8) ? "bg-white dark:bg-gray-600 shadow text-gray-800 dark:text-white" : "text-gray-500"}`}>Custom</button>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-4">
                             <Field label="Month">
                                 <select className={selectCls} value={activeEditHours.month} onChange={e => setActiveEditHours({ ...activeEditHours, month: e.target.value })}>
@@ -1736,9 +1784,28 @@ function ConsultantDetailContent() {
                                 <input type="number" className={inputCls} value={activeEditHours.year} onChange={e => setActiveEditHours({ ...activeEditHours, year: e.target.value })} />
                             </Field>
                         </div>
+
+                        {(activeEditHours.week >= 1 && activeEditHours.week <= 5) && (
+                            <Field label="Week Number">
+                                <select className={selectCls} value={activeEditHours.week} onChange={e => setActiveEditHours({ ...activeEditHours, week: +e.target.value })}>
+                                    {[1, 2, 3, 4, 5].map(w => <option key={w} value={w}>Week {w}</option>)}
+                                </select>
+                            </Field>
+                        )}
+
+                        {(activeEditHours.week === 6 || activeEditHours.week === 7) && (
+                            <Field label="Period">
+                                <select className={selectCls} value={activeEditHours.week} onChange={e => setActiveEditHours({ ...activeEditHours, week: +e.target.value })}>
+                                    <option value="6">1st Half (1-15)</option>
+                                    <option value="7">2nd Half (16-End)</option>
+                                </select>
+                            </Field>
+                        )}
+
                         <Field label="Hours Worked">
                             <input type="number" step="0.5" className={inputCls} value={activeEditHours.hours} onChange={e => setActiveEditHours({ ...activeEditHours, hours: e.target.value })} />
                         </Field>
+
                         {activeEditHours.week === 8 && (
                             <div className="grid grid-cols-2 gap-4">
                                 <Field label="Start Date">
@@ -1758,6 +1825,7 @@ function ConsultantDetailContent() {
                     </form>
                 </Modal>
             )}
+
         </>
     );
 }
