@@ -22,10 +22,23 @@ import {
 } from "@/components/ui/select";
 import { toast } from "react-hot-toast";
 import { useSession } from "next-auth/react";
-import { Textarea } from "@/components/ui/textarea";
 import { apiClient } from "@/lib/apiClient";
 import { LocationSelect } from "@/components/shared/location-select";
 import { MultiSelect, Option } from "@/components/shared/multi-select";
+import RichTextEditor from "@/components/shared/rich-text-editor";
+import { 
+    Save, 
+    X, 
+    Loader2, 
+    Briefcase, 
+    User, 
+    Globe, 
+    DollarSign, 
+    ClipboardList, 
+    AlertCircle, 
+    FileText 
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const visaOptions: Option[] = [
     { label: "All Visa", value: "ALL_VISA" },
@@ -57,7 +70,7 @@ interface Job {
     status: string;
     podId?: string | null;
     accountManagerId: string;
-    description: string;
+    jobDescription: string;
 }
 
 interface Pod {
@@ -104,7 +117,7 @@ export default function JobEditDialog({ job, isOpen, onClose, onSuccess }: JobEd
                     urgency: fullJob.urgency,
                     status: fullJob.status,
                     accountManagerId: fullJob.accountManagerId,
-                    description: fullJob.description || "",
+                    jobDescription: fullJob.jobDescription || "",
                 });
                 // Pre-populate selected pods from the many-to-many pods array
                 setSelectedPodIds(
@@ -160,7 +173,7 @@ export default function JobEditDialog({ job, isOpen, onClose, onSuccess }: JobEd
 
         setIsSubmitting(true);
         try {
-            const { accountManagerId, jobCode, podId, description, ...sanitizedData } = formData;
+            const { accountManagerId, jobCode, podId, ...sanitizedData } = formData;
 
             const patchData: any = {
                 ...sanitizedData,
@@ -210,161 +223,233 @@ export default function JobEditDialog({ job, isOpen, onClose, onSuccess }: JobEd
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                         </div>
                     )}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="jobTitle">Job Title</Label>
-                            <Input
-                                id="jobTitle"
-                                value={formData.jobTitle || ""}
-                                onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-                                required
-                            />
+                    <div className="sticky top-[-16px] z-20 bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm pb-4 pt-1 mb-2 border-b border-neutral-100 dark:border-slate-800 flex justify-between items-center -mx-6 px-6 transition-all">
+                        <div className="flex flex-col">
+                            <h3 className="text-sm font-semibold text-primary">Job Editor</h3>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Quick Actions</p>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Assigned Pods</Label>
-                            <MultiSelect
-                                options={pods.map((p) => ({ label: p.name, value: p.id }))}
-                                selected={selectedPodIds}
-                                onChange={setSelectedPodIds}
-                                placeholder={isAccountManager ? "View assigned pods" : "Select pods..."}
-                                disabled={isAccountManager}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Client Name</Label>
-                            <ClientAutocomplete
-                                type="CLIENT"
-                                value={formData.clientName || ""}
-                                onChange={(value) => setFormData({ ...formData, clientName: value })}
-                                required
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>End Client</Label>
-                            <ClientAutocomplete
-                                type="END_CLIENT"
-                                value={formData.endClientName || ""}
-                                onChange={(value) => setFormData({ ...formData, endClientName: value })}
-                            />
+                        <div className="flex gap-2">
+                            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isSubmitting} className="h-9 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors">
+                                <X className="mr-1.5 h-3.5 w-3.5" />
+                                Cancel
+                            </Button>
+                            <Button type="submit" size="sm" disabled={isSubmitting} className="h-9 px-4 shadow-sm hover:shadow-md transition-all active:scale-[0.98] bg-primary text-primary-foreground hover:opacity-90">
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                        Saving...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="mr-1.5 h-3.5 w-3.5" />
+                                        Save Changes
+                                    </>
+                                )}
+                            </Button>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="jobLocation">Location</Label>
-                            <LocationSelect
-                                value={formData.jobLocation || ""}
-                                onChange={(val) => setFormData({ ...formData, jobLocation: val })}
-                                placeholder="Select location"
-                            />
+                    {/* Section 1: Core Job Info */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 pb-1 border-b border-neutral-100 dark:border-slate-800/50">
+                            <Briefcase className="h-4 w-4 text-primary" />
+                            <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/80">Core Job Details</h4>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="visaType">Visa Type</Label>
-                            <MultiSelect
-                                options={visaOptions}
-                                selected={parseVisaTypes(formData.visaType)}
-                                onChange={(selected) =>
-                                    setFormData({ ...formData, visaType: selected.join(",") })
-                                }
-                                placeholder="Select visa type(s)"
-                            />
-                        </div>
-                    </div>
-
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="clientBillRate">Client Bill Rate</Label>
-                            <Input
-                                id="clientBillRate"
-                                value={formData.clientBillRate || ""}
-                                onChange={(e) => setFormData({ ...formData, clientBillRate: e.target.value })}
-                                required
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="payRate">Pay Rate</Label>
-                            <Input
-                                id="payRate"
-                                value={formData.payRate || ""}
-                                onChange={(e) => setFormData({ ...formData, payRate: e.target.value })}
-                                required
-                            />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="jobTitle" className="text-xs font-semibold">Job Title</Label>
+                                <Input
+                                    id="jobTitle"
+                                    className="h-10 border-neutral-200 focus:border-primary transition-all"
+                                    value={formData.jobTitle || ""}
+                                    onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold">Assigned Pods</Label>
+                                <MultiSelect
+                                    options={pods.map((p) => ({ label: p.name, value: p.id }))}
+                                    selected={selectedPodIds}
+                                    onChange={setSelectedPodIds}
+                                    placeholder={isAccountManager ? "View assigned pods" : "Select pods..."}
+                                    disabled={isAccountManager}
+                                />
+                            </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="noOfPositions">No of Positions</Label>
-                            <Input
-                                id="noOfPositions"
-                                type="number"
-                                value={formData.noOfPositions || 0}
-                                onChange={(e) => setFormData({ ...formData, noOfPositions: parseInt(e.target.value) })}
-                                required
-                            />
+                    {/* Section 2: Client Info */}
+                    <div className="space-y-4 mt-6">
+                        <div className="flex items-center gap-2 pb-1 border-b border-neutral-100 dark:border-slate-800/50">
+                            <User className="h-4 w-4 text-primary" />
+                            <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/80">Client Information</h4>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="submissionRequired">Submissions Required</Label>
-                            <Input
-                                id="submissionRequired"
-                                type="number"
-                                value={formData.submissionRequired || 0}
-                                onChange={(e) => setFormData({ ...formData, submissionRequired: parseInt(e.target.value) })}
-                                required
-                            />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="urgency">Urgency</Label>
-                            <Select
-                                value={formData.urgency || "WARM"}
-                                onValueChange={(value) => setFormData({ ...formData, urgency: value })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select urgency" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="HOT">🔴 Hot</SelectItem>
-                                    <SelectItem value="WARM">🟡 Warm</SelectItem>
-                                    <SelectItem value="COLD">🔵 Cold</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="status">Status</Label>
-                            <Select
-                                value={formData.status || "ACTIVE"}
-                                onValueChange={(value) => setFormData({ ...formData, status: value })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="ACTIVE">Active</SelectItem>
-                                    <SelectItem value="ON_HOLD">On Hold</SelectItem>
-                                    <SelectItem value="HOLD_BY_CLIENT">Hold By Client</SelectItem>
-                                    <SelectItem value="FILLED">Filled</SelectItem>
-                                    <SelectItem value="CLOSED">Closed</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold">Primary Client</Label>
+                                <ClientAutocomplete
+                                    type="CLIENT"
+                                    value={formData.clientName || ""}
+                                    onChange={(value) => setFormData({ ...formData, clientName: value })}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-xs font-semibold">End Client</Label>
+                                <ClientAutocomplete
+                                    type="END_CLIENT"
+                                    value={formData.endClientName || ""}
+                                    onChange={(value) => setFormData({ ...formData, endClientName: value })}
+                                />
+                            </div>
                         </div>
                     </div>
 
+                    {/* Section 3: Location & Eligibility */}
+                    <div className="space-y-4 mt-6">
+                        <div className="flex items-center gap-2 pb-1 border-b border-neutral-100 dark:border-slate-800/50">
+                            <Globe className="h-4 w-4 text-primary" />
+                            <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/80">Location & Requirements</h4>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="jobLocation" className="text-xs font-semibold">Job Location</Label>
+                                <LocationSelect
+                                    value={formData.jobLocation || ""}
+                                    onChange={(val) => setFormData({ ...formData, jobLocation: val })}
+                                    placeholder="Select location"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="visaType" className="text-xs font-semibold">Eligible Visa Types</Label>
+                                <MultiSelect
+                                    options={visaOptions}
+                                    selected={parseVisaTypes(formData.visaType)}
+                                    onChange={(selected) =>
+                                        setFormData({ ...formData, visaType: selected.join(",") })
+                                    }
+                                    placeholder="Select visa type(s)"
+                                />
+                            </div>
+                        </div>
+                    </div>
 
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-                            Cancel
-                        </Button>
-                        <Button type="submit" disabled={isSubmitting}>
-                            {isSubmitting ? "Saving..." : "Save Changes"}
-                        </Button>
-                    </DialogFooter>
+                    {/* Section 4: Compensation & Capacity */}
+                    <div className="space-y-4 mt-6">
+                        <div className="flex items-center gap-2 pb-1 border-b border-neutral-100 dark:border-slate-800/50">
+                            <DollarSign className="h-4 w-4 text-primary" />
+                            <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/80">Financials & Staffing</h4>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="clientBillRate" className="text-xs font-semibold">Client Bill Rate ($/hr)</Label>
+                                <Input
+                                    id="clientBillRate"
+                                    className="h-10 border-neutral-200 focus:border-primary transition-all font-mono"
+                                    value={formData.clientBillRate || ""}
+                                    onChange={(e) => setFormData({ ...formData, clientBillRate: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="payRate" className="text-xs font-semibold">Maximum Pay Rate ($/hr)</Label>
+                                <Input
+                                    id="payRate"
+                                    className="h-10 border-neutral-200 focus:border-primary transition-all font-mono"
+                                    value={formData.payRate || ""}
+                                    onChange={(e) => setFormData({ ...formData, payRate: e.target.value })}
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="noOfPositions" className="text-xs font-semibold">Open Positions</Label>
+                                <Input
+                                    id="noOfPositions"
+                                    type="number"
+                                    className="h-10 border-neutral-200 focus:border-primary transition-all"
+                                    value={formData.noOfPositions || 0}
+                                    onChange={(e) => setFormData({ ...formData, noOfPositions: parseInt(e.target.value) })}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="submissionRequired" className="text-xs font-semibold">Target Submissions</Label>
+                                <Input
+                                    id="submissionRequired"
+                                    type="number"
+                                    className="h-10 border-neutral-200 focus:border-primary transition-all"
+                                    value={formData.submissionRequired || 0}
+                                    onChange={(e) => setFormData({ ...formData, submissionRequired: parseInt(e.target.value) })}
+                                    required
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 5: Priority & Status */}
+                    <div className="space-y-4 mt-6">
+                        <div className="flex items-center gap-2 pb-1 border-b border-neutral-100 dark:border-slate-800/50">
+                            <AlertCircle className="h-4 w-4 text-primary" />
+                            <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/80">Management Status</h4>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="urgency" className="text-xs font-semibold">Priority Level</Label>
+                                <Select
+                                    value={formData.urgency || "WARM"}
+                                    onValueChange={(value) => setFormData({ ...formData, urgency: value })}
+                                >
+                                    <SelectTrigger className="h-10 border-neutral-200 focus:border-primary transition-all">
+                                        <SelectValue placeholder="Select urgency" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="HOT">🔴 Hot - Immediate</SelectItem>
+                                        <SelectItem value="WARM">🟡 Warm - Normal</SelectItem>
+                                        <SelectItem value="COLD">🔵 Cold - Low</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="status" className="text-xs font-semibold">Current Status</Label>
+                                <Select
+                                    value={formData.status || "ACTIVE"}
+                                    onValueChange={(value) => setFormData({ ...formData, status: value })}
+                                >
+                                    <SelectTrigger className={cn(
+                                        "h-10 border-neutral-200 focus:border-primary transition-all",
+                                        formData.status === "CLOSED" && "bg-neutral-50 text-neutral-500"
+                                    )}>
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="ACTIVE" className="text-green-600 font-medium">Active</SelectItem>
+                                        <SelectItem value="ON_HOLD" className="text-orange-600 font-medium">On Hold</SelectItem>
+                                        <SelectItem value="HOLD_BY_CLIENT" className="text-orange-700 font-medium">Hold By Client</SelectItem>
+                                        <SelectItem value="FILLED" className="text-blue-600 font-medium">Filled</SelectItem>
+                                        <SelectItem value="CLOSED" className="text-neutral-500 font-medium font-strike">Closed</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 6: Full Job Description */}
+                    <div className="space-y-4 mt-6">
+                        <div className="flex items-center gap-2 pb-1 border-b border-neutral-100 dark:border-slate-800/50">
+                            <FileText className="h-4 w-4 text-primary" />
+                            <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/80">Role Description</h4>
+                        </div>
+                        <RichTextEditor
+                            value={formData.jobDescription || ""}
+                            onChange={(val) => setFormData({ ...formData, jobDescription: val })}
+                            placeholder="Provide a detailed job summary, responsibilities, and requirements..."
+                        />
+                    </div>
+
+
                 </form>
             </DialogContent>
         </Dialog>

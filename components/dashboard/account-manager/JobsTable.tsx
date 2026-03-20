@@ -959,13 +959,16 @@ export default function JobsTable({
                                     if (showCfrExtSubHeader) hasShownCfrExtSubHeader = true;
 
                                     const isEditing = editingJobId === job.id;
+                                    const isClosed = job.status === "CLOSED";
                                     const inputCls = "h-7 px-1.5 text-xs border border-blue-300 rounded w-full focus:outline-none focus:ring-1 focus:ring-blue-400";
                                     const selCls = "h-7 text-xs border border-blue-300 rounded focus:ring-blue-400";
                                     const stickyBgClass = isEditing
                                         ? "bg-blue-50 dark:bg-blue-950"
-                                        : index % 2 === 0
-                                            ? "bg-white dark:bg-slate-900"
-                                            : "bg-slate-50 dark:bg-slate-800";
+                                        : isClosed
+                                            ? "bg-neutral-50/80 dark:bg-slate-900/60"
+                                            : index % 2 === 0
+                                                ? "bg-white dark:bg-slate-900"
+                                                : "bg-slate-50 dark:bg-slate-800";
 
                                     return (
                                         <React.Fragment key={job.id}>
@@ -1014,8 +1017,8 @@ export default function JobsTable({
                                                         : index % 2 === 0
                                                             ? "bg-white dark:bg-slate-900/20 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                                                             : "bg-slate-50/70 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75",
-                                                    job.status === "CLOSED" && "opacity-60 grayscale-[0.2] bg-slate-50/50 dark:bg-slate-900/40",
-                                                    !isEditing && "cursor-pointer"
+                                                    isClosed && "bg-neutral-50/50 dark:bg-slate-950/50",
+                                                    !isEditing && !isClosed && "cursor-pointer"
                                                 )}
                                                 onClick={(e) => {
                                                     if (isEditing || isInteractiveTarget(e.target)) return;
@@ -1024,48 +1027,57 @@ export default function JobsTable({
                                             >
                                                 {/* Job Code - never editable */}
                                                 <TableCell className={cn("sticky left-0 z-30 min-w-[170px] w-[170px] whitespace-nowrap overflow-hidden py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start shadow-[1px_0_0_0_rgba(226,232,240,1)] dark:shadow-[1px_0_0_0_rgba(71,85,105,1)]", stickyBgClass)}>
-                                                    <code className="inline-block bg-neutral-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-xs font-mono whitespace-nowrap">{job.jobCode}</code>
+                                                    <code className={cn(
+                                                        "inline-block px-1.5 py-0.5 rounded text-xs font-mono whitespace-nowrap border transition-colors",
+                                                        isClosed 
+                                                            ? "bg-red-50/50 text-red-800/50 border-red-100/50 dark:bg-red-950/10 dark:text-red-400/40 dark:border-red-900/20" 
+                                                            : "bg-neutral-100 dark:bg-slate-800 text-neutral-800 dark:text-neutral-200 border-neutral-200 dark:border-slate-700"
+                                                    )}>
+                                                        {job.jobCode}
+                                                    </code>
                                                 </TableCell>
                                                 {/* Job Title */}
                                                 <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
-                                                    {isEditing
-                                                        ? <Input className={inputCls} value={editForm.jobTitle ?? ""} onChange={ef("jobTitle")} />
-                                                        : (
-                                                            <div className="flex items-center gap-1 flex-wrap">
-                                                                <span className="font-medium capitalize">{job.jobTitle.toLowerCase()}</span>
-                                                                {job.requirementType === "NEW" && (
-                                                                    <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-600 border-emerald-200">New</span>
-                                                                )}
-                                                                {job.requirementType === "CFR" && (
-                                                                    <>
-                                                                        <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border bg-rose-50 text-rose-600 border-rose-200">CFR</span>
-                                                                        {showCfrExtend && canEditByRole && (
-                                                                            <CfrExtendButton jobId={job.id} currentType={job.requirementType} onSuccess={() => refreshJob(job.id)} />
-                                                                        )}
-                                                                    </>
-                                                                )}
-                                                                {job.requirementType === "CFR_EXTENDED" && (
-                                                                    <>
-                                                                        <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-200">
-                                                                            CFR Ext {job.cfrDaysRemaining !== undefined ? `· ${job.cfrDaysRemaining}d left` : ""}
-                                                                        </span>
-                                                                        {showCfrExtend && canEditByRole && (
-                                                                            <CfrExtendButton jobId={job.id} currentType={job.requirementType} onSuccess={() => refreshJob(job.id)} />
-                                                                        )}
-                                                                    </>
-                                                                )}
-                                                                {job.urgency && (
-                                                                    <span className={`text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${job.urgency === "HOT" ? "bg-red-50 text-red-600 border-red-200" :
-                                                                        job.urgency === "WARM" ? "bg-amber-50 text-amber-600 border-amber-200" :
-                                                                            "bg-blue-50 text-blue-600 border-blue-200"
-                                                                        }`}>{job.urgency}</span>
-                                                                )}
-                                                            </div>
-                                                        )}
+                                                    <div className={cn(isClosed && "opacity-40 grayscale-[0.5]")}>
+                                                        {isEditing
+                                                            ? <Input className={inputCls} value={editForm.jobTitle ?? ""} onChange={ef("jobTitle")} />
+                                                            : (
+                                                                <div className="flex items-center gap-1 flex-wrap">
+                                                                    <span className="font-medium capitalize">{job.jobTitle.toLowerCase()}</span>
+                                                                    {job.requirementType === "NEW" && (
+                                                                        <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-600 border-emerald-200">New</span>
+                                                                    )}
+                                                                    {job.requirementType === "CFR" && (
+                                                                        <>
+                                                                            <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border bg-rose-50 text-rose-600 border-rose-200">CFR</span>
+                                                                            {showCfrExtend && canEditByRole && (
+                                                                                <CfrExtendButton jobId={job.id} currentType={job.requirementType} onSuccess={() => refreshJob(job.id)} />
+                                                                            )}
+                                                                        </>
+                                                                    )}
+                                                                    {job.requirementType === "CFR_EXTENDED" && (
+                                                                        <>
+                                                                            <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border bg-amber-50 text-amber-600 border-amber-200">
+                                                                                CFR Ext {job.cfrDaysRemaining !== undefined ? `· ${job.cfrDaysRemaining}d left` : ""}
+                                                                            </span>
+                                                                            {showCfrExtend && canEditByRole && (
+                                                                                <CfrExtendButton jobId={job.id} currentType={job.requirementType} onSuccess={() => refreshJob(job.id)} />
+                                                                            )}
+                                                                        </>
+                                                                    )}
+                                                                    {job.urgency && (
+                                                                        <span className={`text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${job.urgency === "HOT" ? "bg-red-50 text-red-600 border-red-200" :
+                                                                            job.urgency === "WARM" ? "bg-amber-50 text-amber-600 border-amber-200" :
+                                                                                "bg-blue-50 text-blue-600 border-blue-200"
+                                                                            }`}>{job.urgency}</span>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                    </div>
                                                 </TableCell>
                                                 {/* Status */}
                                                 <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-center">
-                                                    <div className="flex justify-center">
+                                                    <div className={cn("flex justify-center", isClosed && "opacity-40 grayscale-[0.5]")}>
                                                         <JobStatusSelect job={job} onRefresh={() => refreshJob(job.id)} />
                                                     </div>
                                                 </TableCell>
@@ -1073,39 +1085,41 @@ export default function JobsTable({
                                                 {showPod && (
                                                     <>
                                                         <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
-                                                            {(() => {
-                                                                const resolvedAssignedPods =
-                                                                    job.pods && job.pods.length > 0
-                                                                        ? job.pods
-                                                                        : job.podIds && job.podIds.length > 0 && availablePods.length > 0
-                                                                            ? (job.podIds.map(id => availablePods.find(p => p.id === id)).filter(Boolean) as { id: string; name: string }[])
-                                                                            : job.pod ? [job.pod] : [];
+                                                            <div className={cn(isClosed && "opacity-40 grayscale-[0.5]")}>
+                                                                {(() => {
+                                                                    const resolvedAssignedPods =
+                                                                        job.pods && job.pods.length > 0
+                                                                            ? job.pods
+                                                                            : job.podIds && job.podIds.length > 0 && availablePods.length > 0
+                                                                                ? (job.podIds.map(id => availablePods.find(p => p.id === id)).filter(Boolean) as { id: string; name: string }[])
+                                                                                : job.pod ? [job.pod] : [];
 
-                                                                const myPodIds = new Set(availablePods.map(p => p.id));
-                                                                const isJobActive = job.status !== "CLOSED" && job.status !== "FILLED";
-                                                                const canEdit = (isAdmin || isDeliveryHead) && isJobActive;
+                                                                    const myPodIds = new Set(availablePods.map(p => p.id));
+                                                                    const isJobActive = job.status !== "CLOSED" && job.status !== "FILLED";
+                                                                    const canEdit = (isAdmin || isDeliveryHead) && isJobActive;
 
-                                                                return (
-                                                                    <div className="flex flex-col gap-1.5">
-                                                                        <PodAssignCell
-                                                                            jobId={job.id}
-                                                                            jobCode={job.jobCode}
-                                                                            assignedPods={resolvedAssignedPods}
-                                                                            availablePods={availablePods}
-                                                                            assignedRecruiters={job.assignedRecruiters || []}
-                                                                            canEdit={canEdit}
-                                                                            onSuccess={() => refreshJob(job.id)}
-                                                                        />
-                                                                    </div>
-                                                                );
-                                                            })()}
+                                                                    return (
+                                                                        <div className="flex flex-col gap-1.5">
+                                                                            <PodAssignCell
+                                                                                jobId={job.id}
+                                                                                jobCode={job.jobCode}
+                                                                                assignedPods={resolvedAssignedPods}
+                                                                                availablePods={availablePods}
+                                                                                assignedRecruiters={job.assignedRecruiters || []}
+                                                                                canEdit={canEdit}
+                                                                                onSuccess={() => refreshJob(job.id)}
+                                                                            />
+                                                                        </div>
+                                                                    );
+                                                                })()}
+                                                            </div>
                                                         </TableCell>
                                                     </>
                                                 )}
                                                 {/* Account Manager */}
                                                 {showAccountManager && (
                                                     <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">
-                                                        <div className="flex flex-col">
+                                                        <div className={cn("flex flex-col", isClosed && "opacity-40 grayscale-[0.5]")}>
                                                             <span className="font-medium text-sm">{job.accountManager?.fullName || "N/A"}</span>
                                                             <span className="text-[10px] text-muted-foreground">{job.accountManager?.email}</span>
                                                         </div>
@@ -1113,73 +1127,85 @@ export default function JobsTable({
                                                 )}
                                                 {/* Type / Location */}
                                                 <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
-                                                    {isEditing ? (
-                                                        <div className="flex flex-col gap-1">
-                                                            <Select value={editForm.jobType ?? ""} onValueChange={efSel("jobType")}>
-                                                                <SelectTrigger className={selCls}><SelectValue /></SelectTrigger>
-                                                                <SelectContent>
-                                                                    {["FULL_TIME", "PART_TIME", "CONTRACT", "CONTRACT_TO_HIRE", "TEMPORARY", "INTERNSHIP", "FREELANCE"].map(t => <SelectItem key={t} value={t} className="text-xs">{t.replace(/_/g, " ")}</SelectItem>)}
-                                                                </SelectContent>
-                                                            </Select>
-                                                            <LocationSelect
-                                                                value={editForm.jobLocation ?? ""}
-                                                                onChange={(val) => setEditForm(p => ({ ...p, jobLocation: val }))}
-                                                                placeholder="Select location"
-                                                            />
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex flex-col gap-0.5">
-                                                            <span className="text-xs font-medium capitalize">{(job.jobType || "").replace(/_/g, " ").toLowerCase()}</span>
-                                                            <span className="text-[10px] text-muted-foreground capitalize">{job.jobLocation}</span>
-                                                        </div>
-                                                    )}
+                                                    <div className={cn(isClosed && "opacity-40 grayscale-[0.5]")}>
+                                                        {isEditing ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                <Select value={editForm.jobType ?? ""} onValueChange={efSel("jobType")}>
+                                                                    <SelectTrigger className={selCls}><SelectValue /></SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {["FULL_TIME", "PART_TIME", "CONTRACT", "CONTRACT_TO_HIRE", "TEMPORARY", "INTERNSHIP", "FREELANCE"].map(t => <SelectItem key={t} value={t} className="text-xs">{t.replace(/_/g, " ")}</SelectItem>)}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <LocationSelect
+                                                                    value={editForm.jobLocation ?? ""}
+                                                                    onChange={(val) => setEditForm(p => ({ ...p, jobLocation: val }))}
+                                                                    placeholder="Select location"
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <span className="text-xs font-medium capitalize">{(job.jobType || "").replace(/_/g, " ").toLowerCase()}</span>
+                                                                <span className="text-[10px] text-muted-foreground capitalize">{job.jobLocation}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 {/* Visa */}
                                                 <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
-                                                    {isEditing ? (
-                                                        <MultiSelect
-                                                            options={visaOptions}
-                                                            selected={parseVisaTypes(editForm.visaType)}
-                                                            onChange={(selected) => setEditForm((prev) => ({ ...prev, visaType: selected.join(",") }))}
-                                                            placeholder="Select visa type(s)"
-                                                        />
-                                                    ) : (
-                                                        <Badge variant="outline" className="text-[8px] px-1.5 py-0">{formatVisaType(job.visaType)}</Badge>
-                                                    )}
+                                                    <div className={cn(isClosed && "opacity-40 grayscale-[0.5]")}>
+                                                        {isEditing ? (
+                                                            <MultiSelect
+                                                                options={visaOptions}
+                                                                selected={parseVisaTypes(editForm.visaType)}
+                                                                onChange={(selected) => setEditForm((prev) => ({ ...prev, visaType: selected.join(",") }))}
+                                                                placeholder="Select visa type(s)"
+                                                            />
+                                                        ) : (
+                                                            <Badge variant="outline" className="text-[8px] px-1.5 py-0">{formatVisaType(job.visaType)}</Badge>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 {/* Client */}
                                                 <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
-                                                    {isEditing
-                                                        ? <Input className={inputCls} value={editForm.clientName ?? ""} onChange={ef("clientName")} />
-                                                        : job.clientName}
+                                                    <div className={cn(isClosed && "opacity-40 grayscale-[0.5]")}>
+                                                        {isEditing
+                                                            ? <Input className={inputCls} value={editForm.clientName ?? ""} onChange={ef("clientName")} />
+                                                            : job.clientName}
+                                                    </div>
                                                 </TableCell>
                                                 {/* End Client */}
                                                 <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
-                                                    {isEditing
-                                                        ? <Input className={inputCls} value={editForm.endClientName ?? ""} onChange={ef("endClientName")} />
-                                                        : job.endClientName}
+                                                    <div className={cn(isClosed && "opacity-40 grayscale-[0.5]")}>
+                                                        {isEditing
+                                                            ? <Input className={inputCls} value={editForm.endClientName ?? ""} onChange={ef("endClientName")} />
+                                                            : job.endClientName}
+                                                    </div>
                                                 </TableCell>
                                                 {/* Positions */}
                                                 <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-center">
-                                                    {isEditing
-                                                        ? <Input type="number" min={1} className={inputCls} value={editForm.noOfPositions ?? ""} onChange={(e) => setEditForm(p => ({ ...p, noOfPositions: parseInt(e.target.value) }))} />
-                                                        : <span className="font-semibold text-sm">{job.noOfPositions ?? "-"}</span>}
+                                                    <div className={cn(isClosed && "opacity-40 grayscale-[0.5]")}>
+                                                        {isEditing
+                                                            ? <Input type="number" min={1} className={inputCls} value={editForm.noOfPositions ?? ""} onChange={(e) => setEditForm(p => ({ ...p, noOfPositions: parseInt(e.target.value) }))} />
+                                                            : <span className="font-semibold text-sm">{job.noOfPositions ?? "-"}</span>}
+                                                    </div>
                                                 </TableCell>
                                                 {/* Submissions */}
                                                 <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-center">
-                                                    {isEditing ? (
-                                                        <Input type="number" min={0} className={inputCls} value={editForm.submissionRequired ?? ""} onChange={(e) => setEditForm(p => ({ ...p, submissionRequired: parseInt(e.target.value) }))} />
-                                                    ) : (
-                                                        <div className="flex flex-col items-center gap-0.5">
-                                                            <span className="font-medium text-sm">{job.submissionDone ?? 0} / {job.submissionRequired ?? 0}</span>
-                                                            <span className="text-[9px] text-muted-foreground">done / req</span>
-                                                        </div>
-                                                    )}
+                                                    <div className={cn(isClosed && "opacity-40 grayscale-[0.5]")}>
+                                                        {isEditing ? (
+                                                            <Input type="number" min={0} className={inputCls} value={editForm.submissionRequired ?? ""} onChange={(e) => setEditForm(p => ({ ...p, submissionRequired: parseInt(e.target.value) }))} />
+                                                        ) : (
+                                                            <div className="flex flex-col items-center gap-0.5">
+                                                                <span className="font-medium text-sm">{job.submissionDone ?? 0} / {job.submissionRequired ?? 0}</span>
+                                                                <span className="text-[9px] text-muted-foreground">done / req</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
 
                                                 {/* Req Type */}
                                                 <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
-                                                    <div className="flex flex-col gap-1">
+                                                    <div className={cn("flex flex-col gap-1", isClosed && "opacity-40 grayscale-[0.5]")}>
                                                         {job.requirementType === "NEW" && (
                                                             <span className="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border w-fit bg-emerald-50 text-emerald-700 border-emerald-200">New</span>
                                                         )}
@@ -1204,36 +1230,42 @@ export default function JobsTable({
                                                 </TableCell>
                                                 {/* CFR Age */}
                                                 <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-center">
-                                                    <span className="text-sm font-medium">{job.carryForwardAge ?? 0}</span>
+                                                    <div className={cn(isClosed && "opacity-40 grayscale-[0.5]")}>
+                                                        <span className="text-sm font-medium">{job.carryForwardAge ?? 0}</span>
+                                                    </div>
                                                 </TableCell>
                                                 {/* Rates */}
                                                 {showRates && (
                                                     <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start">
-                                                        {isEditing ? (
-                                                            <div className="flex flex-col gap-1">
-                                                                <Input className={inputCls} value={editForm.clientBillRate ?? ""} onChange={ef("clientBillRate")} placeholder="Bill rate" />
-                                                                <Input className={inputCls} value={editForm.payRate ?? ""} onChange={ef("payRate")} placeholder="Pay rate" />
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex flex-col gap-0.5 text-xs">
-                                                                <span><span className="text-muted-foreground">Bill:</span> {job.clientBillRate ? `$${job.clientBillRate}` : "-"}</span>
-                                                                <span><span className="text-muted-foreground">Pay:</span> {job.payRate ? `$${job.payRate}` : "-"}</span>
-                                                            </div>
-                                                        )}
+                                                        <div className={cn(isClosed && "opacity-40 grayscale-[0.5]")}>
+                                                            {isEditing ? (
+                                                                <div className="flex flex-col gap-1">
+                                                                    <Input className={inputCls} value={editForm.clientBillRate ?? ""} onChange={ef("clientBillRate")} placeholder="Bill rate" />
+                                                                    <Input className={inputCls} value={editForm.payRate ?? ""} onChange={ef("payRate")} placeholder="Pay rate" />
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex flex-col gap-0.5 text-xs">
+                                                                    <span><span className="text-muted-foreground">Bill:</span> {job.clientBillRate ? `$${job.clientBillRate}` : "-"}</span>
+                                                                    <span><span className="text-muted-foreground">Pay:</span> {job.payRate ? `$${job.payRate}` : "-"}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </TableCell>
                                                 )}
                                                 {/* Created Date */}
                                                 <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">
-                                                    {showEstCreatedDateTime ? (
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm">{estDateFormatter.format(new Date(job.createdAt))}</span>
-                                                            <span className="text-[10px] text-muted-foreground">{estTimeFormatter.format(new Date(job.createdAt))}</span>
-                                                        </div>
-                                                    ) : new Date(job.createdAt).toLocaleDateString()}
+                                                    <div className={cn(isClosed && "opacity-40 grayscale-[0.5]")}>
+                                                        {showEstCreatedDateTime ? (
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm">{estDateFormatter.format(new Date(job.createdAt))}</span>
+                                                                <span className="text-[10px] text-muted-foreground">{estTimeFormatter.format(new Date(job.createdAt))}</span>
+                                                            </div>
+                                                        ) : new Date(job.createdAt).toLocaleDateString()}
+                                                    </div>
                                                 </TableCell>
                                                 {/* Last Updated */}
                                                 <TableCell className="py-2 px-4 border-b border-r border-neutral-200 dark:border-slate-600 text-start whitespace-nowrap">
-                                                    <div className="flex flex-col">
+                                                    <div className={cn("flex flex-col", isClosed && "opacity-40 grayscale-[0.5]")}>
                                                         <span className="text-sm">{estDateFormatter.format(new Date(job.updatedAt))}</span>
                                                         <span className="text-[10px] text-muted-foreground">{estTimeFormatter.format(new Date(job.updatedAt))}</span>
                                                     </div>
