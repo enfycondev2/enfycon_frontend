@@ -15,6 +15,7 @@ interface MonthActual {
     clientPaid: boolean; expectedPaymentDate: string | null;
     isOverdue: boolean; daysUntilDue: number | null;
     consultantPaid: boolean; payoutAmount: number;
+    payoutAmountPaid?: number | null; payoutRemark?: string | null;
     payoutDate: string | null; payoutRef: string | null;
 }
 
@@ -357,11 +358,20 @@ function RosterContent() {
                                                             );
                                                         }
 
+                                                        const actualOut = "payoutAmountPaid" in mData ? mData.payoutAmountPaid : (mData as Totals).paidOut;
+                                                        
                                                         return (
                                                             <>
                                                                 <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{curr(mData.revenue)}</div>
-                                                                <div className="text-xs text-orange-500">−{curr(mData.cost)}</div>
-                                                                <div className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">{curr(mData.margin)}</div>
+                                                                <div className="text-xs text-orange-500">
+                                                                    −{curr(mData.cost)}
+                                                                    {actualOut != null && Math.abs(Number(actualOut) - mData.cost) > 0.01 && (
+                                                                        <div className={`mt-0.5 text-[10px] px-1 rounded inline-block ${Number(actualOut) > mData.cost ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-500"}`} title={('payoutRemark' in mData ? mData.payoutRemark : "") || "Variance"}>
+                                                                            {Number(actualOut) > mData.cost ? "▲ " : "▼ "}{curr(Math.abs(Number(actualOut) - mData.cost))} var
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-xs text-indigo-600 dark:text-indigo-400 font-bold mt-0.5">{curr(mData.margin)}</div>
                                                                 <div className="text-[10px] text-gray-400">
                                                                     {filterMonth === "ALL" ? pct(row.totals.marginPerc) : (mData.hours + " hours")}
                                                                 </div>

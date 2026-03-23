@@ -20,6 +20,7 @@ function InvoicesContent() {
     const queryProjectId = searchParams.get("projectId") || "";
     const queryMonth = searchParams.get("month") ? Number(searchParams.get("month")) : null;
     const queryYear = searchParams.get("year") ? Number(searchParams.get("year")) : null;
+    const queryHoursRecordId = searchParams.get("hoursRecordId") || "";
 
     const [projectId, setProjectId] = useState(queryProjectId);
     const [showAdd, setShowAdd] = useState(!!queryProjectId);
@@ -27,6 +28,7 @@ function InvoicesContent() {
     const now = new Date();
     const [form, setForm] = useState({
         projectId: queryProjectId,
+        hoursRecordId: queryHoursRecordId,
         invoiceMonth: queryMonth || (now.getMonth() + 1),
         invoiceYear: queryYear || now.getFullYear(),
         invoiceDate: now.toISOString().slice(0, 10),
@@ -63,6 +65,7 @@ function InvoicesContent() {
         try {
             await financePost("finance/invoices", {
                 projectId: form.projectId,
+                hoursRecordId: form.hoursRecordId || undefined,
                 invoiceMonth: +form.invoiceMonth,
                 invoiceYear: +form.invoiceYear,
                 invoiceDate: form.invoiceDate,
@@ -323,6 +326,7 @@ function InvoicesContent() {
                                                 <button onClick={() => {
                                                     setForm({
                                                         projectId: inv.projectId,
+                                                        hoursRecordId: inv.hoursId || "",
                                                         invoiceMonth: inv.invoiceMonth,
                                                         invoiceYear: inv.invoiceYear,
                                                         invoiceDate: inv.invoiceDate ? new Date(inv.invoiceDate).toISOString().slice(0, 10) : now.toISOString().slice(0, 10),

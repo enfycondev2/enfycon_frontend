@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { financeDelete, financeGet, financePatch, financePost } from "@/lib/financeClient";
@@ -143,7 +143,7 @@ function LogHoursForm({ consultantId, onLogged }: { consultantId: string; onLogg
 }
 
 // ─── Create Invoice inline form ───────────────────────────────────────────────
-function CreateInvoiceForm({ projects, hours: allHours, onCreated, initialPeriod }: { projects: any[]; hours: any[]; onCreated: () => void; initialPeriod?: any }) {
+function CreateInvoiceForm({ projects, hours, onCreated, initialPeriod }: { projects: any[]; hours: any[]; onCreated: () => void; initialPeriod?: any }) {
     const now = new Date();
 
     // Helper: get bill rate from project's latest contract
@@ -153,13 +153,11 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated, initialPeriod
         return contract ? String(Number(contract.billRate)) : "";
     }
 
-    // Helper: get logged hours for a consultant in a given month/year (sum all entries or filter by week)
-    // Helper: get logged hours for a consultant in a given month/year
     function getLoggedHours(month: number, year: number, week?: number) {
-        if (!allHours?.length) return "";
+        if (!hours?.length) return "";
         
         // Filter by month and year first
-        const monthMatches = allHours.filter(h => h.month === month && h.year === year);
+        const monthMatches = hours.filter(h => h.month === month && h.year === year);
         if (monthMatches.length === 0) return "";
 
         // If a specific period is requested (W1, 1st Half, etc.), find that exact match
@@ -196,19 +194,46 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated, initialPeriod
         billRate: getBillRate(initialPeriod?.projectId ?? defaultProjectId),
         referenceNumber: "", // New: Client Invoice #
         week: initialPeriod?.week ?? 0, // 0 for full month, 1-5 for W1-W5, 6-7 for halves, 8 for custom
+        hoursRecordId: initialPeriod?.id ?? "",
     });
 
-    // Reactive Auto-fill: Update hours and billRate whenever selection or data changes
+    // Use a ref to capture the initial hoursRecordId (set when clicking a specific row's + button).
+    // We NEVER let the effect overwrite this — doing so caused duplicate invoices and the render loop.
+    const lockedHoursId = useRef(initialPeriod?.id ?? "");
+
+    // Reactive Auto-fill: Update hours and billRate when dropdowns change.
+    // Never overwrites hoursRecordId if it was pre-set from a row click.
     useEffect(() => {
-        const autoHours = getLoggedHours(form.invoiceMonth, form.invoiceYear, form.week === 0 ? undefined : form.week);
+        const monthMatches = hours.filter(h => h.month === form.invoiceMonth && h.year === form.invoiceYear);
+
+        let match: any = undefined;
+        if (lockedHoursId.current) {
+            // Pre-set from row: just look up the locked record for hours/rate auto-fill
+            match = hours.find(h => h.id === lockedHoursId.current);
+        } else {
+            // Opened from generic "+ Invoice": auto-select by period
+            if (form.week !== 0) match = monthMatches.find(h => h.week === form.week);
+            else match = monthMatches.find(h => !h.week || h.week === 0);
+        }
+
+        let autoHours = "";
+        if (form.week === 0 && !match) {
+            autoHours = getLoggedHours(form.invoiceMonth, form.invoiceYear, undefined);
+        } else {
+            autoHours = match ? String(Number(match.hours)) : "";
+        }
+
         const autoBill = getBillRate(form.projectId);
-        
-        setForm(f => ({
+
+        setForm((f: any) => ({
             ...f,
             hours: autoHours || f.hours,
-            billRate: autoBill || f.billRate
+            billRate: autoBill || f.billRate,
+            // Only set hoursRecordId from auto-match if nothing was pre-locked
+            hoursRecordId: lockedHoursId.current || match?.id || f.hoursRecordId,
         }));
-    }, [form.invoiceMonth, form.invoiceYear, form.projectId, form.week, allHours, projects]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [form.invoiceMonth, form.invoiceYear, form.projectId, form.week, hours, projects]);
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -219,11 +244,11 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated, initialPeriod
     }
 
     function handleMonthChange(month: number) {
-        setForm(f => ({ ...f, invoiceMonth: month, hours: getLoggedHours(month, f.invoiceYear) }));
+        setForm((f: any) => ({ ...f, invoiceMonth: month }));
     }
 
     function handleYearChange(year: number) {
-        setForm(f => ({ ...f, invoiceYear: year, hours: getLoggedHours(f.invoiceMonth, year) }));
+        setForm((f: any) => ({ ...f, invoiceYear: year }));
     }
 
     const previewTotal = (+form.hours || 0) * (+form.billRate || 0);
@@ -238,7 +263,8 @@ function CreateInvoiceForm({ projects, hours: allHours, onCreated, initialPeriod
                 invoiceYear: +form.invoiceYear, 
                 hours: +form.hours, 
                 billRate: +form.billRate,
-                week: form.week === 0 ? undefined : +form.week
+                week: form.week === 0 ? undefined : +form.week,
+                hoursRecordId: form.hoursRecordId || undefined
             });
             setOk(true);
             onCreated();
@@ -535,6 +561,9 @@ function ConsultantDetailContent() {
                 consultantInvoiceDate: activeMarkPaidPayout.consultantInvoiceDate ? new Date(activeMarkPaidPayout.consultantInvoiceDate).toISOString().slice(0, 10) : undefined,
                 paymentDate: modalForm.paymentDate,
                 referenceNumber: modalForm.referenceNumber || "DIRECT_PAY",
+                hoursRecordId: activeMarkPaidPayout.hoursRecordId || undefined,
+                amountPaid: activeMarkPaidPayout.amountPaid ?? undefined,
+                paymentRemark: activeMarkPaidPayout.paymentRemark ?? undefined
             });
             setActiveMarkPaidPayout(null);
             await load();
@@ -576,7 +605,9 @@ function ConsultantDetailContent() {
                 payRate: Number(activeEditPayout.payRate),
                 consultantInvoiceDate: activeEditPayout.consultantInvoiceDate,
                 paymentDate: activeEditPayout.paymentDate,
-                referenceNumber: activeEditPayout.referenceNumber
+                referenceNumber: activeEditPayout.referenceNumber,
+                amountPaid: activeEditPayout.amountPaid !== "" && activeEditPayout.amountPaid != null ? Number(activeEditPayout.amountPaid) : undefined,
+                paymentRemark: activeEditPayout.paymentRemark || undefined,
             });
             setActiveEditPayout(null);
             await load();
@@ -890,18 +921,56 @@ function ConsultantDetailContent() {
         setActiveMarkPaidPayout(payout);
     }
 
+    // ─── 1-to-1 Mapping Logic ─────────────────────────────────────────────────
+    // IMPORTANT: These useMemo calls MUST be above the early returns (if loading / if !data)
+    // to satisfy React's Rules of Hooks (hooks must always be called in the same order).
+    const mappedInvoices = useMemo(() => {
+        if (!data) return {};
+        const hoursList = data.hours || [];
+        const projects: any[] = data.projects ?? [];
+        const allInvoicesRaw = projects.flatMap((p: any) => (p.invoices ?? []).map((inv: any) => ({ ...inv })));
+        const allInvoices = Array.from(new Map(allInvoicesRaw.map((inv: any) => [inv.id, inv])).values());
+        const available = [...allInvoices];
+        const res: Record<string, boolean> = {};
+        hoursList.forEach((h: any) => {
+            const idx = available.findIndex((inv: any) => inv.hoursId === h.id);
+            if (idx !== -1) { res[h.id] = true; available.splice(idx, 1); }
+        });
+        return res;
+    }, [data]);
+
+    const mappedPayouts = useMemo(() => {
+        if (!data) return {};
+        const hoursList = data.hours || [];
+        const consultantInvoicesRaw = (data.payouts ?? []);
+        const consultantInvoices = Array.from(new Map(consultantInvoicesRaw.map((p: any) => [p.id, p])).values());
+        const available = [...consultantInvoices];
+        const res: Record<string, boolean> = {};
+        hoursList.forEach((h: any) => {
+            const idx = available.findIndex((p: any) => (p as any).hoursId === h.id);
+            if (idx !== -1) { res[h.id] = true; available.splice(idx, 1); }
+        });
+        return res;
+    }, [data]);
+    // ──────────────────────────────────────────────────────────────────────────
+
     if (loading) return <div className="p-12 text-center text-gray-400 animate-pulse">Loading…</div>;
     if (error) return <div className="p-12 text-center text-red-500">{error} <button onClick={() => router.back()} className="underline ml-2">Go back</button></div>;
     if (!data) return null;
 
     const projects: any[] = data.projects ?? [];
-    const allInvoices = projects.flatMap((p: any) => (p.invoices ?? []).map((inv: any) => ({ ...inv, projectName: p.clientName ?? "Project" })));
+    const allInvoicesRaw = projects.flatMap((p: any) => (p.invoices ?? []).map((inv: any) => ({ ...inv, projectName: p.clientName ?? "Project" })));
+    const allInvoices = Array.from(new Map(allInvoicesRaw.map((inv: any) => [inv.id, inv])).values());
+
     const allPayments = allInvoices.flatMap((inv: any) => (inv.payments ?? [])
         .map((p: any) => ({ ...p, invoiceMonth: inv.invoiceMonth, invoiceYear: inv.invoiceYear, projectName: inv.projectName })))
         .sort((a: any, b: any) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
-    const consultantInvoices = (data.payouts ?? [])
+
+    const consultantInvoicesRaw = (data.payouts ?? []);
+    const consultantInvoices = Array.from(new Map(consultantInvoicesRaw.map((p: any) => [p.id, p])).values())
         .sort((a: any, b: any) => (b.year - a.year) || (b.month - a.month) || (b.week - a.week));
-    const consultantPayouts = (data.payouts ?? [])
+
+    const consultantPayouts = (consultantInvoices as any[])
         .filter((p: any) => p.status === 'PAID')
         .sort((a: any, b: any) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
 
@@ -1011,6 +1080,15 @@ function ConsultantDetailContent() {
                                             </div>
                                         </div>
                                     )}
+                                    {/* Remarks / Special Notes */}
+                                    <div className="border-t border-gray-100 dark:border-gray-700 pt-5">
+                                        <Field label="📝 Remarks / Special Case Notes">
+                                            <textarea rows={3} className={inputCls}
+                                                placeholder="e.g. C2C consultant — extra deduction applied monthly. Client has 45-day NET terms by exception."
+                                                value={editForm.remarks ?? ""}
+                                                onChange={(e) => setEditForm((f: any) => ({ ...f, remarks: e.target.value }))} />
+                                        </Field>
+                                    </div>
                                     <div className="flex justify-end pt-4">
                                         <button type="submit" disabled={saving} className="bg-violet-600 hover:bg-violet-700 text-white font-semibold px-8 py-2.5 rounded-xl transition flex items-center gap-2">
                                             {saving ? "Saving…" : <>Next Step <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></>}
@@ -1112,6 +1190,17 @@ function ConsultantDetailContent() {
                                 </div>
                             ))}
                         </dl>
+                        {/* Remarks / Notes */}
+                        {data.remarks ? (
+                            <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl">
+                                <p className="text-[10px] text-amber-600 dark:text-amber-400 uppercase font-bold tracking-widest mb-1">📝 Special Notes</p>
+                                <p className="text-xs text-amber-900 dark:text-amber-100 leading-relaxed whitespace-pre-wrap">{data.remarks}</p>
+                            </div>
+                        ) : (
+                            <button onClick={() => setEditing(true)} className="mt-4 w-full text-left p-3 border border-dashed border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-400 hover:border-violet-400 hover:text-violet-500 transition">
+                                + Add remarks / special case notes…
+                            </button>
+                        )}
                     </Card>
 
                     {/* Quick Action buttons */}
@@ -1170,7 +1259,7 @@ function ConsultantDetailContent() {
 
                     {showInvoice && (
                         <Card title="Create Invoice">
-                            <CreateInvoiceForm projects={projects} hours={data.hours ?? []} initialPeriod={prefillPeriod} onCreated={load} />
+                            <CreateInvoiceForm key={prefillPeriod?.id || 'new'} projects={projects} hours={data.hours ?? []} initialPeriod={prefillPeriod} onCreated={load} />
                         </Card>
                     )}
 
@@ -1182,7 +1271,7 @@ function ConsultantDetailContent() {
 
                     {showLogInvoice && (
                         <Card title="Log Consultant Invoice">
-                            <LogConsultantInvoiceForm consultantId={id!} hours={data.hours ?? []} projects={projects} initialPeriod={prefillPeriod} onRecorded={load} />
+                            <LogConsultantInvoiceForm key={prefillPeriod?.id || 'payout-new'} consultantId={id!} hours={data.hours ?? []} projects={projects} initialPeriod={prefillPeriod} onRecorded={load} />
                         </Card>
                     )}
 
@@ -1260,16 +1349,8 @@ function ConsultantDetailContent() {
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {data.hours.map((h: any) => {
                                             // A row is "accounted for" ONLY if there's an exact period match (e.g. Week 1 hours -> Week 1 invoice)
-                                            const hasInv = allInvoices.some((inv: any) => 
-                                                inv.invoiceMonth === h.month && 
-                                                inv.invoiceYear === h.year && 
-                                                (h.week || 0) === (inv.week || 0)
-                                            );
-                                            const hasPay = consultantInvoices.some((p: any) => 
-                                                p.month === h.month && 
-                                                p.year === h.year && 
-                                                (h.week || 0) === (p.week || 0)
-                                            );
+                                            const hasInv = !!mappedInvoices[h.id];
+                                            const hasPay = !!mappedPayouts[h.id];
                                             return (
                                                 <tr key={h.id} className="group hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition">
                                                     <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">
@@ -1375,7 +1456,24 @@ function ConsultantDetailContent() {
                                                 </td>
                                                 <td className="py-2 text-gray-500 dark:text-gray-400">{inv.projectName}</td>
                                                 <td className="py-2 font-semibold text-gray-800 dark:text-white text-right">${Number(inv.totalAmount).toLocaleString()}</td>
-                                                <td className="py-2 font-bold text-emerald-600 text-right">${Number(inv.payments?.reduce((s: any, p: any) => s + Number(p.amountReceived), 0) ?? 0).toLocaleString()}</td>
+                                                <td className="py-2 text-right">
+                                                    <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                                                        ${Number(inv.payments?.reduce((s: any, p: any) => s + Number(p.amountReceived), 0) ?? 0).toLocaleString()}
+                                                    </div>
+                                                    {(() => {
+                                                        const amt = Number(inv.payments?.reduce((s: any, p: any) => s + Number(p.amountReceived), 0) ?? 0);
+                                                        const tot = Number(inv.totalAmount);
+                                                        if (amt > 0 && Math.abs(amt - tot) > 0.01) {
+                                                            const isOver = amt > tot;
+                                                            return (
+                                                                <div className={`text-[10px] mt-0.5 inline-block px-1 rounded ${isOver ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-500"}`}>
+                                                                    {isOver ? "▲ " : "▼ "}${Math.abs(amt - tot).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} var
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    })()}
+                                                </td>
                                                 <td className="py-2 text-gray-400 text-xs text-right">{formatDateUS(inv.expectedPaymentDate)}</td>
                                                 <td className="py-2 pl-4"><StatusBadge status={inv.status ?? "PENDING"} /></td>
                                                 <td className="py-2 text-right flex items-center justify-end gap-2">
@@ -1439,7 +1537,7 @@ function ConsultantDetailContent() {
                     </Card>
 
                     {/* Consultant Invoices */}
-                    <Card title="3. Consultant Invoices (AP)">
+                    <Card title="3. Consultant Invoices (AP/Pending)">
                         {!consultantInvoices.length ? (
                             <p className="text-gray-400 text-sm">No consultant invoices recorded yet.</p>
                         ) : (
@@ -1449,9 +1547,9 @@ function ConsultantDetailContent() {
                                         <tr>
                                             <th className="pb-2">Period</th>
                                             <th className="pb-2">Hours</th>
-                                            <th className="pb-2 text-right">INV AMOUNT</th>
-                                            <th className="pb-2 text-right">CNSLT INV DATE</th>
-                                            <th className="pb-2 text-right pr-4">STATUS</th>
+                                            <th className="pb-2 text-right">EXPECTED</th>
+                                            <th className="pb-2 text-right">ACTUAL PAID</th>
+                                            <th className="pb-2 text-right">STATUS</th>
                                             <th className="pb-2"></th>
                                         </tr>
                                     </thead>
@@ -1466,9 +1564,24 @@ function ConsultantDetailContent() {
                                                         : inv.week ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">W{inv.week}</span> : null}
                                                 </td>
                                                 <td className="py-2 text-gray-400 text-xs font-mono">{Number(inv.hours)}h</td>
-                                                <td className="py-2 font-bold text-orange-600 text-right">${Number(inv.amount).toLocaleString()}</td>
-                                                <td className="py-2 text-gray-400 text-xs text-right italic">{inv.consultantInvoiceDate ? formatDateUS(inv.consultantInvoiceDate) : "—"}</td>
-                                                <td className="py-2 text-right pr-4"><StatusBadge status={inv.status ?? "PENDING"} /></td>
+                                                <td className="py-2 text-gray-500 font-medium text-right font-mono">${Number(inv.amount).toLocaleString()}</td>
+                                                <td className="py-2 text-right">
+                                                    {inv.amountPaid != null ? (
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="font-bold text-gray-800 dark:text-gray-100 font-mono">${Number(inv.amountPaid).toLocaleString()}</span>
+                                                            {(() => {
+                                                                const diff = Number(inv.amountPaid) - Number(inv.amount);
+                                                                if (Math.abs(diff) < 0.01) return null;
+                                                                return diff > 0 
+                                                                    ? <span className="text-[10px] text-amber-600 bg-amber-50 px-1 rounded mt-0.5" title={inv.paymentRemark || "Overpaid"}>+${diff.toLocaleString()}</span>
+                                                                    : <span className="text-[10px] text-red-500 bg-red-50 px-1 rounded mt-0.5" title={inv.paymentRemark || "Underpaid"}>-${Math.abs(diff).toLocaleString()}</span>;
+                                                            })()}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-gray-400 italic text-xs">—</span>
+                                                    )}
+                                                </td>
+                                                <td className="py-2 text-right"><StatusBadge status={inv.status ?? "PENDING"} /></td>
                                                 <td className="py-2 text-right flex items-center justify-end gap-2">
                                                     {inv.status === "PAID" ? (
                                                         <button onClick={() => handleRevokePayout(inv.id)} className="text-xs text-orange-500 hover:underline">Revoke</button>
@@ -1501,15 +1614,18 @@ function ConsultantDetailContent() {
                                         <tr>
                                             <th className="pb-2">Date</th>
                                             <th className="pb-2">Invoice Period</th>
-                                            <th className="pb-2">Reference</th>
-                                            <th className="pb-2 text-right pr-4">AMOUNT PAID</th>
+                                            <th className="pb-2 text-right">EXPECTED</th>
+                                            <th className="pb-2 text-right">ACTUAL PAID</th>
                                             <th className="pb-2"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {consultantPayouts.map((p: any) => (
                                             <tr key={p.id}>
-                                                <td className="py-2 text-emerald-600 dark:text-emerald-400 font-semibold">{formatDateUS(p.paymentDate)}</td>
+                                                <td className="py-2 text-emerald-600 dark:text-emerald-400 font-semibold text-xs">
+                                                    {formatDateUS(p.paymentDate)}
+                                                    <div className="text-[10px] text-gray-400 font-normal">{p.referenceNumber || "—"}</div>
+                                                </td>
                                                 <td className="py-2 text-gray-600 dark:text-gray-300">
                                                     {MONTHS[p.month - 1]} {p.year}
                                                     {p.week === 6 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">1st Half</span>
@@ -1517,9 +1633,23 @@ function ConsultantDetailContent() {
                                                         : p.week === 8 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">Custom</span>
                                                         : p.week ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">W{p.week}</span> : null}
                                                 </td>
-                                                <td className="py-2 text-gray-500 font-mono text-xs">{p.referenceNumber || "—"}</td>
-                                                <td className="py-2 font-bold text-gray-800 dark:text-gray-100 text-right pr-4 font-mono">${Number(p.amount).toLocaleString()}</td>
+                                                <td className="py-2 text-gray-500 text-right font-mono">${Number(p.amount).toLocaleString()}</td>
                                                 <td className="py-2 text-right">
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="font-bold text-gray-800 dark:text-gray-100 font-mono">${Number(p.amountPaid ?? p.amount).toLocaleString()}</span>
+                                                        {p.amountPaid != null && (() => {
+                                                            const diff = Number(p.amountPaid) - Number(p.amount);
+                                                            if (Math.abs(diff) < 0.01) return null;
+                                                            return diff > 0 
+                                                                ? <span className="text-[10px] text-amber-600 bg-amber-50 px-1 rounded mt-0.5" title={p.paymentRemark || "Overpaid"}>+${diff.toLocaleString()}</span>
+                                                                : <span className="text-[10px] text-red-500 bg-red-50 px-1 rounded mt-0.5" title={p.paymentRemark || "Underpaid"}>-${Math.abs(diff).toLocaleString()}</span>;
+                                                        })()}
+                                                    </div>
+                                                </td>
+                                                <td className="py-2 text-right flex justify-end gap-1">
+                                                    <button onClick={() => setActiveEditPayout(p)} className="text-gray-400 hover:text-violet-600 p-1" title="Edit Payout">
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                    </button>
                                                     <button onClick={() => handleRevokePayout(p.id)} className="text-gray-400 hover:text-orange-500 p-1 rounded hover:bg-orange-50 transition" title="Revoke Payment (Return to Pending)">
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                     </button>
@@ -1716,6 +1846,30 @@ function ConsultantDetailContent() {
                                 <input type="number" step="0.01" className={inputCls} value={activeEditPayout.payRate} onChange={e => setActiveEditPayout({ ...activeEditPayout, payRate: e.target.value })} />
                             </Field>
                         </div>
+                        {/* Expected amount calculated from hours × rate */}
+                        <div className="text-xs text-gray-400 -mt-2 px-1">
+                            Expected: <strong className="text-gray-600 dark:text-gray-300">${(Number(activeEditPayout.hours) * Number(activeEditPayout.payRate)).toFixed(2)}</strong>
+                        </div>
+                        <Field label="Actual Amount Paid ($) — leave blank if same as expected">
+                            <input type="number" step="0.01" className={inputCls}
+                                placeholder={`${(Number(activeEditPayout.hours) * Number(activeEditPayout.payRate)).toFixed(2)}`}
+                                value={activeEditPayout.amountPaid ?? ""}
+                                onChange={e => setActiveEditPayout({ ...activeEditPayout, amountPaid: e.target.value })} />
+                            {/* Show variance indicator live */}
+                            {activeEditPayout.amountPaid !== "" && activeEditPayout.amountPaid != null && (() => {
+                                const expected = Number(activeEditPayout.hours) * Number(activeEditPayout.payRate);
+                                const actual = Number(activeEditPayout.amountPaid);
+                                const diff = actual - expected;
+                                if (Math.abs(diff) < 0.01) return <span className="text-xs text-emerald-600 font-semibold mt-1 block">✓ Exact match</span>;
+                                if (diff > 0) return <span className="text-xs text-amber-600 font-semibold mt-1 block">▲ Overpaid by ${diff.toFixed(2)}</span>;
+                                return <span className="text-xs text-red-500 font-semibold mt-1 block">▼ Underpaid by ${Math.abs(diff).toFixed(2)}</span>;
+                            })()}
+                        </Field>
+                        <Field label="Payment Remark (reason for discrepancy, etc.)">
+                            <textarea rows={2} className={inputCls} placeholder="e.g. Short-paid due to deduction, will be corrected next month"
+                                value={activeEditPayout.paymentRemark || ""}
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setActiveEditPayout({ ...activeEditPayout, paymentRemark: e.target.value })} />
+                        </Field>
                         <Field label="Consultant Invoice Date">
                             <input type="date" className={inputCls} value={activeEditPayout.consultantInvoiceDate?.slice(0, 10) || ""} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setActiveEditPayout({ ...activeEditPayout, consultantInvoiceDate: e.target.value })} />
                         </Field>
@@ -1841,6 +1995,7 @@ function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded, i
         consultantInvoiceDate: now.toISOString().slice(0, 10),
         referenceNumber: "", // New: Consultant Invoice #
         week: initialPeriod?.week ?? 0, // 0 for full month, 1-5 for W1-W5, 6-7 for halves, 8 for custom
+        hoursRecordId: initialPeriod?.id ?? "",
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -1848,17 +2003,25 @@ function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded, i
 
     // Auto-fill hours & pay rate based on month/year/week
     useEffect(() => {
+        setForm((f: any) => {
+            const m = +f.month;
+            const y = +f.year;
+            const w = +f.week;
+            
+            let match = hours.find(h => h.id === f.hoursRecordId);
+            if (!match || match.month !== m || match.year !== y || (w !== 0 && match.week !== w) || (w === 0 && match.week && match.week !== 0)) {
+                const monthMatches = hours.filter(h => h.month === m && h.year === y);
+                if (w !== 0) match = monthMatches.find(h => h.week === w) || null;
+                else match = monthMatches.find(h => !h.week || h.week === 0) || null;
+            }
+
         // Use the same smart summation logic as CreateInvoiceForm
-        const getSum = () => {
-            const m = +form.month;
-            const y = +form.year;
-            const w = +form.week;
+        const getSum = (m: number, y: number, w: number) => {
             const monthMatches = hours.filter(h => h.month === m && h.year === y);
             if (!monthMatches.length) return "";
 
             if (w !== 0) {
-                const exact = monthMatches.find(h => h.week === w);
-                return exact ? String(Number(exact.hours)) : "";
+                return match ? String(Number(match.hours)) : "";
             }
 
             const fullMonthLog = monthMatches.find(h => !h.week || h.week === 0);
@@ -1868,15 +2031,16 @@ function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded, i
             return periodLogs.length ? String(periodLogs.reduce((acc, curr) => acc + Number(curr.hours), 0)) : "";
         };
 
-        const autoHours = getSum();
+        const autoHours = getSum(+f.month, +f.year, +f.week);
         let autoPayRate = "";
         if (projects.length > 0) {
             const project = projects.find((p: any) => p.status === "ACTIVE") || projects[0];
             const contract = project?.contracts?.sort((a: any, b: any) => b.id - a.id)?.[0];
             if (contract) autoPayRate = Number(contract.payRate).toString();
         }
-        setForm(f => ({ ...f, hours: autoHours, payRate: autoPayRate }));
-    }, [form.month, form.year, form.week, hours, projects]);
+        return { ...f, hours: autoHours, payRate: autoPayRate, hoursRecordId: match?.id ?? "" };
+        });
+    }, [form.month, form.year, form.week, form.hoursRecordId, hours, projects]);
 
     async function handleSave(e: React.FormEvent) {
         e.preventDefault();
@@ -1891,6 +2055,7 @@ function LogConsultantInvoiceForm({ consultantId, hours, projects, onRecorded, i
                 consultantInvoiceDate: form.consultantInvoiceDate,
                 referenceNumber: form.referenceNumber || undefined,
                 week: form.week === 0 ? undefined : +form.week,
+                hoursRecordId: form.hoursRecordId || undefined
                 // paymentDate is left out purposely to mark as PENDING
             });
             setOk(true);

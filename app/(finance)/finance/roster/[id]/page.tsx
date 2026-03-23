@@ -26,6 +26,9 @@ function initials(name: string) {
 }
 
 interface MonthEntry {
+    recordId: string;
+    startDate: string | null;
+    endDate: string | null;
     month: number; year: number; hours: number;
     revenue: number; amountReceived: number; invoiceTotal: number;
     invoiceId: string | null;
@@ -116,9 +119,19 @@ function MonthRow({ m }: { m: MonthEntry }) {
 
     return (
         <tr className={`${rowBg} transition border-b border-gray-100 dark:border-gray-700/50 text-sm`}>
-            {/* Month */}
+            {/* Month & Custom Date Range */}
             <td className="px-4 py-3 font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
-                {MN[m.month - 1]} {m.year}
+                {m.startDate && m.endDate ? (
+                    <div className="flex flex-col">
+                        <span>{MN[m.month - 1]} {m.year}</span>
+                        <span className="text-[11px] text-gray-400 font-normal">
+                            {fmtDate(m.startDate)} – {fmtDate(m.endDate)}
+                        </span>
+                    </div>
+                ) : (
+                    <span>{MN[m.month - 1]} {m.year}</span>
+                )}
+                
                 {m.invoiceDate && (
                     <div className="text-[10px] text-gray-400 font-normal mt-0.5">
                         Invoice: {fmtDate(m.invoiceDate)}
@@ -161,11 +174,17 @@ function MonthRow({ m }: { m: MonthEntry }) {
                         </span>
                     ) : <span className="text-gray-300 text-xs">—</span>}
 
-                    {m.invoiceId && (
-                        <Link href={`/finance/invoices?projectId=${m.projectId}&year=${m.year}&month=${m.month}`} 
+                    {m.invoiceId ? (
+                        <Link href={`/finance/invoices?projectId=${m.projectId}&year=${m.year}&month=${m.month}&hoursRecordId=${m.recordId}`} 
                             title="Edit Invoice"
                             className="text-gray-400 hover:text-violet-600 transition p-1 hover:bg-violet-50 dark:hover:bg-violet-900/40 rounded-lg">
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        </Link>
+                    ) : (
+                        <Link href={`/finance/invoices?projectId=${m.projectId}&year=${m.year}&month=${m.month}&hoursRecordId=${m.recordId}`} 
+                            title="Generate Invoice"
+                            className="text-violet-500 hover:text-violet-700 transition p-1 hover:bg-violet-50 dark:hover:bg-violet-900/40 rounded-lg">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                         </Link>
                     )}
                 </div>
