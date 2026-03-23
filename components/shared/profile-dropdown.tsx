@@ -46,7 +46,11 @@ const ProfileDropdown = () => {
     .map((role) => role.toUpperCase())
     .filter((role) => validRoles.includes(role))
     .map((role) => role.replace(/-/g, "_"));
-  const uniqueDisplayRoles = Array.from(new Set(displayRolesRaw));
+  const uniqueDisplayRoles = Array.from(new Set(displayRolesRaw)).sort((a, b) => {
+    if (a === "FIN_ADMIN") return 1;
+    if (b === "FIN_ADMIN") return -1;
+    return 0;
+  });
   const selectedRolesBase = uniqueDisplayRoles;
   const hasPodLead = selectedRolesBase.includes("POD_LEAD");
   const hasRecruiter = selectedRolesBase.includes("RECRUITER");
@@ -79,7 +83,9 @@ const ProfileDropdown = () => {
     ? [effectiveActiveRole]
     : (hasPodLead && hasRecruiter
       ? selectedRolesBase.filter((role) => role !== "RECRUITER")
-      : selectedRolesBase);
+      : (selectedRolesBase.length > 1 && selectedRolesBase[0] === "FIN_ADMIN"
+        ? [...selectedRolesBase.slice(1), "FIN_ADMIN"].slice(0, 1) // Pick next if FIN_ADMIN is first
+        : selectedRolesBase));
 
   const formattedRoles = selectedRoles.map((role) =>
     role

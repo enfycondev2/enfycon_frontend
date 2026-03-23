@@ -17,8 +17,22 @@ export default function FinancePinGate({ children }: FinancePinGateProps) {
 
     useEffect(() => {
         const stored = getStoredPin();
-        if (stored) setUnlocked(true);
-        setMounted(true);
+        if (stored) {
+            setUnlocked(true);
+            setMounted(true);
+        } else {
+            // Lazy check: see if session is already unlocked in backend
+            setLoading(true);
+            apiClient("/finance/dashboard")
+                .then(res => {
+                    if (res.ok) setUnlocked(true);
+                })
+                .catch(() => {})
+                .finally(() => {
+                    setLoading(false);
+                    setMounted(true);
+                });
+        }
 
         const handleLock = () => {
             setUnlocked(false);

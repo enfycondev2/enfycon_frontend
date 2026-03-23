@@ -13,6 +13,7 @@ function getRoleDashboard(roles: string[]): string {
   if (normalized.includes("POD_LEAD") || normalized.includes("POD-LEAD"))
     return "/pod-lead/dashboard"
   if (normalized.includes("RECRUITER")) return "/pod-lead/dashboard"
+  if (normalized.includes("FIN_ADMIN") || normalized.includes("FIN-ADMIN")) return "/finance"
   return "/dashboard"
 }
 
