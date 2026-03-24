@@ -1578,6 +1578,7 @@ function ConsultantDetailContent() {
                                 <table className="w-full text-sm">
                                     <thead className="text-left text-xs text-gray-400 uppercase">
                                         <tr>
+                                            <th className="pb-2">Date</th>
                                             <th className="pb-2">Period</th>
                                             <th className="pb-2">Hours</th>
                                             <th className="pb-2 text-right">Expected</th>
@@ -1590,6 +1591,7 @@ function ConsultantDetailContent() {
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {consultantInvoices.map((inv: any) => (
                                             <tr key={inv.id}>
+                                                <td className="py-2 text-gray-400 text-[10px] font-mono whitespace-nowrap">{inv.consultantInvoiceDate ? formatDateUS(inv.consultantInvoiceDate) : "—"}</td>
                                                 <td className="py-2 text-gray-600 dark:text-gray-300 font-medium text-xs whitespace-nowrap">
                                                     {MONTHS[inv.month - 1]} {inv.year}
                                                     {inv.week === 6 ? <span className="ml-1 text-[9px] bg-sky-50 text-sky-600 px-1 rounded">1st Half</span>
@@ -1618,7 +1620,7 @@ function ConsultantDetailContent() {
                                                         <span className="text-gray-400 italic text-[10px]">—</span>
                                                     )}
                                                 </td>
-                                                <td className="py-2 px-4 text-gray-400 text-[10px] max-w-[120px] truncate italic" title={inv.paymentRemark}>{inv.paymentRemark || "—"}</td>
+                                                <td onClick={() => toggleRemark(inv.id)} className="py-2 px-4 text-[10px] italic cursor-pointer select-none hover:text-violet-600 transition-colors" style={{ maxWidth: expandedRemarks.has(inv.id) ? undefined : 120, overflow: expandedRemarks.has(inv.id) ? "visible" : "hidden", whiteSpace: expandedRemarks.has(inv.id) ? "normal" : "nowrap", textOverflow: expandedRemarks.has(inv.id) ? undefined : "ellipsis" }}><span className="text-gray-400">{inv.paymentRemark || "—"}</span>{inv.paymentRemark && !expandedRemarks.has(inv.id) && <span className="ml-1 text-violet-400 text-[8px]">▼</span>}{inv.paymentRemark && expandedRemarks.has(inv.id) && <span className="ml-1 text-violet-400 text-[8px]">▲</span>}</td>
                                                 <td className="py-2 text-right"><StatusBadge status={inv.status ?? "PENDING"} /></td>
                                                 <td className="py-2 text-right flex items-center justify-end gap-2">
                                                     {inv.status === "PAID" ? (
