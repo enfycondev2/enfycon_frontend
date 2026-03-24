@@ -977,7 +977,8 @@ function ConsultantDetailContent() {
 
     const projects: any[] = data.projects ?? [];
     const allInvoicesRaw = projects.flatMap((p: any) => (p.invoices ?? []).map((inv: any) => ({ ...inv, projectName: p.clientName ?? "Project" })));
-    const allInvoices = Array.from(new Map(allInvoicesRaw.map((inv: any) => [inv.id, inv])).values());
+    const allInvoices = Array.from(new Map(allInvoicesRaw.map((inv: any) => [inv.id, inv])).values())
+        .sort((a: any, b: any) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime());
 
     const allPayments = allInvoices.flatMap((inv: any) => (inv.payments ?? [])
         .map((p: any) => ({ ...p, invoiceMonth: inv.invoiceMonth, invoiceYear: inv.invoiceYear, projectName: inv.projectName })))
@@ -985,7 +986,12 @@ function ConsultantDetailContent() {
 
     const consultantInvoicesRaw = (data.payouts ?? []);
     const consultantInvoices = Array.from(new Map(consultantInvoicesRaw.map((p: any) => [p.id, p])).values())
-        .sort((a: any, b: any) => (b.year - a.year) || (b.month - a.month) || (b.week - a.week));
+        .sort((a: any, b: any) => {
+            const dateA = a.consultantInvoiceDate ? new Date(a.consultantInvoiceDate).getTime() : 0;
+            const dateB = b.consultantInvoiceDate ? new Date(b.consultantInvoiceDate).getTime() : 0;
+            if (dateA !== dateB) return dateB - dateA;
+            return (b.year - a.year) || (b.month - a.month) || (b.week - a.week);
+        });
 
     const consultantPayouts = (consultantInvoices as any[])
         .filter((p: any) => p.status === 'PAID')
