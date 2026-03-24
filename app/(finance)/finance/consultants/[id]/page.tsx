@@ -1478,6 +1478,7 @@ function ConsultantDetailContent() {
                                             <th className="pb-2">Date</th>
                                             <th className="pb-2">Period</th>
                                             <th className="pb-2">Project</th>
+                                            <th className="pb-2 text-center px-4">Hours</th>
                                             <th className="pb-2 text-right">INV AMT</th>
                                             <th className="pb-2 text-right">ACTUAL RECVD</th>
                                             <th className="pb-2 px-4">Remark</th>
@@ -1497,6 +1498,7 @@ function ConsultantDetailContent() {
                                                         : inv.week ? <span className="ml-1 text-[9px] bg-sky-50 text-sky-600 px-1 rounded">W{inv.week}</span> : null}
                                                 </td>
                                                 <td className="py-2 text-gray-500 dark:text-gray-400 text-xs">{inv.projectName}</td>
+                                                <td className="py-2 text-center text-gray-400 text-[10px] font-mono px-4">{Number(inv.hours)}h</td>
                                                 <td className="py-2 font-semibold text-gray-700 dark:text-gray-200 text-right text-xs">${Number(inv.totalAmount).toLocaleString()}</td>
                                                 <td className="py-2 text-right">
                                                     <div className="font-bold text-emerald-600 dark:text-emerald-400 text-xs text-right">
