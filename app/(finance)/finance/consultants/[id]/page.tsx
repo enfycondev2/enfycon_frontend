@@ -1546,7 +1546,7 @@ function ConsultantDetailContent() {
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {allPayments.map((p: any) => (
                                             <tr key={p.id}>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium text-[10px] font-mono">{formatDateUS(p.paymentDate)}</td>
+                                                <td className="py-2 text-gray-400 dark:text-gray-500 font-medium text-[10px] font-mono">{formatDateUS(p.paymentDate)}</td>
                                                 <td className="py-2 text-gray-400 text-xs">{MONTHS[p.invoiceMonth - 1]} {p.invoiceYear}</td>
                                                 <td className="py-2 text-gray-500 text-xs">
                                                     <div className="font-medium text-gray-700 dark:text-gray-300 text-[10px]">{p.paymentRemark || ""}</div>
