@@ -212,7 +212,7 @@ function CreateInvoiceForm({ projects, hours, onCreated, initialPeriod }: { proj
             match = hours.find(h => h.id === lockedHoursId.current);
         } else {
             // Opened from generic "+ Invoice": auto-select by period
-            if (form.week !== 0) match = monthMatches.find(h => h.week === form.week);
+            if (form.week && form.week !== 0) match = monthMatches.find(h => h.week === form.week);
             else match = monthMatches.find(h => !h.week || h.week === 0);
         }
 
@@ -531,18 +531,29 @@ function ConsultantDetailContent() {
     const [activeEditInvoice, setActiveEditInvoice] = useState<any>(null);
     const [activeEditPayment, setActiveEditPayment] = useState<any>(null);
     const [activeEditPayout, setActiveEditPayout] = useState<any>(null);
+    const [expandedRemarks, setExpandedRemarks] = useState<Set<string>>(new Set());
+    const toggleRemark = (id: string) => setExpandedRemarks(prev => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+    });
 
     const [modalForm, setModalForm] = useState({
         paymentDate: new Date().toISOString().slice(0, 10),
         referenceNumber: "",
-        amount: ""
+        amount: "",
+        paymentRemark: "",
+        isFinalPayment: true
     });
 
     async function handleMarkPaid(invoiceId: string) {
         try {
             await financePatch(`finance/invoices/${invoiceId}/mark-paid`, {
                 paymentDate: modalForm.paymentDate,
-                referenceNumber: modalForm.referenceNumber || "MANUAL_MARK_PAID"
+                referenceNumber: modalForm.referenceNumber || "MANUAL_MARK_PAID",
+                amountReceived: Number(modalForm.amount),
+                paymentRemark: modalForm.paymentRemark || undefined,
+                isFinalPayment: modalForm.isFinalPayment
             });
             setActiveMarkPaid(null);
             await load();
@@ -562,8 +573,9 @@ function ConsultantDetailContent() {
                 paymentDate: modalForm.paymentDate,
                 referenceNumber: modalForm.referenceNumber || "DIRECT_PAY",
                 hoursRecordId: activeMarkPaidPayout.hoursRecordId || undefined,
-                amountPaid: activeMarkPaidPayout.amountPaid ?? undefined,
-                paymentRemark: activeMarkPaidPayout.paymentRemark ?? undefined
+                amountPaid: Number(modalForm.amount),
+                paymentRemark: modalForm.paymentRemark || undefined,
+                isFinalPayment: modalForm.isFinalPayment
             });
             setActiveMarkPaidPayout(null);
             await load();
@@ -577,7 +589,9 @@ function ConsultantDetailContent() {
                 hours: Number(activeEditInvoice.hours),
                 billRate: Number(activeEditInvoice.billRate),
                 invoiceDate: activeEditInvoice.invoiceDate,
-                referenceNumber: activeEditInvoice.referenceNumber
+                referenceNumber: activeEditInvoice.referenceNumber,
+                paymentRemark: activeEditInvoice.paymentRemark || undefined,
+                amountReceived: activeEditInvoice.amountReceived !== "" && activeEditInvoice.amountReceived != null ? Number(activeEditInvoice.amountReceived) : undefined
             });
             setActiveEditInvoice(null);
             await load();
@@ -590,7 +604,8 @@ function ConsultantDetailContent() {
             await financePatch(`finance/payments/${activeEditPayment.id}`, {
                 amountReceived: Number(activeEditPayment.amountReceived),
                 paymentDate: activeEditPayment.paymentDate,
-                referenceNumber: activeEditPayment.referenceNumber
+                referenceNumber: activeEditPayment.referenceNumber,
+                paymentRemark: activeEditPayment.paymentRemark || undefined
             });
             setActiveEditPayment(null);
             await load();
@@ -916,7 +931,9 @@ function ConsultantDetailContent() {
         setModalForm({
             paymentDate: new Date().toISOString().slice(0, 10),
             referenceNumber: "",
-            amount: Number(payout.amount).toString()
+            amount: Number(payout.amount).toString(),
+            paymentRemark: "",
+            isFinalPayment: true
         });
         setActiveMarkPaidPayout(payout);
     }
@@ -1435,11 +1452,12 @@ function ConsultantDetailContent() {
                                 <table className="w-full text-sm">
                                     <thead className="text-left text-xs text-gray-400 uppercase">
                                         <tr>
+                                            <th className="pb-2">Date</th>
                                             <th className="pb-2">Period</th>
                                             <th className="pb-2">Project</th>
-                                            <th className="pb-2 text-right">INVOICE AMT</th>
-                                            <th className="pb-2 text-right">PAID</th>
-                                            <th className="pb-2 text-right">EXPECTED</th>
+                                            <th className="pb-2 text-right">INV AMT</th>
+                                            <th className="pb-2 text-right">ACTUAL RECVD</th>
+                                            <th className="pb-2 px-4">Remark</th>
                                             <th className="pb-2 pl-4">STATUS</th>
                                             <th className="pb-2"></th>
                                         </tr>
@@ -1447,17 +1465,18 @@ function ConsultantDetailContent() {
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {allInvoices.map((inv: any) => (
                                             <tr key={inv.id}>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300">
+                                                <td className="py-2 text-gray-400 text-[10px] font-mono whitespace-nowrap">{formatDateUS(inv.expectedPaymentDate)}</td>
+                                                <td className="py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap text-xs">
                                                     {MONTHS[(inv.invoiceMonth ?? 1) - 1]} {inv.invoiceYear}
-                                                    {inv.week === 6 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">1st Half</span>
-                                                        : inv.week === 7 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">2nd Half</span>
-                                                        : inv.week === 8 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">Custom</span>
-                                                        : inv.week ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">W{inv.week}</span> : null}
+                                                    {inv.week === 6 ? <span className="ml-1 text-[9px] bg-sky-50 text-sky-600 px-1 rounded">1st Half</span>
+                                                        : inv.week === 7 ? <span className="ml-1 text-[9px] bg-sky-50 text-sky-600 px-1 rounded">2nd Half</span>
+                                                        : inv.week === 8 ? <span className="ml-1 text-[9px] bg-sky-50 text-sky-600 px-1 rounded">Custom</span>
+                                                        : inv.week ? <span className="ml-1 text-[9px] bg-sky-50 text-sky-600 px-1 rounded">W{inv.week}</span> : null}
                                                 </td>
-                                                <td className="py-2 text-gray-500 dark:text-gray-400">{inv.projectName}</td>
-                                                <td className="py-2 font-semibold text-gray-800 dark:text-white text-right">${Number(inv.totalAmount).toLocaleString()}</td>
+                                                <td className="py-2 text-gray-500 dark:text-gray-400 text-xs">{inv.projectName}</td>
+                                                <td className="py-2 font-semibold text-gray-700 dark:text-gray-200 text-right text-xs">${Number(inv.totalAmount).toLocaleString()}</td>
                                                 <td className="py-2 text-right">
-                                                    <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                                                    <div className="font-bold text-emerald-600 dark:text-emerald-400 text-xs text-right">
                                                         ${Number(inv.payments?.reduce((s: any, p: any) => s + Number(p.amountReceived), 0) ?? 0).toLocaleString()}
                                                     </div>
                                                     {(() => {
@@ -1466,21 +1485,32 @@ function ConsultantDetailContent() {
                                                         if (amt > 0 && Math.abs(amt - tot) > 0.01) {
                                                             const isOver = amt > tot;
                                                             return (
-                                                                <div className={`text-[10px] mt-0.5 inline-block px-1 rounded ${isOver ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-500"}`}>
-                                                                    {isOver ? "▲ " : "▼ "}${Math.abs(amt - tot).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} var
+                                                                <div 
+                                                                    className={`text-[9px] mt-0.5 inline-block px-1 rounded font-medium ${isOver ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-500"}`}
+                                                                >
+                                                                    {isOver ? "▲ " : "▼ "}${Math.abs(amt - tot).toLocaleString()} var
                                                                 </div>
                                                             );
                                                         }
                                                         return null;
                                                     })()}
                                                 </td>
-                                                <td className="py-2 text-gray-400 text-xs text-right">{formatDateUS(inv.expectedPaymentDate)}</td>
+                                                <td className="py-2 px-4 text-gray-400 text-[10px] max-w-[120px] truncate italic" title={inv.paymentRemark}>{inv.paymentRemark || "—"}</td>
                                                 <td className="py-2 pl-4"><StatusBadge status={inv.status ?? "PENDING"} /></td>
                                                 <td className="py-2 text-right flex items-center justify-end gap-2">
                                                     {inv.status === "PAID" ? (
                                                         <button onClick={() => handleMarkUnpaid(inv.id)} className="text-xs text-orange-500 hover:underline">Revoke Paid</button>
                                                     ) : (
-                                                        <button onClick={() => { setActiveMarkPaid(inv); setModalForm({ paymentDate: new Date().toISOString().slice(0, 10), referenceNumber: "", amount: inv.totalAmount.toString() }); }} className="text-xs text-violet-600 hover:underline">Mark Paid</button>
+                                                        <button onClick={() => { 
+                                                            setActiveMarkPaid(inv); 
+                                                            setModalForm({ 
+                                                                paymentDate: new Date().toISOString().slice(0, 10), 
+                                                                referenceNumber: "", 
+                                                                amount: Number(inv.totalAmount).toFixed(2), 
+                                                                paymentRemark: "", 
+                                                                isFinalPayment: true 
+                                                            }); 
+                                                        }} className="text-xs text-violet-600 hover:underline">Mark Paid</button>
                                                     )}
                                                     <button onClick={() => setActiveEditInvoice(inv)} className="text-gray-400 hover:text-violet-600 p-1" title="Edit Invoice">
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -1507,19 +1537,22 @@ function ConsultantDetailContent() {
                                     <thead className="text-left text-xs text-gray-400 uppercase">
                                         <tr>
                                             <th className="pb-2">Date</th>
-                                            <th className="pb-2">Invoice Period</th>
-                                            <th className="pb-2">Reference</th>
-                                            <th className="pb-2 text-right">AMOUNT RECVD</th>
+                                            <th className="pb-2">Period</th>
+                                            <th className="pb-2 text-left">Remark</th>
+                                            <th className="pb-2 text-right">Amount Recvd</th>
                                             <th className="pb-2"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {allPayments.map((p: any) => (
                                             <tr key={p.id}>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">{formatDateUS(p.paymentDate)}</td>
+                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium text-[10px] font-mono">{formatDateUS(p.paymentDate)}</td>
                                                 <td className="py-2 text-gray-400 text-xs">{MONTHS[p.invoiceMonth - 1]} {p.invoiceYear}</td>
-                                                <td className="py-2 text-gray-500 italic text-xs">{p.referenceNumber || "Bank Transfer"}</td>
-                                                <td className="py-2 font-bold text-emerald-600 text-right font-mono">${Number(p.amountReceived).toLocaleString()}</td>
+                                                <td className="py-2 text-gray-500 text-xs">
+                                                    <div className="font-medium text-gray-700 dark:text-gray-300 text-[10px]">{p.paymentRemark || ""}</div>
+                                                    <div className="italic text-[9px] text-gray-400">{p.referenceNumber || "Bank Transfer"}</div>
+                                                </td>
+                                                <td className="py-2 font-bold text-emerald-600 text-right font-mono text-xs">${Number(p.amountReceived).toLocaleString()}</td>
                                                 <td className="py-2 text-right flex items-center justify-end gap-2">
                                                     <button onClick={() => setActiveEditPayment(p)} className="text-gray-400 hover:text-violet-600 p-1" title="Edit Payment">
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -1547,8 +1580,9 @@ function ConsultantDetailContent() {
                                         <tr>
                                             <th className="pb-2">Period</th>
                                             <th className="pb-2">Hours</th>
-                                            <th className="pb-2 text-right">EXPECTED</th>
-                                            <th className="pb-2 text-right">ACTUAL PAID</th>
+                                            <th className="pb-2 text-right">Expected</th>
+                                            <th className="pb-2 text-right">Actual Paid</th>
+                                            <th className="pb-2 px-4">Remark</th>
                                             <th className="pb-2 text-right">STATUS</th>
                                             <th className="pb-2"></th>
                                         </tr>
@@ -1556,37 +1590,50 @@ function ConsultantDetailContent() {
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {consultantInvoices.map((inv: any) => (
                                             <tr key={inv.id}>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium">
+                                                <td className="py-2 text-gray-600 dark:text-gray-300 font-medium text-xs whitespace-nowrap">
                                                     {MONTHS[inv.month - 1]} {inv.year}
-                                                    {inv.week === 6 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">1st Half</span>
-                                                        : inv.week === 7 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">2nd Half</span>
-                                                        : inv.week === 8 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">Custom</span>
-                                                        : inv.week ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">W{inv.week}</span> : null}
+                                                    {inv.week === 6 ? <span className="ml-1 text-[9px] bg-sky-50 text-sky-600 px-1 rounded">1st Half</span>
+                                                        : inv.week === 7 ? <span className="ml-1 text-[9px] bg-sky-50 text-sky-600 px-1 rounded">2nd Half</span>
+                                                        : inv.week === 8 ? <span className="ml-1 text-[9px] bg-sky-50 text-sky-600 px-1 rounded">Custom</span>
+                                                        : inv.week ? <span className="ml-1 text-[9px] bg-sky-50 text-sky-600 px-1 rounded">W{inv.week}</span> : null}
                                                 </td>
-                                                <td className="py-2 text-gray-400 text-xs font-mono">{Number(inv.hours)}h</td>
-                                                <td className="py-2 text-gray-500 font-medium text-right font-mono">${Number(inv.amount).toLocaleString()}</td>
+                                                <td className="py-2 text-gray-400 text-[10px] font-mono">{Number(inv.hours)}h</td>
+                                                <td className="py-2 text-gray-500 font-medium text-right text-xs font-mono">${Number(inv.amount).toLocaleString()}</td>
                                                 <td className="py-2 text-right">
                                                     {inv.amountPaid != null ? (
-                                                        <div className="flex flex-col items-end">
-                                                            <span className="font-bold text-gray-800 dark:text-gray-100 font-mono">${Number(inv.amountPaid).toLocaleString()}</span>
+                                                        <div className="flex flex-col items-end text-right">
+                                                            <span className="font-bold text-gray-700 dark:text-gray-100 text-xs font-mono">${Number(inv.amountPaid).toLocaleString()}</span>
                                                             {(() => {
                                                                 const diff = Number(inv.amountPaid) - Number(inv.amount);
                                                                 if (Math.abs(diff) < 0.01) return null;
-                                                                return diff > 0 
-                                                                    ? <span className="text-[10px] text-amber-600 bg-amber-50 px-1 rounded mt-0.5" title={inv.paymentRemark || "Overpaid"}>+${diff.toLocaleString()}</span>
-                                                                    : <span className="text-[10px] text-red-500 bg-red-50 px-1 rounded mt-0.5" title={inv.paymentRemark || "Underpaid"}>-${Math.abs(diff).toLocaleString()}</span>;
+                                                                const isOver = diff > 0;
+                                                                return (
+                                                                    <span className={`text-[9px] font-medium px-1 rounded mt-0.5 ${isOver ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-500"}`}>
+                                                                        {isOver ? "+ " : "- "}${Math.abs(diff).toLocaleString()}
+                                                                    </span>
+                                                                );
                                                             })()}
                                                         </div>
                                                     ) : (
-                                                        <span className="text-gray-400 italic text-xs">—</span>
+                                                        <span className="text-gray-400 italic text-[10px]">—</span>
                                                     )}
                                                 </td>
+                                                <td className="py-2 px-4 text-gray-400 text-[10px] max-w-[120px] truncate italic" title={inv.paymentRemark}>{inv.paymentRemark || "—"}</td>
                                                 <td className="py-2 text-right"><StatusBadge status={inv.status ?? "PENDING"} /></td>
                                                 <td className="py-2 text-right flex items-center justify-end gap-2">
                                                     {inv.status === "PAID" ? (
                                                         <button onClick={() => handleRevokePayout(inv.id)} className="text-xs text-orange-500 hover:underline">Revoke</button>
                                                     ) : (
-                                                        <button onClick={() => handleMarkPayoutPaid(inv)} className="text-xs text-violet-600 hover:underline">Mark Paid</button>
+                                                        <button onClick={() => { 
+                                                            setActiveMarkPaidPayout(inv); 
+                                                            setModalForm({ 
+                                                                paymentDate: new Date().toISOString().slice(0, 10), 
+                                                                referenceNumber: "", 
+                                                                amount: Number(inv.amount).toFixed(2), 
+                                                                paymentRemark: "", 
+                                                                isFinalPayment: true 
+                                                            }); 
+                                                        }} className="text-xs text-violet-600 hover:underline">Mark Paid</button>
                                                     )}
                                                     <button onClick={() => setActiveEditPayout(inv)} className="text-gray-400 hover:text-violet-600 p-1" title="Edit Payout">
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -1613,36 +1660,41 @@ function ConsultantDetailContent() {
                                     <thead className="text-left text-xs text-gray-400 uppercase">
                                         <tr>
                                             <th className="pb-2">Date</th>
-                                            <th className="pb-2">Invoice Period</th>
-                                            <th className="pb-2 text-right">EXPECTED</th>
-                                            <th className="pb-2 text-right">ACTUAL PAID</th>
+                                            <th className="pb-2">Period</th>
+                                            <th className="pb-2">Remark</th>
+                                            <th className="pb-2 text-right">Expected</th>
+                                            <th className="pb-2 text-right">Actual Paid</th>
                                             <th className="pb-2"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {consultantPayouts.map((p: any) => (
                                             <tr key={p.id}>
-                                                <td className="py-2 text-emerald-600 dark:text-emerald-400 font-semibold text-xs">
+                                                <td className="py-2 text-emerald-600 dark:text-emerald-400 font-semibold text-[10px] font-mono whitespace-nowrap">
                                                     {formatDateUS(p.paymentDate)}
-                                                    <div className="text-[10px] text-gray-400 font-normal">{p.referenceNumber || "—"}</div>
+                                                    <div className="text-[9px] text-gray-400 font-normal">{p.referenceNumber || "—"}</div>
                                                 </td>
-                                                <td className="py-2 text-gray-600 dark:text-gray-300">
+                                                <td className="py-2 text-gray-600 dark:text-gray-300 text-xs whitespace-nowrap">
                                                     {MONTHS[p.month - 1]} {p.year}
-                                                    {p.week === 6 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">1st Half</span>
-                                                        : p.week === 7 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">2nd Half</span>
-                                                        : p.week === 8 ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">Custom</span>
-                                                        : p.week ? <span className="ml-1 text-[10px] bg-sky-50 text-sky-600 px-1 rounded">W{p.week}</span> : null}
+                                                    {p.week === 6 ? <span className="ml-1 text-[9px] bg-sky-50 text-sky-600 px-1 rounded">1st Half</span>
+                                                        : p.week === 7 ? <span className="ml-1 text-[9px] bg-sky-50 text-sky-600 px-1 rounded">2nd Half</span>
+                                                        : p.week === 8 ? <span className="ml-1 text-[9px] bg-sky-50 text-sky-600 px-1 rounded">Custom</span>
+                                                        : p.week ? <span className="ml-1 text-[9px] bg-sky-50 text-sky-600 px-1 rounded">W{p.week}</span> : null}
                                                 </td>
-                                                <td className="py-2 text-gray-500 text-right font-mono">${Number(p.amount).toLocaleString()}</td>
+                                                <td className="py-2 text-gray-400 text-[10px] max-w-[150px] truncate italic px-2" title={p.paymentRemark}>{p.paymentRemark || "—"}</td>
+                                                <td className="py-2 text-gray-500 text-right text-xs font-mono">${Number(p.amount).toLocaleString()}</td>
                                                 <td className="py-2 text-right">
                                                     <div className="flex flex-col items-end">
-                                                        <span className="font-bold text-gray-800 dark:text-gray-100 font-mono">${Number(p.amountPaid ?? p.amount).toLocaleString()}</span>
+                                                        <span className="font-bold text-gray-700 dark:text-gray-100 text-xs font-mono">${Number(p.amountPaid ?? p.amount).toLocaleString()}</span>
                                                         {p.amountPaid != null && (() => {
                                                             const diff = Number(p.amountPaid) - Number(p.amount);
                                                             if (Math.abs(diff) < 0.01) return null;
-                                                            return diff > 0 
-                                                                ? <span className="text-[10px] text-amber-600 bg-amber-50 px-1 rounded mt-0.5" title={p.paymentRemark || "Overpaid"}>+${diff.toLocaleString()}</span>
-                                                                : <span className="text-[10px] text-red-500 bg-red-50 px-1 rounded mt-0.5" title={p.paymentRemark || "Underpaid"}>-${Math.abs(diff).toLocaleString()}</span>;
+                                                            const isOver = diff > 0;
+                                                            return (
+                                                                <span className={`text-[9px] font-medium px-1 rounded mt-0.5 ${isOver ? "bg-amber-50 text-amber-600" : "bg-red-50 text-red-500"}`}>
+                                                                    {isOver ? "+ " : "- "}${Math.abs(diff).toLocaleString()}
+                                                                </span>
+                                                            );
                                                         })()}
                                                     </div>
                                                 </td>
@@ -1764,6 +1816,39 @@ function ConsultantDetailContent() {
                         <Field label="Reference Number (Check # / ACH)">
                             <input type="text" className={inputCls} placeholder="e.g. ACH-9982" value={modalForm.referenceNumber} onChange={e => setModalForm(f => ({ ...f, referenceNumber: e.target.value }))} />
                         </Field>
+                        <div className="grid grid-cols-2 gap-4">
+                            <Field label="Actual Amount Received ($)">
+                                <input type="number" step="0.5" className={inputCls} value={modalForm.amount} onChange={e => setModalForm(f => ({ ...f, amount: e.target.value }))} />
+                            </Field>
+                            <div className="flex items-end pb-2">
+                                {(() => {
+                                    const expected = Number(activeMarkPaid.totalAmount);
+                                    const actual = Number(modalForm.amount);
+                                    const diff = actual - expected;
+                                    if (Math.abs(diff) < 0.01) return <span className="text-[10px] text-emerald-600 font-bold">✓ Exact Match</span>;
+                                    return <span className={`text-[10px] font-bold ${diff > 0 ? "text-amber-600" : "text-red-500"}`}>
+                                        {diff > 0 ? "▲ Overpaid" : "▼ Underpaid"} by ${Math.abs(diff).toLocaleString()}
+                                    </span>;
+                                })()}
+                            </div>
+                        </div>
+
+                        <div className="bg-violet-50 dark:bg-violet-900/20 p-3 rounded-xl border border-violet-100 dark:border-violet-800/50 flex items-center justify-between">
+                            <div className="flex flex-col">
+                                <span className="text-sm font-bold text-violet-700 dark:text-violet-300">Final Payment</span>
+                                <span className="text-[10px] text-violet-500">Mark invoice as PAID (closes record)</span>
+                            </div>
+                            <input 
+                                type="checkbox" 
+                                className="w-5 h-5 rounded border-violet-300 text-violet-600 focus:ring-violet-500"
+                                checked={modalForm.isFinalPayment}
+                                onChange={e => setModalForm(f => ({ ...f, isFinalPayment: e.target.checked }))}
+                            />
+                        </div>
+
+                        <Field label="Payment Remark (reason for discrepancy, etc.)">
+                            <textarea rows={2} className={inputCls} placeholder="e.g. Short-paid due to bank fees, client promised to pay rest later" value={modalForm.paymentRemark} onChange={e => setModalForm(f => ({ ...f, paymentRemark: e.target.value }))} />
+                        </Field>
                         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <button onClick={() => setActiveMarkPaid(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-gray-600">Cancel</button>
                             <button onClick={() => handleMarkPaid(activeMarkPaid.id)} className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-violet-100 dark:shadow-none transition hover:bg-violet-700">Confirm Payment</button>
@@ -1776,12 +1861,47 @@ function ConsultantDetailContent() {
                 <Modal title="Mark Consultant Payout as Paid" onClose={() => setActiveMarkPaidPayout(null)}>
                     <div className="space-y-4">
                         <p className="text-sm text-gray-500">Confirm payment of <strong>${Number(activeMarkPaidPayout.amount).toLocaleString()}</strong> to the consultant.</p>
-                        <Field label="Payment Date">
-                            <input type="date" className={inputCls} value={modalForm.paymentDate} onChange={e => setModalForm(f => ({ ...f, paymentDate: e.target.value }))} />
-                        </Field>
+                        <div className="grid grid-cols-2 gap-4">
+                            <Field label="Payment Date">
+                                <input type="date" className={inputCls} value={modalForm.paymentDate} onChange={e => setModalForm(f => ({ ...f, paymentDate: e.target.value }))} />
+                            </Field>
+                            <Field label="Actual Amount Paid ($)">
+                                <div className="relative">
+                                    <input 
+                                        type="number" step="0.01" className={inputCls} 
+                                        value={modalForm.amount} 
+                                        onChange={e => setModalForm(f => ({ ...f, amount: e.target.value }))} 
+                                    />
+                                    {Math.abs(Number(modalForm.amount) - Number(activeMarkPaidPayout.amount)) < 0.01 && (
+                                        <div className="absolute right-3 top-2.5 text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                            Exact Match
+                                        </div>
+                                    )}
+                                </div>
+                            </Field>
+                        </div>
                         <Field label="Reference Number (Check # / ACH / Ref)">
                             <input type="text" className={inputCls} placeholder="e.g. Bank Transfer" value={modalForm.referenceNumber} onChange={e => setModalForm(f => ({ ...f, referenceNumber: e.target.value }))} />
                         </Field>
+
+                        <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+                            <div className="flex-1">
+                                <h4 className="text-sm font-bold text-emerald-800 dark:text-emerald-400">Final Payment</h4>
+                                <p className="text-[11px] text-emerald-600/80">Mark payout as PAID (closes record)</p>
+                            </div>
+                            <input 
+                                type="checkbox" 
+                                className="w-5 h-5 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                                checked={modalForm.isFinalPayment}
+                                onChange={e => setModalForm(f => ({ ...f, isFinalPayment: e.target.checked }))}
+                            />
+                        </div>
+
+                        <Field label="Payment Remark (reason for discrepancy, etc.)">
+                            <textarea rows={2} className={inputCls} placeholder="e.g. Deducted wire transfer fee" value={modalForm.paymentRemark} onChange={e => setModalForm(f => ({ ...f, paymentRemark: e.target.value }))} />
+                        </Field>
+
                         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <button onClick={() => setActiveMarkPaidPayout(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-gray-600">Cancel</button>
                             <button onClick={handleMarkPayoutPaidSubmit} className="bg-emerald-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-emerald-100 dark:shadow-none transition hover:bg-emerald-700">Confirm Payment</button>
@@ -1801,12 +1921,55 @@ function ConsultantDetailContent() {
                                 <input type="number" step="0.01" className={inputCls} value={activeEditInvoice.billRate} onChange={e => setActiveEditInvoice({ ...activeEditInvoice, billRate: e.target.value })} />
                             </Field>
                         </div>
-                        <Field label="Invoice Date">
-                            <input type="date" className={inputCls} value={activeEditInvoice.invoiceDate?.slice(0, 10)} onChange={e => setActiveEditInvoice({ ...activeEditInvoice, invoiceDate: e.target.value })} />
+                        {/* Expected amount calculated from hours × rate */}
+                        <div className="text-xs text-gray-400 -mt-2 px-1">
+                            Expected: <strong className="text-gray-600 dark:text-gray-300">${(Number(activeEditInvoice.hours) * Number(activeEditInvoice.billRate)).toFixed(2)}</strong>
+                        </div>
+
+                        <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                             <div className="flex justify-between items-center text-xs mb-2">
+                                <span className="text-gray-500 font-medium uppercase">Financial Status</span>
+                                {(() => {
+                                    const expected = Number(activeEditInvoice.hours) * Number(activeEditInvoice.billRate);
+                                    const actual = (activeEditInvoice.payments || []).reduce((s:any,p:any)=>s+Number(p.amountReceived),0);
+                                    const diff = actual - expected;
+                                    if (Math.abs(diff) < 0.01) return <span className="text-emerald-600 font-bold px-2 py-0.5 bg-emerald-50 rounded italic">Settled</span>;
+                                    if (diff > 0) return <span className="text-amber-600 font-bold px-2 py-0.5 bg-amber-50 rounded italic">Over-received (+${diff.toFixed(2)})</span>;
+                                    return <span className="text-red-500 font-bold px-2 py-0.5 bg-red-50 rounded italic">Short-received (-${Math.abs(diff).toFixed(2)})</span>;
+                                })()}
+                             </div>
+                             <div className="flex justify-between items-baseline mb-3">
+                                <span className="text-gray-400 text-[10px]">Current Total Received:</span>
+                                <span className="text-sm font-mono font-bold text-gray-700 dark:text-gray-200">
+                                    ${(activeEditInvoice.payments || []).reduce((s:any,p:any)=>s+Number(p.amountReceived),0).toLocaleString()}
+                                </span>
+                             </div>
+
+                             <Field label="Adjust Actual Amount Received ($) — Manage manual record">
+                                <input 
+                                    type="number" step="0.01" className={inputCls}
+                                    placeholder="Enter new total for manual record"
+                                    value={activeEditInvoice.amountReceived ?? ""}
+                                    onChange={e => setActiveEditInvoice({ ...activeEditInvoice, amountReceived: e.target.value })} 
+                                />
+                                <p className="text-[10px] text-gray-400 mt-1 italic">Note: This updates the &quot;MANUAL_MARK_PAID&quot; record.</p>
+                             </Field>
+                        </div>
+
+                        <Field label="Payment Remark (reason for discrepancy, etc.)">
+                            <textarea rows={2} className={inputCls} placeholder="e.g. Client deducted bank fees, promised to pay remaining next week"
+                                value={activeEditInvoice.paymentRemark || ""}
+                                onChange={e => setActiveEditInvoice({ ...activeEditInvoice, paymentRemark: e.target.value })} />
                         </Field>
-                        <Field label="Reference / Invoice #">
-                            <input type="text" className={inputCls} value={activeEditInvoice.referenceNumber || ""} onChange={e => setActiveEditInvoice({ ...activeEditInvoice, referenceNumber: e.target.value })} />
-                        </Field>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <Field label="Invoice Date">
+                                <input type="date" className={inputCls} value={activeEditInvoice.invoiceDate?.slice(0, 10)} onChange={e => setActiveEditInvoice({ ...activeEditInvoice, invoiceDate: e.target.value })} />
+                            </Field>
+                            <Field label="Reference / Invoice #">
+                                <input type="text" className={inputCls} value={activeEditInvoice.referenceNumber || ""} onChange={e => setActiveEditInvoice({ ...activeEditInvoice, referenceNumber: e.target.value })} />
+                            </Field>
+                        </div>
                         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <button type="button" onClick={() => setActiveEditInvoice(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-gray-600">Cancel</button>
                             <button type="submit" className="bg-violet-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg transition hover:bg-violet-700">Save Changes</button>
@@ -1818,7 +1981,7 @@ function ConsultantDetailContent() {
             {activeEditPayment && (
                 <Modal title="Edit Payment Record" onClose={() => setActiveEditPayment(null)}>
                     <form onSubmit={handleUpdatePayment} className="space-y-4">
-                        <Field label="Amount Received ($)">
+                        <Field label="Actual Amount Received ($)">
                             <input type="number" step="0.01" className={inputCls} value={activeEditPayment.amountReceived} onChange={e => setActiveEditPayment({ ...activeEditPayment, amountReceived: e.target.value })} />
                         </Field>
                         <Field label="Payment Date">
@@ -1826,6 +1989,9 @@ function ConsultantDetailContent() {
                         </Field>
                         <Field label="Reference #">
                             <input type="text" className={inputCls} value={activeEditPayment.referenceNumber || ""} onChange={e => setActiveEditPayment({ ...activeEditPayment, referenceNumber: e.target.value })} />
+                        </Field>
+                        <Field label="Payment Remark (reason for discrepancy, etc.)">
+                            <textarea rows={2} className={inputCls} value={activeEditPayment.paymentRemark || ""} onChange={e => setActiveEditPayment({ ...activeEditPayment, paymentRemark: e.target.value })} />
                         </Field>
                         <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
                             <button type="button" onClick={() => setActiveEditPayment(null)} className="px-4 py-2 text-sm text-gray-400 hover:text-gray-600">Cancel</button>
