@@ -1672,9 +1672,9 @@ function ConsultantDetailContent() {
                                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                                         {consultantPayouts.map((p: any) => (
                                             <tr key={p.id}>
-                                                <td className="py-2 text-emerald-600 dark:text-emerald-400 font-semibold text-[10px] font-mono whitespace-nowrap">
+                                                <td className="py-2 text-gray-400 dark:text-gray-500 font-mono text-[10px] whitespace-nowrap">
                                                     {formatDateUS(p.paymentDate)}
-                                                    <div className="text-[9px] text-gray-400 font-normal">{p.referenceNumber || "—"}</div>
+                                                    <div className="text-[9px] text-gray-500 font-normal">{p.referenceNumber || "—"}</div>
                                                 </td>
                                                 <td className="py-2 text-gray-600 dark:text-gray-300 text-xs whitespace-nowrap">
                                                     {MONTHS[p.month - 1]} {p.year}
