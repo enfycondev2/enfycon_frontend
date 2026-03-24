@@ -988,13 +988,10 @@ function ConsultantDetailContent() {
     const allPayments = allInvoices.flatMap((inv: any) => (inv.payments ?? [])
         .map((p: any) => ({ ...p, invoiceMonth: inv.invoiceMonth, invoiceYear: inv.invoiceYear, projectName: inv.projectName })))
         .sort((a: any, b: any) => {
-            // Primarily sort by physical payment date, then by invoice period
-            const dateB = new Date(b.paymentDate).getTime();
-            const dateA = new Date(a.paymentDate).getTime();
-            if (dateA !== dateB) return dateB - dateA;
             const valB = (b.invoiceYear || 0) * 100 + (b.invoiceMonth || 0);
             const valA = (a.invoiceYear || 0) * 100 + (a.invoiceMonth || 0);
-            return valB - valA;
+            if (valA !== valB) return valB - valA;
+            return new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime();
         });
 
     const consultantInvoicesRaw = (data.payouts ?? []);
@@ -1011,12 +1008,10 @@ function ConsultantDetailContent() {
     const consultantPayouts = (consultantInvoices as any[])
         .filter((p: any) => p.status === 'PAID')
         .sort((a: any, b: any) => {
-            const dateB = new Date(b.paymentDate).getTime();
-            const dateA = new Date(a.paymentDate).getTime();
-            if (dateA !== dateB) return dateB - dateA;
             const valB = (b.year || 0) * 100 + (b.month || 0);
             const valA = (a.year || 0) * 100 + (a.month || 0);
-            return valB - valA;
+            if (valA !== valB) return valB - valA;
+            return new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime();
         });
 
     if (editing) {
