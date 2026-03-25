@@ -405,32 +405,6 @@ export default function JobsTable({
     // Modal states (unused now - kept for safety, remove after verification)
     const [availablePods, setAvailablePods] = useState<{ id: string, name: string, isAvailable?: boolean }[]>([]);
 
-    useEffect(() => {
-        if (showPod) {
-            apiClient("/pods/all")
-                .then(async (res) => {
-                    if (res.ok) return res.json();
-                    const fallback = await apiClient("/pods/my-pods");
-                    return fallback.ok ? fallback.json() : [];
-                })
-                .then(data => {
-                    const mapPod = (p: any) => ({
-                        id: p.id,
-                        name: p.name,
-                        isAvailable: p.isAvailableForAssignment !== false,
-                    });
-                    if (Array.isArray(data)) {
-                        setAvailablePods(data.map(mapPod));
-                    } else if (data && Array.isArray(data.items)) {
-                        setAvailablePods(data.items.map(mapPod));
-                    } else if (data && Array.isArray(data.data)) {
-                        setAvailablePods(data.data.map(mapPod));
-                    }
-                })
-                .catch(console.error);
-        }
-    }, [showPod]);
-
     const itemsPerPage = 10;
     const isInteractiveTarget = (target: EventTarget | null) => {
         const el = target as HTMLElement | null;
@@ -1090,13 +1064,11 @@ export default function JobsTable({
                                                                     const resolvedAssignedPods =
                                                                         job.pods && job.pods.length > 0
                                                                             ? job.pods
-                                                                            : job.podIds && job.podIds.length > 0 && availablePods.length > 0
-                                                                                ? (job.podIds.map(id => availablePods.find(p => p.id === id)).filter(Boolean) as { id: string; name: string }[])
-                                                                                : job.pod ? [job.pod] : [];
+                                                                            : job.pod ? [job.pod] : [];
 
                                                                     const myPodIds = new Set(availablePods.map(p => p.id));
                                                                     const isJobActive = job.status !== "CLOSED" && job.status !== "FILLED";
-                                                                    const canEdit = (isAdmin || isDeliveryHead) && isJobActive;
+                                                                    const canEdit = (isAdmin || isDeliveryHead || isAccountManager) && isJobActive;
 
                                                                     return (
                                                                         <div className="flex flex-col gap-1.5">

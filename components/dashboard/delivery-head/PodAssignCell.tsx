@@ -75,9 +75,36 @@ export default function PodAssignCell({
     );
     const [allRecruiters, setAllRecruiters] = useState<RecruiterData[]>([]);
     const [isLoadingRecruiters, setIsLoadingRecruiters] = useState(false);
+    const [allPods, setAllPods] = useState<PodData[]>(availablePods);
+    const [isLoadingPods, setIsLoadingPods] = useState(false);
     const [search, setSearch] = useState("");
     const [saving, setSaving] = useState(false);
     const [podLeads, setPodLeads] = useState<Record<string, { fullName?: string | null; email?: string }>>({});
+
+    // Fetch all pods for the selection list if not provided or empty
+    useEffect(() => {
+        if (open && allPods.length === 0) {
+            setIsLoadingPods(true);
+            apiClient("/pods/all")
+                .then(async res => {
+                    if (res.ok) return res.json();
+                    // Fallback for AMs if /pods/all isn't quite right
+                    const fb = await apiClient("/pods/my-pods");
+                    return fb.ok ? fb.json() : [];
+                })
+                .then(data => {
+                    const mapPod = (p: any) => ({
+                        id: p.id,
+                        name: p.name,
+                        isAvailable: p.isAvailableForAssignment !== false,
+                    });
+                    if (Array.isArray(data)) setAllPods(data.map(mapPod));
+                    else if (data?.data && Array.isArray(data.data)) setAllPods(data.data.map(mapPod));
+                })
+                .catch(err => console.error("Failed to fetch pods:", err))
+                .finally(() => setIsLoadingPods(false));
+        }
+    }, [open, allPods.length]);
 
     // Fetch all recruiters for the selection list
     useEffect(() => {
@@ -130,8 +157,9 @@ export default function PodAssignCell({
 
     const filteredPods = useMemo(() => {
         const q = search.toLowerCase();
-        return availablePods.filter((p) => p.name.toLowerCase().includes(q));
-    }, [availablePods, search]);
+        const pool = allPods.length > 0 ? allPods : availablePods;
+        return pool.filter((p) => p.name.toLowerCase().includes(q));
+    }, [allPods, availablePods, search]);
 
     const groupedRecruiters = useMemo(() => {
         const q = search.toLowerCase();
@@ -357,7 +385,12 @@ export default function PodAssignCell({
                         <div className="max-h-[300px] overflow-y-auto bg-white dark:bg-slate-900">
                             <TabsContent value="pods" className="m-0">
                                 <div className="py-1">
-                                    {filteredPods.length === 0 ? (
+                                    {isLoadingPods ? (
+                                        <div className="flex flex-col items-center justify-center py-12 gap-2">
+                                            <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
+                                            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Loading pods…</span>
+                                        </div>
+                                    ) : filteredPods.length === 0 ? (
                                         <p className="text-xs text-neutral-400 text-center py-8">No pods found</p>
                                     ) : (
                                         filteredPods.map((pod) => {

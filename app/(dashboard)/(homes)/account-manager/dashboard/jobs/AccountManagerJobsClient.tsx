@@ -153,7 +153,7 @@ export default function AccountManagerJobsClient() {
                     jobs={jobs}
                     baseUrl="/account-manager/dashboard/jobs"
                     showPod={true}
-                    showActions={false}
+                    showActions={true}
                     showFilters={true}
                     showEstCreatedDateTime={true}
                     serverPaginated={false}
