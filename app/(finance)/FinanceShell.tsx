@@ -15,9 +15,6 @@ const NAV_LINKS = [
     { href: "/finance/roster", label: "Roster" },
     { href: "/finance/consultants", label: "Consultants" },
     { href: "/finance/invoices", label: "Invoices" },
-    { href: "/finance/payments", label: "Payments" },
-    { href: "/finance/projects", label: "Projects" },
-    { href: "/finance/hours", label: "Hours" },
     { href: "/finance/candidate-onboard", label: "Onboard" },
 ];
 

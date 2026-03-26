@@ -122,7 +122,6 @@ function ConsultantsContent() {
                     </div>
                 )}
             </div>
-
         </>
     );
 }

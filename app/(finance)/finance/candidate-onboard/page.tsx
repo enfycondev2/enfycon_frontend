@@ -5,7 +5,7 @@ import { apiClient } from "@/lib/apiClient";
 import { financeGet, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import AutoComplete from "@/components/finance/AutoComplete";
-import { formatPhoneNumber } from "@/components/finance/FinanceUI";
+import { formatPhoneNumber, Field, inputCls, selectCls } from "@/components/finance/FinanceUI";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -23,7 +23,7 @@ interface Section1Data {
 interface Section3Data {
     clientName: string; endClientName: string; startDate: string; endDate: string;
     billingRate: string; payRate: string; currency: string; paymentTermsDays: string;
-    clientPOC: string; pocContactNumber: string;
+    clientPOC: string; pocContactNumber: string; pocEmail: string;
 }
 
 // ─── Step Indicator ──────────────────────────────────────────────────────────
@@ -54,21 +54,6 @@ function StepIndicator({ current, steps }: { current: number; steps: string[] })
         </div>
     );
 }
-
-// ─── Field ───────────────────────────────────────────────────────────────────
-
-function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: React.ReactNode }) {
-    return (
-        <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">{label}</label>
-            {children}
-            {hint && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
-        </div>
-    );
-}
-
-const inputCls = "w-full border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2.5 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm transition";
-const selectCls = `${inputCls} cursor-pointer`;
 
 // ─── Section 1 ───────────────────────────────────────────────────────────────
 
@@ -248,7 +233,7 @@ function Section3({ consultantId, engagementType, onDone, onBack }: { consultant
     const [form, setForm] = useState<Section3Data>({
         clientName: "", endClientName: "", startDate: "", endDate: "",
         billingRate: "", payRate: "", currency: "USD", paymentTermsDays: "30",
-        clientPOC: "", pocContactNumber: "+1 "
+        clientPOC: "", pocContactNumber: "+1 ", pocEmail: ""
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -313,6 +298,7 @@ function Section3({ consultantId, engagementType, onDone, onBack }: { consultant
             if (form.endDate) projectPayload.endDate = new Date(form.endDate).toISOString();
             if (form.clientPOC) projectPayload.clientPOC = form.clientPOC;
             if (form.pocContactNumber) projectPayload.pocContactNumber = form.pocContactNumber;
+            if (form.pocEmail) projectPayload.pocEmail = form.pocEmail;
 
             const project = await financePost("finance/projects", projectPayload);
             const projectId = project.id ?? project.data?.id;
@@ -365,18 +351,13 @@ function Section3({ consultantId, engagementType, onDone, onBack }: { consultant
                 <Field label="POC Contact Number">
                     <input type="tel" className={inputCls} placeholder="+1 XXX-XXX-XXXX" value={form.pocContactNumber} onChange={(e) => set("pocContactNumber", formatPhoneNumber(e.target.value))} />
                 </Field>
+                <Field label="POC Email" spanFull>
+                    <input type="email" className={inputCls} placeholder="poc@client.com" value={form.pocEmail} onChange={(e) => set("pocEmail", e.target.value)} />
+                </Field>
                 <Field label="Bill Rate ($/hr) *">
                     <input required type="number" min="0" step="0.01" className={inputCls} placeholder="60" value={form.billingRate} onChange={(e) => set("billingRate", e.target.value)} />
                 </Field>
-                <Field label="Pay Rate ($/hr) *" hint="Enter 0 for referral cases (no payout)">
-                    <input required disabled={engagementType === "Referral"} type="number" min="0" step="0.01" className={inputCls} placeholder={engagementType === "Referral" ? "0 (Referral)" : "50"} value={engagementType === "Referral" ? "0" : form.payRate} onChange={(e) => set("payRate", e.target.value)} />
-                </Field>
-                <Field label="Currency">
-                    <select className={selectCls} value={form.currency} onChange={(e) => set("currency", e.target.value)}>
-                        {["USD"].map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                </Field>
-                {(form.currency !== "W2") && ( // Reusing currency check since W2 usually has fixed terms
+                {engagementType !== "W2" && (
                     <Field label="Client Payment Terms (Days) *">
                         <input required type="number" min="1" step="1" className={inputCls} placeholder="30" value={form.paymentTermsDays} onChange={(e) => set("paymentTermsDays", e.target.value)} />
                     </Field>

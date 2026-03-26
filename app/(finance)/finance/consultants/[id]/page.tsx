@@ -522,7 +522,9 @@ function ConsultantDetailContent() {
     const [billingForm, setBillingForm] = useState<any>({
         clientName: "", endClientName: "", startDate: "", endDate: "",
         billingRate: "", payRate: "", currency: "USD", paymentTermsDays: "30",
-        clientPOC: "", pocContactNumber: "+1 "
+        clientPOC: "",
+        pocContactNumber: "",
+        pocEmail: "",
     });
     const [duration, setDuration] = useState("ONGOING");
     const [options, setOptions] = useState<{ recruiters: any[], accountManagers: any[], podHeads: any[] }>({ recruiters: [], accountManagers: [], podHeads: [] });
@@ -720,7 +722,8 @@ function ConsultantDetailContent() {
                 currency: contract?.currency ?? "USD",
                 paymentTermsDays: contract?.paymentTermsDays ? String(contract.paymentTermsDays) : "30",
                 clientPOC: activeProject?.clientPOC ?? "",
-                pocContactNumber: activeProject?.pocContactNumber || "+1 "
+                pocContactNumber: activeProject?.pocContactNumber || "+1 ",
+                pocEmail: activeProject?.pocEmail ?? "",
             });
             setDuration(activeProject?.endDate ? "CUSTOM" : "ONGOING");
 
@@ -793,6 +796,10 @@ function ConsultantDetailContent() {
     // I'll add it to the imports if needed, but wait, the original file uses financePost.
     // Onboarding used apiClient. I'll stick to what works.
 
+    function setBilling(field: string, value: any) {
+        setBillingForm((f: any) => ({ ...f, [field]: value }));
+    }
+
     async function handleSaveStep3(e: React.FormEvent) {
         e.preventDefault();
         setSaving(true); setSaveError("");
@@ -825,6 +832,8 @@ function ConsultantDetailContent() {
             if (billingForm.endDate) projectPayload.endDate = new Date(billingForm.endDate).toISOString();
             if (billingForm.clientPOC) projectPayload.clientPOC = billingForm.clientPOC;
             if (billingForm.pocContactNumber) projectPayload.pocContactNumber = billingForm.pocContactNumber;
+            if (billingForm.pocEmail) projectPayload.pocEmail = billingForm.pocEmail;
+
 
             if (projectId) {
                 await financePatch(`finance/projects/${projectId}`, projectPayload);
@@ -1178,16 +1187,14 @@ function ConsultantDetailContent() {
                                         <Field label="POC Contact Number">
                                             <input type="tel" className={inputCls} placeholder="+1 XXX-XXX-XXXX" value={billingForm.pocContactNumber} onChange={(e) => setBillingForm((f: any) => ({ ...f, pocContactNumber: formatPhoneNumber(e.target.value) }))} />
                                         </Field>
+                                        <Field label="POC Email" spanFull>
+                                            <input type="email" className={inputCls} placeholder="poc@client.com" value={billingForm.pocEmail} onChange={(e) => setBillingForm((f: any) => ({ ...f, pocEmail: e.target.value }))} />
+                                        </Field>
                                         <Field label="Bill Rate ($/hr) *">
                                             <input required type="number" step="0.01" className={inputCls} value={billingForm.billingRate} onChange={(e) => setBillingForm((f: any) => ({ ...f, billingRate: e.target.value }))} />
                                         </Field>
                                         <Field label="Pay Rate ($/hr) *">
                                             <input required disabled={editForm.engagementType === "Referral"} type="number" step="0.01" className={inputCls} value={editForm.engagementType === "Referral" ? "0" : billingForm.payRate} onChange={(e) => setBillingForm((f: any) => ({ ...f, payRate: e.target.value }))} />
-                                        </Field>
-                                        <Field label="Currency">
-                                            <select className={selectCls} value={billingForm.currency} onChange={(e) => setBillingForm((f: any) => ({ ...f, currency: e.target.value }))}>
-                                                {["USD"].map((c) => <option key={c} value={c}>{c}</option>)}
-                                            </select>
                                         </Field>
                                         {editForm.engagementType !== "W2" && (
                                             <Field label="Client Payment Terms (Days) *">
@@ -1220,9 +1227,20 @@ function ConsultantDetailContent() {
                 {/* ── Left: Info Card ─────────────────────────────────── */}
                 <div className="xl:col-span-1 space-y-4">
                     <Card title="Consultant Info" action={
-                        <button onClick={() => setEditing(true)} className="text-xs text-violet-600 hover:underline">
-                            Edit
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <Link 
+                                href={`/finance/consultants/${id}/profile`}
+                                className="text-[10px] items-center gap-1 uppercase tracking-wider font-bold bg-violet-50 text-violet-600 hover:bg-violet-100 px-2.5 py-1.5 rounded-lg transition"
+                            >
+                                Profile
+                            </Link>
+                            <button 
+                                onClick={() => setEditing(true)}
+                                className="text-[10px] items-center gap-1 uppercase tracking-wider font-bold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg transition"
+                            >
+                                Edit
+                            </button>
+                        </div>
                     }>
                         <dl className="space-y-3 text-sm">
                             {[
@@ -1333,9 +1351,7 @@ function ConsultantDetailContent() {
                     )}
 
                     {/* Projects & Contracts */}
-                    <Card title="Projects & Rates" action={
-                        <Link href={`/finance/projects?consultantId=${id}`} className="text-xs text-violet-600 hover:underline">Manage →</Link>
-                    }>
+                    <Card title="Projects & Rates">
                         {!projects.length ? (
                             <p className="text-gray-400 text-sm">No projects assigned yet.</p>
                         ) : (
@@ -1346,7 +1362,11 @@ function ConsultantDetailContent() {
                                             <div>
                                                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{p.clientName ?? "Project"}</p>
                                                 {p.endClientName && <p className="text-xs text-gray-400">End client: {p.endClientName}</p>}
-                                                {p.clientPOC && <p className="text-[10px] text-violet-500 font-medium mt-1">POC: {p.clientPOC} {p.pocContactNumber && `(${p.pocContactNumber})`}</p>}
+                                                {(p.clientPOC || p.pocEmail) && (
+                                                    <p className="text-[10px] text-violet-500 font-medium mt-1">
+                                                        POC: {p.clientPOC} {p.pocEmail && `<${p.pocEmail}>`} {p.pocContactNumber && `(${p.pocContactNumber})`}
+                                                    </p>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <StatusBadge status={p.status ?? "ACTIVE"} />
@@ -2445,6 +2465,7 @@ function RecordPayoutForm({ consultantId, payouts, onRecorded }: { consultantId:
         </form>
     );
 }
+
 
 function Modal({ title, onClose, children }: { title: string, onClose: () => void, children: React.ReactNode }) {
     return (

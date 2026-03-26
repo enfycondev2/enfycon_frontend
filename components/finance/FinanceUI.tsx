@@ -66,9 +66,9 @@ export function StatusBadge({ status }: { status: string }) {
     );
 }
 
-export function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: React.ReactNode }) {
+export function Field({ label, children, hint, spanFull }: { label: string; children: React.ReactNode; hint?: React.ReactNode; spanFull?: boolean }) {
     return (
-        <div>
+        <div className={spanFull ? "md:col-span-2" : ""}>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">{label}</label>
             {children}
             {hint && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
