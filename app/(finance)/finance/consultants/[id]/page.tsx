@@ -1228,12 +1228,6 @@ function ConsultantDetailContent() {
                 <div className="xl:col-span-1 space-y-4">
                     <Card title="Consultant Info" action={
                         <div className="flex items-center gap-2">
-                            <Link 
-                                href={`/finance/consultants/${id}/profile`}
-                                className="text-[10px] items-center gap-1 uppercase tracking-wider font-bold bg-violet-50 text-violet-600 hover:bg-violet-100 px-2.5 py-1.5 rounded-lg transition"
-                            >
-                                Profile
-                            </Link>
                             <button 
                                 onClick={() => setEditing(true)}
                                 className="text-[10px] items-center gap-1 uppercase tracking-wider font-bold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg transition"
