@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/apiClient";
 import { financeGet, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
 import AutoComplete from "@/components/finance/AutoComplete";
+import { formatPhoneNumber } from "@/components/finance/FinanceUI";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -22,6 +23,7 @@ interface Section1Data {
 interface Section3Data {
     clientName: string; endClientName: string; startDate: string; endDate: string;
     billingRate: string; payRate: string; currency: string; paymentTermsDays: string;
+    clientPOC: string; pocContactNumber: string;
 }
 
 // ─── Step Indicator ──────────────────────────────────────────────────────────
@@ -72,10 +74,10 @@ const selectCls = `${inputCls} cursor-pointer`;
 
 function Section1({ onSaved }: { onSaved: (consultantId: string, engType: string) => void }) {
     const [form, setForm] = useState<Section1Data>({
-        name: "", email: "", phone: "", immigrationStatus: "", engagementType: "",
+        name: "", email: "", phone: "+1 ", immigrationStatus: "", engagementType: "",
         recruiterId: "", accountManagerId: "", podHeadId: "", jobCode: "",
         c2cVendorName: "", c2cContactPerson: "", c2cContactEmail: "",
-        c2cAddress: "", c2cPhoneFax: "", clientPaymentTermsDays: "30", c2cProjectStartDate: ""
+        c2cAddress: "", c2cPhoneFax: "+1 ", clientPaymentTermsDays: "30", c2cProjectStartDate: ""
     });
     const [options, setOptions] = useState<{ recruiters: any[], accountManagers: any[], podHeads: any[] }>({ recruiters: [], accountManagers: [], podHeads: [] });
     const [saving, setSaving] = useState(false);
@@ -153,7 +155,7 @@ function Section1({ onSaved }: { onSaved: (consultantId: string, engType: string
                     <input required type="email" className={inputCls} placeholder="john@example.com" value={form.email} onChange={(e) => set("email", e.target.value)} />
                 </Field>
                 <Field label="Phone">
-                    <input type="tel" className={inputCls} placeholder="+1-555-0100" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+                    <input type="tel" className={inputCls} placeholder="+1-555-0100" value={form.phone} onChange={(e) => set("phone", formatPhoneNumber(e.target.value))} />
                 </Field>
                 <Field label="Immigration Status">
                     <select className={selectCls} value={form.immigrationStatus} onChange={(e) => set("immigrationStatus", e.target.value)}>
@@ -214,7 +216,7 @@ function Section1({ onSaved }: { onSaved: (consultantId: string, engType: string
                             <input type="email" className={inputCls} placeholder="jane@apex.com" value={form.c2cContactEmail} onChange={(e) => set("c2cContactEmail", e.target.value)} />
                         </Field>
                         <Field label="Phone & Fax">
-                            <input className={inputCls} placeholder="123-456-7890" value={form.c2cPhoneFax} onChange={(e) => set("c2cPhoneFax", e.target.value)} />
+                            <input className={inputCls} placeholder="123-456-7890" value={form.c2cPhoneFax} onChange={(e) => set("c2cPhoneFax", formatPhoneNumber(e.target.value))} />
                         </Field>
                         <Field label="Address">
                             <input className={inputCls} placeholder="123 Main St, City, ST" value={form.c2cAddress} onChange={(e) => set("c2cAddress", e.target.value)} />
@@ -245,7 +247,8 @@ function Section1({ onSaved }: { onSaved: (consultantId: string, engType: string
 function Section3({ consultantId, engagementType, onDone, onBack }: { consultantId: string; engagementType: string; onDone: () => void; onBack: () => void }) {
     const [form, setForm] = useState<Section3Data>({
         clientName: "", endClientName: "", startDate: "", endDate: "",
-        billingRate: "", payRate: "", currency: "USD", paymentTermsDays: "30"
+        billingRate: "", payRate: "", currency: "USD", paymentTermsDays: "30",
+        clientPOC: "", pocContactNumber: "+1 "
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -308,6 +311,8 @@ function Section3({ consultantId, engagementType, onDone, onBack }: { consultant
             };
             if (form.endClientName) projectPayload.endClientName = form.endClientName;
             if (form.endDate) projectPayload.endDate = new Date(form.endDate).toISOString();
+            if (form.clientPOC) projectPayload.clientPOC = form.clientPOC;
+            if (form.pocContactNumber) projectPayload.pocContactNumber = form.pocContactNumber;
 
             const project = await financePost("finance/projects", projectPayload);
             const projectId = project.id ?? project.data?.id;
@@ -353,6 +358,12 @@ function Section3({ consultantId, engagementType, onDone, onBack }: { consultant
                             />
                         )}
                     </div>
+                </Field>
+                <Field label="Client POC">
+                    <input className={inputCls} placeholder="John Doe" value={form.clientPOC} onChange={(e) => set("clientPOC", e.target.value)} />
+                </Field>
+                <Field label="POC Contact Number">
+                    <input type="tel" className={inputCls} placeholder="+1 XXX-XXX-XXXX" value={form.pocContactNumber} onChange={(e) => set("pocContactNumber", formatPhoneNumber(e.target.value))} />
                 </Field>
                 <Field label="Bill Rate ($/hr) *">
                     <input required type="number" min="0" step="0.01" className={inputCls} placeholder="60" value={form.billingRate} onChange={(e) => set("billingRate", e.target.value)} />

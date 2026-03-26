@@ -21,6 +21,28 @@ export function formatDateUS(dateInput: string | Date | null | undefined): strin
     });
 }
 
+export const formatPhoneNumber = (value: string) => {
+    // Keep the + and digits only
+    const digits = value.replace(/\D/g, "");
+    if (digits.length === 0) return "+1 ";
+    
+    // Assume US format for now as requested
+    let formatted = "+1 ";
+    // If it already started with 1, don't double it
+    const actualDigits = digits.startsWith("1") ? digits.substring(1) : digits;
+    
+    if (actualDigits.length > 0) {
+        formatted += actualDigits.substring(0, 3);
+    }
+    if (actualDigits.length > 3) {
+        formatted += "-" + actualDigits.substring(3, 6);
+    }
+    if (actualDigits.length > 6) {
+        formatted += "-" + actualDigits.substring(6, 10);
+    }
+    return formatted;
+};
+
 // Shared Tailwind Classes
 export const inputCls = "w-full border border-gray-300 dark:border-gray-600 rounded-xl px-3 py-2.5 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm transition";
 export const selectCls = `${inputCls} cursor-pointer`;

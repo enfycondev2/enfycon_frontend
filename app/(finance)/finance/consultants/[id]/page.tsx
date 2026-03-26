@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { financeDelete, financeGet, financePatch, financePost } from "@/lib/financeClient";
 import DashboardBreadcrumb from "@/components/layout/dashboard-breadcrumb";
-import { StatusBadge, MONTHS, btnPrimary, btnSecondary, StepIndicator, Field, inputCls, selectCls, formatDateUS } from "@/components/finance/FinanceUI";
+import { StatusBadge, MONTHS, btnPrimary, btnSecondary, StepIndicator, Field, inputCls, selectCls, formatDateUS, formatPhoneNumber } from "@/components/finance/FinanceUI";
 import AutoComplete from "@/components/finance/AutoComplete";
 import QuickCalc from "@/components/finance/QuickCalc";
 import { apiClient } from "@/lib/apiClient";
@@ -513,15 +513,16 @@ function ConsultantDetailContent() {
     const [editing, setEditing] = useState(false);
     const [editStep, setEditStep] = useState(0);
     const [editForm, setEditForm] = useState<any>({
-        name: "", email: "", phone: "", status: "",
+        name: "", email: "", phone: "+1 ", status: "",
         immigrationStatus: "", engagementType: "",
         recruiterId: "", accountManagerId: "", podHeadId: "", jobCode: "",
         c2cVendorName: "", c2cContactPerson: "", c2cContactEmail: "",
-        c2cAddress: "", c2cPhoneFax: "", clientPaymentTermsDays: "30", c2cProjectStartDate: ""
+        c2cAddress: "", c2cPhoneFax: "+1 ", clientPaymentTermsDays: "30", c2cProjectStartDate: ""
     });
     const [billingForm, setBillingForm] = useState<any>({
         clientName: "", endClientName: "", startDate: "", endDate: "",
-        billingRate: "", payRate: "", currency: "USD", paymentTermsDays: "30"
+        billingRate: "", payRate: "", currency: "USD", paymentTermsDays: "30",
+        clientPOC: "", pocContactNumber: "+1 "
     });
     const [duration, setDuration] = useState("ONGOING");
     const [options, setOptions] = useState<{ recruiters: any[], accountManagers: any[], podHeads: any[] }>({ recruiters: [], accountManagers: [], podHeads: [] });
@@ -691,7 +692,7 @@ function ConsultantDetailContent() {
             const res = await financeGet(`finance/consultants/${id}`);
             setData(res);
             setEditForm({
-                name: res.name, email: res.email, phone: res.phone ?? "", status: res.status,
+                name: res.name, email: res.email, phone: res.phone || "+1 ", status: res.status,
                 immigrationStatus: res.immigrationStatus ?? "",
                 engagementType: res.engagementType ?? "",
                 recruiterId: res.recruiterId ?? "",
@@ -701,7 +702,7 @@ function ConsultantDetailContent() {
                 c2cContactPerson: res.c2cContactPerson ?? "",
                 c2cContactEmail: res.c2cContactEmail ?? "",
                 c2cAddress: res.c2cAddress ?? "",
-                c2cPhoneFax: res.c2cPhoneFax ?? "",
+                c2cPhoneFax: res.c2cPhoneFax || "+1 ",
                 clientPaymentTermsDays: (res.clientPaymentTermsDays !== null && res.clientPaymentTermsDays !== undefined) ? String(res.clientPaymentTermsDays) : "30",
                 c2cProjectStartDate: res.c2cProjectStartDate ? new Date(res.c2cProjectStartDate).toISOString().slice(0, 10) : ""
             });
@@ -717,7 +718,9 @@ function ConsultantDetailContent() {
                 billingRate: contract ? String(Number(contract.billRate)) : "",
                 payRate: contract ? String(Number(contract.payRate)) : "",
                 currency: contract?.currency ?? "USD",
-                paymentTermsDays: contract?.paymentTermsDays ? String(contract.paymentTermsDays) : "30"
+                paymentTermsDays: contract?.paymentTermsDays ? String(contract.paymentTermsDays) : "30",
+                clientPOC: activeProject?.clientPOC ?? "",
+                pocContactNumber: activeProject?.pocContactNumber || "+1 "
             });
             setDuration(activeProject?.endDate ? "CUSTOM" : "ONGOING");
 
@@ -820,6 +823,8 @@ function ConsultantDetailContent() {
             };
             if (billingForm.endClientName) projectPayload.endClientName = billingForm.endClientName;
             if (billingForm.endDate) projectPayload.endDate = new Date(billingForm.endDate).toISOString();
+            if (billingForm.clientPOC) projectPayload.clientPOC = billingForm.clientPOC;
+            if (billingForm.pocContactNumber) projectPayload.pocContactNumber = billingForm.pocContactNumber;
 
             if (projectId) {
                 await financePatch(`finance/projects/${projectId}`, projectPayload);
@@ -1044,7 +1049,7 @@ function ConsultantDetailContent() {
                                             <input required type="email" className={inputCls} value={editForm.email} onChange={(e) => setEditForm((f: any) => ({ ...f, email: e.target.value }))} />
                                         </Field>
                                         <Field label="Phone">
-                                            <input type="tel" className={inputCls} value={editForm.phone} onChange={(e) => setEditForm((f: any) => ({ ...f, phone: e.target.value }))} />
+                                            <input type="tel" className={inputCls} value={editForm.phone} onChange={(e) => setEditForm((f: any) => ({ ...f, phone: formatPhoneNumber(e.target.value) }))} />
                                         </Field>
                                         <Field label="Status">
                                             <select className={selectCls} value={editForm.status} onChange={(e) => setEditForm((f: any) => ({ ...f, status: e.target.value }))}>
@@ -1109,7 +1114,7 @@ function ConsultantDetailContent() {
                                                     <input type="email" className={inputCls} value={editForm.c2cContactEmail} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cContactEmail: e.target.value }))} />
                                                 </Field>
                                                 <Field label="Phone & Fax">
-                                                    <input className={inputCls} placeholder="123-456-7890" value={editForm.c2cPhoneFax} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cPhoneFax: e.target.value }))} />
+                                                    <input className={inputCls} placeholder="123-456-7890" value={editForm.c2cPhoneFax} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cPhoneFax: formatPhoneNumber(e.target.value) }))} />
                                                 </Field>
                                                 <Field label="Address">
                                                     <input className={inputCls} value={editForm.c2cAddress} onChange={(e) => setEditForm((f: any) => ({ ...f, c2cAddress: e.target.value }))} />
@@ -1166,6 +1171,12 @@ function ConsultantDetailContent() {
                                                     />
                                                 )}
                                             </div>
+                                        </Field>
+                                        <Field label="Client POC">
+                                            <input className={inputCls} placeholder="John Doe" value={billingForm.clientPOC} onChange={(e) => setBillingForm((f: any) => ({ ...f, clientPOC: e.target.value }))} />
+                                        </Field>
+                                        <Field label="POC Contact Number">
+                                            <input type="tel" className={inputCls} placeholder="+1 XXX-XXX-XXXX" value={billingForm.pocContactNumber} onChange={(e) => setBillingForm((f: any) => ({ ...f, pocContactNumber: formatPhoneNumber(e.target.value) }))} />
                                         </Field>
                                         <Field label="Bill Rate ($/hr) *">
                                             <input required type="number" step="0.01" className={inputCls} value={billingForm.billingRate} onChange={(e) => setBillingForm((f: any) => ({ ...f, billingRate: e.target.value }))} />
@@ -1335,6 +1346,7 @@ function ConsultantDetailContent() {
                                             <div>
                                                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{p.clientName ?? "Project"}</p>
                                                 {p.endClientName && <p className="text-xs text-gray-400">End client: {p.endClientName}</p>}
+                                                {p.clientPOC && <p className="text-[10px] text-violet-500 font-medium mt-1">POC: {p.clientPOC} {p.pocContactNumber && `(${p.pocContactNumber})`}</p>}
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <StatusBadge status={p.status ?? "ACTIVE"} />
