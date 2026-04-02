@@ -19,8 +19,8 @@ import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
 import { cn } from "@/lib/utils";
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useState, useMemo } from "react";
 
 interface SidebarItem {
   title?: string;
@@ -37,6 +37,8 @@ interface SidebarItem {
 
 export function NavMain({ items }: { items: SidebarItem[] }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const from = searchParams.get("from");
   const isCollapsed = useSidebarCollapsed();
   const [openGroup, setOpenGroup] = useState<string | null>(null);
 
@@ -49,21 +51,26 @@ export function NavMain({ items }: { items: SidebarItem[] }) {
   };
 
   // Find the best matching URL
-  let bestMatchUrl = "";
-  items.forEach((item) => {
-    if (item.url && (pathname === item.url || pathname.startsWith(item.url + "/"))) {
-      if (item.url.length > bestMatchUrl.length) {
-        bestMatchUrl = item.url;
-      }
-    }
-    item.items?.forEach((subItem) => {
-      if (pathname === subItem.url || pathname.startsWith(subItem.url + "/")) {
-        if (subItem.url.length > bestMatchUrl.length) {
-          bestMatchUrl = subItem.url;
+  const bestMatchUrl = useMemo(() => {
+    let match = "";
+    const effectivePath = from || pathname;
+
+    items.forEach((item) => {
+      if (item.url && (effectivePath === item.url || effectivePath.startsWith(item.url + "/"))) {
+        if (item.url.length > match.length) {
+          match = item.url;
         }
       }
+      item.items?.forEach((subItem) => {
+        if (effectivePath === subItem.url || effectivePath.startsWith(subItem.url + "/")) {
+          if (subItem.url.length > match.length) {
+            match = subItem.url;
+          }
+        }
+      });
     });
-  });
+    return match;
+  }, [items, pathname, from]);
 
   return (
     <SidebarGroup className={`${isCollapsed ? "px-1.5" : ""}`}>

@@ -577,7 +577,10 @@ export default function RecruiterJobsTable({
                                                         ? "bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/60"
                                                         : "bg-slate-50 dark:bg-slate-800/35 hover:bg-slate-100/70 dark:hover:bg-slate-800/75"
                                                 )}
-                                                onClick={() => router.push(`${baseUrl}/${job.id}`)}
+                                                onClick={() => {
+                                                    const fromPath = typeof window !== 'undefined' ? window.location.pathname : '';
+                                                    router.push(`${baseUrl}/${job.id}${fromPath ? `?from=${fromPath}` : ''}`);
+                                                }}
                                             >
                                                 {/* Job Code - never editable */}
                                                 <TableCell 

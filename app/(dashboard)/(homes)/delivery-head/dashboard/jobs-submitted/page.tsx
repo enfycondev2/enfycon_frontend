@@ -96,6 +96,7 @@ export default function DeliveryHeadSubmittedJobsPage() {
                         <SubmittedJobsTable
                             submissions={submissions}
                             showExtendedDetails={true}
+                            baseUrl="/delivery-head/dashboard/jobs"
                             statsMode="cleared"
                         />
                     )}

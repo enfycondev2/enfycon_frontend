@@ -996,7 +996,8 @@ export default function JobsTable({
                                                 )}
                                                 onClick={(e) => {
                                                     if (isEditing || isInteractiveTarget(e.target)) return;
-                                                    router.push(`${baseUrl}/${job.id}`);
+                                                    const fromPath = typeof window !== 'undefined' ? window.location.pathname : '';
+                                                    router.push(`${baseUrl}/${job.id}${fromPath ? `?from=${fromPath}` : ''}`);
                                                 }}
                                             >
                                                 {/* Job Code - never editable */}
@@ -1259,7 +1260,7 @@ export default function JobsTable({
                                                             ) : (
                                                                 <>
                                                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20" asChild>
-                                                                        <Link href={`${baseUrl}/${job.id}`}><Eye className="h-4 w-4" /></Link>
+                                                                        <Link href={`${baseUrl}/${job.id}${typeof window !== 'undefined' ? `?from=${window.location.pathname}` : ''}`}><Eye className="h-4 w-4" /></Link>
                                                                     </Button>
                                                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20" onClick={() => startEdit(job)} title="Edit">
                                                                         <Edit2 className="h-4 w-4" />
@@ -1293,7 +1294,7 @@ export default function JobsTable({
                                                                     className="gap-2 cursor-pointer"
                                                                     asChild
                                                                 >
-                                                                    <Link href={`${baseUrl}/${job.id}`}>
+                                                                    <Link href={`${baseUrl}/${job.id}${typeof window !== 'undefined' ? `?from=${window.location.pathname}` : ''}`}>
                                                                         <Eye className="h-3.5 w-3.5 text-blue-500" />
                                                                         View Details
                                                                     </Link>

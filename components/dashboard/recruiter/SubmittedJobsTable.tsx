@@ -842,7 +842,8 @@ export default function SubmittedJobsTable({
                                                     )}
                                                     onClick={(e) => {
                                                         if (baseUrl && !isInteractiveTarget(e.target)) {
-                                                            router.push(`${baseUrl}/${sub.jobId}`);
+                                                            const fromPath = typeof window !== 'undefined' ? window.location.pathname : '';
+                                                            router.push(`${baseUrl}/${sub.jobId}${fromPath ? `?from=${fromPath}` : ''}`);
                                                         }
                                                     }}
                                                 >
@@ -971,7 +972,7 @@ export default function SubmittedJobsTable({
                                                                         } />
                                                                     </DropdownMenuItem>
                                                                     <DropdownMenuItem asChild disabled={!baseUrl}>
-                                                                        <Link href={`${baseUrl}/${sub.jobId}`} className="flex items-center gap-2 w-full cursor-pointer">
+                                                                        <Link href={`${baseUrl}/${sub.jobId}${typeof window !== 'undefined' ? `?from=${window.location.pathname}` : ''}`} className="flex items-center gap-2 w-full cursor-pointer">
                                                                             <Eye className="h-4 w-4 text-blue-500" />
                                                                             <span>View Details</span>
                                                                         </Link>

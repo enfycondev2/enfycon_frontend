@@ -119,7 +119,7 @@ export default function PodLeadSubmittedJobsPage() {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        <SubmittedJobsTable submissions={submissions} isRecruiter={true} onUpdate={refresh} />
+                        <SubmittedJobsTable submissions={submissions} isRecruiter={true} baseUrl="/pod-lead/dashboard/jobs" onUpdate={refresh} />
 
                         {tp > 1 && (
                             <div className="flex items-center justify-between px-2">

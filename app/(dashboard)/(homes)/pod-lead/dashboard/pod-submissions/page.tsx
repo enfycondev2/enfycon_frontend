@@ -122,6 +122,7 @@ export default function PodLeadTeamSubmissionsPage() {
                         <SubmittedJobsTable
                             submissions={submissions}
                             isRecruiter={false}
+                            baseUrl="/pod-lead/dashboard/jobs"
                             onUpdate={refresh}
                         />
 

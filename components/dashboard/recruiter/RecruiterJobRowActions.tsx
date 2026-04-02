@@ -60,7 +60,7 @@ export default function RecruiterJobRowActions({
                 onCloseAutoFocus={(e) => e.preventDefault()}
             >
                 <DropdownMenuItem asChild className="focus:bg-blue-50 dark:focus:bg-blue-900/20">
-                    <Link href={`${baseUrl}/${jobId}`} className="flex items-center gap-2.5 cursor-pointer w-full py-2">
+                    <Link href={`${baseUrl}/${jobId}${typeof window !== 'undefined' ? `?from=${window.location.pathname}` : ''}`} className="flex items-center gap-2.5 cursor-pointer w-full py-2">
                         <Eye className="h-4 w-4 text-blue-600" />
                         <span className="font-medium">View Details</span>
                     </Link>
@@ -106,7 +106,7 @@ export default function RecruiterJobRowActions({
                 <DropdownMenuSeparator className="my-1.5" />
                 
                 <DropdownMenuItem asChild className="focus:bg-neutral-50 dark:focus:bg-slate-800/50">
-                    <Link href={`${baseUrl}/${jobId}`} target="_blank" className="flex items-center gap-2.5 cursor-pointer w-full py-2">
+                    <Link href={`${baseUrl}/${jobId}${typeof window !== 'undefined' ? `?from=${window.location.pathname}` : ''}`} target="_blank" className="flex items-center gap-2.5 cursor-pointer w-full py-2">
                         <ExternalLink className="h-4 w-4 text-neutral-500" />
                         <span className="font-medium text-neutral-600 dark:text-slate-400">Open in New Tab</span>
                     </Link>
