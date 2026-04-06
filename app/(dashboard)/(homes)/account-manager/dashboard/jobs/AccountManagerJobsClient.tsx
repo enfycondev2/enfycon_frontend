@@ -10,7 +10,7 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2 } from 
 
 interface PageMeta { total: number; page: number; limit: number; totalPages: number; }
 
-const LIMIT = 100;
+const LIMIT = 25;
 
 function extract(data: any) {
     const jobs = Array.isArray(data) ? data : (data?.data ?? data?.jobs ?? data?.content ?? []);
@@ -156,7 +156,7 @@ export default function AccountManagerJobsClient() {
                     showActions={true}
                     showFilters={true}
                     showEstCreatedDateTime={true}
-                    serverPaginated={false}
+                    serverPaginated={true}
                     serverTotal={meta.total}
                     onRefresh={refresh}
                     onJobUpdated={handleJobUpdated}

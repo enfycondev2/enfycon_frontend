@@ -61,7 +61,7 @@ interface PageMeta {
  * regardless of how many total jobs exist.  At 10 000 jobs/year (~27/day) the
  * backend guarantees correct ordering at the DB level.
  */
-const LIMIT = 100;
+const LIMIT = 25;
 
 function extractPageData(data: any): { jobs: Job[]; meta: PageMeta } {
     const jobs: Job[] = Array.isArray(data)
@@ -275,7 +275,7 @@ export default function DeliveryHeadJobsClient() {
                     showFilters={true}
                     showEstCreatedDateTime={true}
                     showCfrExtend={true}
-                    serverPaginated={false}
+                    serverPaginated={true}
                     serverTotal={meta.total}
                     onRefresh={handleRefresh}
                     onJobUpdated={handleJobUpdated}
