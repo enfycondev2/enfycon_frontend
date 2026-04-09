@@ -77,6 +77,8 @@ interface RecruiterJobsTableProps {
     baseUrl?: string;
     onRefresh?: () => void;
     hideRecruiterFilter?: boolean;
+    serverPaginated?: boolean;
+    serverTotal?: number;
 }
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" | "warning" | "info" }> = {
@@ -91,7 +93,9 @@ export default function RecruiterJobsTable({
     jobs: jobsProp,
     baseUrl = "/recruiter/dashboard/jobs",
     onRefresh,
-    hideRecruiterFilter = false
+    hideRecruiterFilter = false,
+    serverPaginated = false,
+    serverTotal,
 }: RecruiterJobsTableProps) {
     const jobs: Job[] = Array.isArray(jobsProp) ? jobsProp : [];
     const { data: session } = useSession();
@@ -117,16 +121,38 @@ export default function RecruiterJobsTable({
     const isPodLead = hasPodLeadRole;
     const itemsPerPage = 10;
 
-    // Fetch team members from /pods/my-team once
+    // Defer team fetch so the initial jobs paint is not competing with another request.
     useEffect(() => {
-        apiClient("/pods/my-team")
-            .then((res) => res.ok ? res.json() : [])
-            .then((data) => {
-                // API may return array directly or { members: [] }
-                const members = Array.isArray(data) ? data : (data?.members ?? data?.recruiters ?? []);
-                setTeamMembers(members);
-            })
-            .catch(() => setTeamMembers([]));
+        let isCancelled = false;
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+        let idleId: number | null = null;
+
+        const loadTeamMembers = () => {
+            apiClient("/pods/my-team")
+                .then((res) => res.ok ? res.json() : [])
+                .then((data) => {
+                    if (isCancelled) return;
+                    const members = Array.isArray(data) ? data : (data?.members ?? data?.recruiters ?? []);
+                    setTeamMembers(members);
+                })
+                .catch(() => {
+                    if (!isCancelled) setTeamMembers([]);
+                });
+        };
+
+        if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+            idleId = window.requestIdleCallback(loadTeamMembers, { timeout: 1000 });
+        } else {
+            timeoutId = setTimeout(loadTeamMembers, 250);
+        }
+
+        return () => {
+            isCancelled = true;
+            if (timeoutId) clearTimeout(timeoutId);
+            if (idleId !== null && typeof window !== "undefined" && "cancelIdleCallback" in window) {
+                window.cancelIdleCallback(idleId);
+            }
+        };
     }, [token]);
 
     // Extract unique values for filters
@@ -274,12 +300,13 @@ export default function RecruiterJobsTable({
         });
     }, [filteredJobs, sortBy]);
 
-    const totalPages = Math.ceil(sortedJobs.length / itemsPerPage);
+    const totalPages = serverPaginated ? 1 : Math.ceil(sortedJobs.length / itemsPerPage);
 
     const currentJobs = useMemo(() => {
+        if (serverPaginated) return sortedJobs;
         const startIndex = (currentPage - 1) * itemsPerPage;
         return sortedJobs.slice(startIndex, startIndex + itemsPerPage);
-    }, [sortedJobs, currentPage]);
+    }, [sortedJobs, currentPage, serverPaginated]);
 
     const handlePageChange = (page: number) => {
         if (page >= 1 && page <= totalPages) {
@@ -710,8 +737,7 @@ export default function RecruiterJobsTable({
                 </Table>
             </div>
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
+            {!serverPaginated && totalPages > 1 && (
                 <div className="flex items-center justify-between px-2">
                     <p className="text-sm text-muted-foreground italic">
                         Showing <span className="font-medium">{Math.min((currentPage - 1) * itemsPerPage + 1, sortedJobs.length)}</span> to <span className="font-medium">{Math.min(currentPage * itemsPerPage, sortedJobs.length)}</span> of <span className="font-medium">{sortedJobs.length}</span> {sortedJobs.length === jobs.length ? "jobs" : "filtered jobs"}

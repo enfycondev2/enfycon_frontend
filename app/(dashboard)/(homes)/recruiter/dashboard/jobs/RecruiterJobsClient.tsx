@@ -10,7 +10,7 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2 } from 
 
 interface PageMeta { total: number; page: number; limit: number; totalPages: number; }
 
-const LIMIT = 100;
+const LIMIT = 25;
 
 function extract(data: any) {
     const jobs = Array.isArray(data) ? data : (data?.data ?? data?.jobs ?? data?.content ?? []);
@@ -134,14 +134,14 @@ export default function RecruiterJobsClient() {
                     <Button variant="outline" size="sm" onClick={refresh}>Retry</Button>
                 </div>
             ) : (
-                // RecruiterJobsTable has its own internal 10-per-page pagination
                 <RecruiterJobsTable
                     jobs={jobs}
                     baseUrl="/recruiter/dashboard/jobs"
                     onRefresh={refresh}
+                    serverPaginated={true}
+                    serverTotal={meta.total}
                 />
             )}
-            {/* Server page controls — only visible when total > LIMIT (100) */}
             {!isLoading && !error && tp > 1 && (
                 <div className="flex items-center justify-between px-2 pt-1 border-t border-neutral-100 dark:border-slate-700">
                     <p className="text-xs text-muted-foreground italic">

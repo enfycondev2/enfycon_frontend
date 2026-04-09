@@ -22,11 +22,11 @@ import { Calendar, Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/apiClient";
 
 interface DatewiseSubmissionTableProps {
-    jobs: any[];
+    jobs?: any[];
     initialTrends?: any[];
 }
 
-const DatewiseSubmissionTable = ({ jobs, initialTrends = [] }: DatewiseSubmissionTableProps) => {
+const DatewiseSubmissionTable = ({ jobs = [], initialTrends = [] }: DatewiseSubmissionTableProps) => {
     const [filter, setFilter] = useState("daily");
     const [trends, setTrends] = useState<any[]>(initialTrends);
     const [isLoading, setIsLoading] = useState(false);

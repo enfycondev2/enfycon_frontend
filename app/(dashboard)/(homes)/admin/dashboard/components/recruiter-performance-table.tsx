@@ -21,147 +21,58 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { parseISO, isValid } from "date-fns";
 import { UserCheck } from "lucide-react";
 
+import { apiClient } from "@/lib/apiClient";
+import { Loader2 } from "lucide-react";
+
 interface RecruiterPerformanceTableProps {
-    jobs: any[];
-    submissions: any[];
+    jobs?: any[];
+    submissions?: any[];
 }
 
-const RecruiterPerformanceTable = ({ jobs, submissions }: RecruiterPerformanceTableProps) => {
+const RecruiterPerformanceTable = ({ jobs: _jobs = [], submissions: _submissions = [] }: RecruiterPerformanceTableProps) => {
     const [filter, setFilter] = useState("all");
+    const [performanceData, setPerformanceData] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const filteredData = useMemo(() => {
-        const recruiters: Record<string, any> = {};
-
-        // EST Timezone Helpers
-        const getESTPart = (date: Date, part: 'year' | 'month' | 'day' | 'week') => {
-            if (!date || !isValid(date)) return "N/A";
-
-            if (part === 'week') {
-                const d = new Date(date.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-                d.setHours(0, 0, 0, 0);
-                d.setDate(d.getDate() + 4 - (d.getDay() || 7));
-                const yearStart = new Date(d.getFullYear(), 0, 1);
-                return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-            }
-            const options: Intl.DateTimeFormatOptions = { timeZone: 'America/New_York' };
-            if (part === 'year') options.year = 'numeric';
-            if (part === 'month') options.month = 'numeric';
-            if (part === 'day') options.day = 'numeric';
-            return new Intl.DateTimeFormat('en-US', options).format(date);
-        };
-
-        const now = new Date();
-        const currentYear = getESTPart(now, 'year');
-        const currentMonth = getESTPart(now, 'month');
-        const currentDay = getESTPart(now, 'day');
-        const currentWeek = getESTPart(now, 'week');
-        const normalizeStatus = (status?: string) => (status || "").trim().toUpperCase();
-
-        const isInSelectedRange = (date: Date) => {
-            const year = getESTPart(date, 'year');
-            const month = getESTPart(date, 'month');
-            const day = getESTPart(date, 'day');
-            const week = getESTPart(date, 'week');
-
-            if (filter === "all") return true;
-            if (filter === "today") return year === currentYear && month === currentMonth && day === currentDay;
-            if (filter === "week") return year === currentYear && week === currentWeek;
-            if (filter === "month") return year === currentYear && month === currentMonth;
-            if (filter === "year") return year === currentYear;
-            return false;
-        };
-
-        jobs.forEach((job) => {
-            if (!job || !job.createdAt) return;
-
-            const createdAt = parseISO(job.createdAt);
-
-            if (!isValid(createdAt)) return;
-            const isInRange = isInSelectedRange(createdAt);
-
-            const assignedRecruiters = job.assignedRecruiters || [];
-            if (assignedRecruiters.length === 0) return;
-
-            assignedRecruiters.forEach((recruiter: any) => {
-                if (!recruiter || !recruiter.id) return;
-
-                if (!recruiters[recruiter.id]) {
-                    recruiters[recruiter.id] = {
-                        name: recruiter.fullName || recruiter.email?.split('@')[0] || "Unknown",
-                        email: recruiter.email,
-                        newReq: 0,
-                        cfr: 0,
-                        totalJobs: 0,
-                        totalPositions: 0,
-                        submissionDone: 0,
-                        submissionRequired: 0,
-                        totalSubmissions: 0,
-                        closure: 0,
-                    };
+    React.useEffect(() => {
+        const fetchRecruiterPerformance = async () => {
+            setIsLoading(true);
+            try {
+                let url = `/dashboard/admin/recruiter-performance`;
+                const params = new URLSearchParams();
+                
+                const now = new Date();
+                if (filter === "today") {
+                    params.append("startDate", new Date(now.setHours(0,0,0,0)).toISOString());
+                } else if (filter === "week") {
+                    const first = now.getDate() - now.getDay();
+                    params.append("startDate", new Date(now.setDate(first)).toISOString());
+                } else if (filter === "month") {
+                    params.append("startDate", new Date(now.getFullYear(), now.getMonth(), 1).toISOString());
+                } else if (filter === "year") {
+                    params.append("startDate", new Date(now.getFullYear(), 0, 1).toISOString());
                 }
 
-                const r = recruiters[recruiter.id];
-
-                if (isInRange) {
-                    r.newReq += 1;
-                    r.totalJobs += 1;
-                    r.totalPositions += job.noOfPositions || job.positions || 1;
-                    if (job.requirementType === "CFR" || job.requirementType === "CFR_EXTENDED") {
-                        r.cfr += 1;
-                    }
-                    // Note: submissionDone/Required on Job are aggregates for all recruiters.
-                    // For a true individual recruiter performance, we might need to filter submissions by recruiterId.
-                    // However, to keep it consistent with the existing dashboard metrics which rely on the jobs array:
-                    // we allocate the job's target/done to each assigned recruiter.
-                    r.submissionDone += job.submissionDone || 0;
-                    r.submissionRequired += job.submissionRequired || 0;
-                    r.totalSubmissions += job.submissionDone || 0;
+                if (params.toString()) {
+                    url += `?${params.toString()}`;
                 }
 
-            });
-        });
-
-        submissions.forEach((submission) => {
-            if (!submission) return;
-            if (normalizeStatus(submission.finalStatus) !== "JOIN") return;
-
-            const closureAtRaw = submission.createdAt || submission.submissionDate;
-            if (!closureAtRaw) return;
-
-            const closureAt = parseISO(closureAtRaw);
-            if (!isValid(closureAt) || !isInSelectedRange(closureAt)) return;
-
-            const recruiterKey = submission.recruiter?.id || submission.recruiterId;
-            if (!recruiterKey) return;
-
-            if (!recruiters[recruiterKey]) {
-                recruiters[recruiterKey] = {
-                    name:
-                        submission.recruiter?.fullName ||
-                        submission.recruiter?.email?.split("@")[0] ||
-                        "Unknown",
-                    email: submission.recruiter?.email,
-                    newReq: 0,
-                    cfr: 0,
-                    totalJobs: 0,
-                    totalPositions: 0,
-                    submissionDone: 0,
-                    submissionRequired: 0,
-                    totalSubmissions: 0,
-                    closure: 0,
-                };
+                const response = await apiClient(url);
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                    setPerformanceData(data);
+                }
+            } catch (error) {
+                console.error("Error fetching recruiter performance:", error);
+            } finally {
+                setIsLoading(false);
             }
+        };
 
-            recruiters[recruiterKey].closure += 1;
-        });
+        fetchRecruiterPerformance();
+    }, [filter]);
 
-        return Object.values(recruiters).map((r: any) => ({
-            ...r,
-            submissionRate: r.submissionRequired > 0
-                ? Math.round((r.submissionDone / r.submissionRequired) * 100)
-                : 0
-        })).sort((a, b) => b.totalSubmissions - a.totalSubmissions);
-    }, [jobs, submissions, filter]);
+    const filteredData = performanceData;
 
     const getInitials = (name: string) => {
         return name
@@ -174,14 +85,14 @@ const RecruiterPerformanceTable = ({ jobs, submissions }: RecruiterPerformanceTa
 
     const totals = useMemo(() => {
         return filteredData.reduce((acc, current) => {
-            acc.newReq += current.newReq;
-            acc.cfr += current.cfr;
-            acc.totalJobs += current.totalJobs;
-            acc.totalPositions += current.totalPositions;
-            acc.submissionDone += current.submissionDone;
-            acc.submissionRequired += current.submissionRequired;
-            acc.totalSubmissions += current.totalSubmissions;
-            acc.closure += current.closure;
+            acc.newReq += current.newReq || 0;
+            acc.cfr += current.cfr || 0;
+            acc.totalJobs += current.totalJobs || 0;
+            acc.totalPositions += current.totalPositions || 0;
+            acc.submissionDone += current.submissionDone || 0;
+            acc.submissionRequired += current.submissionRequired || 0;
+            acc.totalSubmissions += current.totalSubmissions || 0;
+            acc.closure += current.closure || 0;
             return acc;
         }, {
             newReq: 0,

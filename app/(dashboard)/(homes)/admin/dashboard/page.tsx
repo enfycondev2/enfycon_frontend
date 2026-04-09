@@ -56,14 +56,14 @@ interface SubmissionRow {
 
 const normalizeStatus = (status?: string) => (status || "").trim().toUpperCase();
 
-import { fetchAllPages } from "@/lib/pagination";
-
-async function getJobs(): Promise<JobRow[]> {
-  return await fetchAllPages<JobRow>("/jobs");
-}
-
-async function getSubmissions(): Promise<SubmissionRow[]> {
-  return await fetchAllPages<SubmissionRow>("/recruiter-submissions");
+async function getAdminStats(): Promise<any> {
+  try {
+    const response = await serverApiClient("/dashboard/admin/stats", { cache: "no-store" });
+    if (!response.ok) return { summaryCards: [], agingStats: [], urgentJobs: [], podPerformance: [] };
+    return await response.json();
+  } catch {
+    return { summaryCards: [], agingStats: [], urgentJobs: [], podPerformance: [] };
+  }
 }
 
 async function getPerformanceTrends(interval: string = "daily"): Promise<any[]> {
@@ -80,114 +80,14 @@ async function getPerformanceTrends(interval: string = "daily"): Promise<any[]> 
 export default async function DashboardPage() {
   const session = await auth();
   const userName = session?.user?.name || "User";
-  const [jobs, submissions, performanceTrends] = await Promise.all([
-    getJobs(),
-    getSubmissions(),
+  const [stats, performanceTrends] = await Promise.all([
+    getAdminStats(),
     getPerformanceTrends("daily")
   ]);
 
   const welcomeMessage = `${getGreeting()}, ${userName}!`;
 
-  const openJobs = jobs.filter((job) => {
-    const s = normalizeStatus(job.status);
-    return s === "ACTIVE" || s === "ON_HOLD" || s === "HOLD_BY_CLIENT";
-  }).length;
-
-  const stageCounts = submissions.reduce(
-    (acc, sub) => {
-      const l1Status = normalizeStatus(sub.l1Status);
-      const l2Status = normalizeStatus(sub.l2Status);
-      const l3Status = normalizeStatus(sub.l3Status);
-      const finalStatus = normalizeStatus(sub.finalStatus);
-
-      if (finalStatus === "JOIN" || finalStatus === "JOINED") {
-        acc.joined += 1;
-      } else if (l3Status === "CLEARED") {
-        acc.l3 += 1;
-      } else if (l2Status === "CLEARED") {
-        acc.l2 += 1;
-      } else if (l1Status === "CLEARED") {
-        acc.l1 += 1;
-      }
-      return acc;
-    },
-    { l1: 0, l2: 0, l3: 0, joined: 0 }
-  );
-
-  const totalSubmissions = submissions.length;
-  const pipelineCoverage = totalSubmissions > 0
-    ? Math.round(((stageCounts.l1 + stageCounts.l2 + stageCounts.l3 + stageCounts.joined) / totalSubmissions) * 100)
-    : 0;
-  const openRatio = jobs.length > 0 ? Math.round((openJobs / jobs.length) * 100) : 0;
-
-  const adminStats = [
-    {
-      title: "Total Open Jobs",
-      value: String(openJobs),
-      icon: "BriefcaseBusiness",
-      iconBg: "bg-blue-600",
-      gradientFrom: "from-blue-600/10",
-      growth: `${openRatio}%`,
-      growthIcon: "ArrowUp",
-      growthColor: "text-green-600 dark:text-green-400",
-      description: "Open roles vs total jobs",
-    },
-    {
-      title: "Total Submissions",
-      value: String(totalSubmissions),
-      icon: "FileText",
-      iconBg: "bg-purple-600",
-      gradientFrom: "from-purple-600/10",
-      growth: `${pipelineCoverage}%`,
-      growthIcon: "ArrowUp",
-      growthColor: "text-green-600 dark:text-green-400",
-      description: "Tagged in active pipeline stages",
-    },
-    {
-      title: "Candidates in L1",
-      value: String(stageCounts.l1),
-      icon: "UsersRound",
-      iconBg: "bg-cyan-600",
-      gradientFrom: "from-cyan-600/10",
-      growth: String(stageCounts.l1),
-      growthIcon: "ArrowUp",
-      growthColor: "text-green-600 dark:text-green-400",
-      description: "Currently in screening",
-    },
-    {
-      title: "Candidates in L2",
-      value: String(stageCounts.l2),
-      icon: "Timer",
-      iconBg: "bg-orange-600",
-      gradientFrom: "from-orange-600/10",
-      growth: String(stageCounts.l2),
-      growthIcon: "ArrowUp",
-      growthColor: "text-green-600 dark:text-green-400",
-      description: "Technical rounds scheduled",
-    },
-    {
-      title: "Candidates in L3",
-      value: String(stageCounts.l3),
-      icon: "UsersRound",
-      iconBg: "bg-indigo-600",
-      gradientFrom: "from-indigo-600/10",
-      growth: String(stageCounts.l3),
-      growthIcon: "ArrowUp",
-      growthColor: "text-green-600 dark:text-green-400",
-      description: "Final technical rounds",
-    },
-    {
-      title: "Successfully Placed",
-      value: String(stageCounts.joined),
-      icon: "CheckCircle",
-      iconBg: "bg-green-600",
-      gradientFrom: "from-green-600/10",
-      growth: String(stageCounts.joined),
-      growthIcon: "ArrowUp",
-      growthColor: "text-green-600 dark:text-green-400",
-      description: "Successfully onboarded",
-    },
-  ];
+  const adminStats = stats.summaryCards;
 
   return (
     <>
@@ -203,25 +103,25 @@ export default async function DashboardPage() {
         {/* Performance Tables - Added as per USER_REQUEST */}
         <div className="xl:col-span-12">
           <Suspense fallback={<LoadingSkeleton />}>
-            <DatewiseSubmissionTable jobs={jobs} initialTrends={performanceTrends} />
+            <DatewiseSubmissionTable initialTrends={performanceTrends} />
           </Suspense>
         </div>
 
         <div className="xl:col-span-12">
           <Suspense fallback={<LoadingSkeleton />}>
-            <ManagerPerformanceTable jobs={jobs} />
+            <ManagerPerformanceTable />
           </Suspense>
         </div>
 
         <div className="xl:col-span-12">
           <Suspense fallback={<LoadingSkeleton />}>
-            <PodPerformanceTable jobs={jobs} submissions={submissions} />
+            <PodPerformanceTable />
           </Suspense>
         </div>
 
         <div className="xl:col-span-12">
           <Suspense fallback={<LoadingSkeleton />}>
-            <RecruiterPerformanceTable jobs={jobs} submissions={submissions} />
+            <RecruiterPerformanceTable />
           </Suspense>
         </div>
 
