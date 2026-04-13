@@ -73,18 +73,25 @@ export default function DeliveryHeadCreatePodPage() {
 
     const handlePodLeadChange = (value: string) => {
         const previousLead = selectedPodLead;
+
+        // If "none" or empty selected, just update the lead state and don't add to recruiters
+        if (value === "none" || value === "") {
+            setSelectedPodLead("");
+            return;
+        }
+
         setSelectedPodLead(value);
 
         setSelectedRecruiters((prev) => {
             if (prev.includes(value)) return prev;
 
-            if (prev.length < 5) {
+            if (prev.length < 10) {
                 return [...prev, value];
             } else {
                 if (previousLead && prev.includes(previousLead)) {
                     return prev.map(id => id === previousLead ? value : id);
                 } else {
-                    toast.error("Maximum 5 members allowed. Replaced a recruiter with the Pod Lead.");
+                    toast.error("Maximum 10 members allowed. One recruiter was replaced.");
                     const newRecs = [...prev];
                     newRecs[0] = value;
                     return newRecs;
@@ -95,11 +102,11 @@ export default function DeliveryHeadCreatePodPage() {
 
     const handleRecruitersChange = (values: string[]) => {
         console.log("handleRecruitersChange called with:", values);
-        // Deduplicate values
-        const uniqueValues = Array.from(new Set(values));
+        // Filter out "none" or empty if they somehow got in
+        const uniqueValues = Array.from(new Set(values.filter(v => v && v !== "none")));
 
-        if (uniqueValues.length > 5) {
-            toast.error("A pod can have a maximum of 5 members including the Pod Leader.");
+        if (uniqueValues.length > 10) {
+            toast.error("A pod can have a maximum of 10 members.");
             return;
         }
 
@@ -118,10 +125,6 @@ export default function DeliveryHeadCreatePodPage() {
             toast.error("Pod Name is required.");
             return;
         }
-        if (!selectedPodLead) {
-            toast.error("Please assign a Pod Lead.");
-            return;
-        }
 
         setIsSubmitting(true);
 
@@ -133,7 +136,7 @@ export default function DeliveryHeadCreatePodPage() {
                 },
                 body: JSON.stringify({
                     name: podName,
-                    podHeadId: selectedPodLead,
+                    ...(selectedPodLead && selectedPodLead !== "none" ? { podHeadId: selectedPodLead } : {}),
                     recruiterIds: selectedRecruiters
                 })
             });
@@ -168,12 +171,15 @@ export default function DeliveryHeadCreatePodPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <Label htmlFor="podLead" className="text-[#4b5563] dark:text-white mb-2">Assign Pod Lead *</Label>
-                                    <Select required onValueChange={handlePodLeadChange} value={selectedPodLead} disabled={!isLoading && recruiterOptions.length === 0}>
+                                    <Label htmlFor="podLead" className="text-[#4b5563] dark:text-white mb-2">Assign Pod Lead</Label>
+                                    <Select onValueChange={handlePodLeadChange} value={selectedPodLead || "none"} disabled={!isLoading && recruiterOptions.length === 0}>
                                         <SelectTrigger className="border border-neutral-300 px-5 dark:border-slate-500 focus:border-primary dark:focus:border-primary focus-visible:border-primary !h-12 rounded-lg !shadow-none !ring-0 w-full bg-transparent text-left">
                                             <SelectValue placeholder={isLoading ? "Loading recruiters..." : (recruiterOptions.length === 0 ? "No recruiter found" : "Select a Pod Lead")} />
                                         </SelectTrigger>
                                         <SelectContent>
+                                            <SelectItem value="none" className="text-muted-foreground italic font-medium">
+                                                None (Unassigned)
+                                            </SelectItem>
                                             {recruiterOptions.map(option => (
                                                 <SelectItem key={option.value} value={option.value}>
                                                     {option.label}
@@ -193,7 +199,7 @@ export default function DeliveryHeadCreatePodPage() {
                                         disabled={!isLoading && recruiterOptions.length === 0}
                                         emptyMessage="No recruiter found"
                                     />
-                                    <p className="text-xs text-neutral-500 mt-2">Select one or more recruiters to join this pod (Max 5 total).</p>
+                                    <p className="text-xs text-neutral-500 mt-2">Select one or more recruiters to join this pod (Max 10 total).</p>
                                 </div>
                             </div>
                         </div>

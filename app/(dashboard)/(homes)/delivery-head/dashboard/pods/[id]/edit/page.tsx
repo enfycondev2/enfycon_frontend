@@ -91,20 +91,26 @@ export default function DeliveryHeadEditPodPage({ params }: { params: Promise<{ 
             const previousLead = prev.selectedPodLead;
             let newRecs = [...prev.selectedRecruiters];
 
-            if (!newRecs.includes(value)) {
-                if (newRecs.length < 5) {
+            // If a valid recruiter is selected as lead, ensure they are in the recruiters list
+            if (value && value !== "none" && !newRecs.includes(value)) {
+                if (newRecs.length < 10) {
                     newRecs.push(value);
                 } else if (previousLead && newRecs.includes(previousLead)) {
                     newRecs = newRecs.map(id => id === previousLead ? value : id);
                 } else {
-                    toast.error("Maximum 5 members allowed. Replaced a recruiter with the Pod Lead.");
+                    toast.error("Maximum 10 members allowed. One recruiter was replaced.");
                     newRecs[0] = value;
                 }
             }
 
+            // Remove "none" or empty string from recruiters if it somehow got in
+            newRecs = newRecs.filter(id => id && id !== "none");
+
+            const newLead = value === "none" ? "" : value;
+
             return {
                 ...prev,
-                selectedPodLead: value,
+                selectedPodLead: newLead,
                 selectedRecruiters: newRecs
             };
         });
@@ -113,8 +119,8 @@ export default function DeliveryHeadEditPodPage({ params }: { params: Promise<{ 
     const handleRecruitersChange = React.useCallback((values: string[]) => {
         const uniqueValues = Array.from(new Set(values));
 
-        if (uniqueValues.length > 5) {
-            toast.error("A pod can have a maximum of 5 members including the Pod Leader.");
+        if (uniqueValues.length > 10) {
+            toast.error("A pod can have a maximum of 10 members including the Pod Leader.");
             return;
         }
 
@@ -129,15 +135,6 @@ export default function DeliveryHeadEditPodPage({ params }: { params: Promise<{ 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formData.podName.trim()) {
-            toast.error("Pod Name is required.");
-            return;
-        }
-        if (!formData.selectedPodLead) {
-            toast.error("Please assign a Pod Lead.");
-            return;
-        }
-
         setIsSubmitting(true);
 
         try {
@@ -148,7 +145,7 @@ export default function DeliveryHeadEditPodPage({ params }: { params: Promise<{ 
                 },
                 body: JSON.stringify({
                     name: formData.podName,
-                    podHeadId: formData.selectedPodLead,
+                    podHeadId: formData.selectedPodLead || null,
                     recruiterIds: formData.selectedRecruiters
                 })
             });
@@ -233,12 +230,15 @@ export default function DeliveryHeadEditPodPage({ params }: { params: Promise<{ 
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <Label htmlFor="podLead" className="text-[#4b5563] dark:text-white mb-2">Assign Pod Lead *</Label>
-                                    <Select required onValueChange={handlePodLeadChange} value={formData.selectedPodLead}>
+                                    <Label htmlFor="podLead" className="text-[#4b5563] dark:text-white mb-2">Assign Pod Lead</Label>
+                                    <Select onValueChange={handlePodLeadChange} value={formData.selectedPodLead === "" ? "none" : formData.selectedPodLead}>
                                         <SelectTrigger className="border border-neutral-300 px-5 dark:border-slate-500 focus:border-primary dark:focus:border-primary focus-visible:border-primary !h-12 rounded-lg !shadow-none !ring-0 w-full bg-transparent text-left">
-                                            <SelectValue placeholder="Select a Pod Lead" />
+                                            <SelectValue placeholder="Remove Pod Head / Unassigned" />
                                         </SelectTrigger>
                                         <SelectContent>
+                                            <SelectItem value="none" className="text-rose-500 font-medium italic">
+                                                None / Remove Pod Head
+                                            </SelectItem>
                                             {recruiterOptions.map(option => (
                                                 <SelectItem key={option.value} value={option.value}>
                                                     {option.label}
@@ -256,7 +256,7 @@ export default function DeliveryHeadEditPodPage({ params }: { params: Promise<{ 
                                         onChange={handleRecruitersChange}
                                         placeholder="Select recruiter(s)..."
                                     />
-                                    <p className="text-xs text-neutral-500 mt-2">Select one or more recruiters to join this pod (Max 5 total).</p>
+                                    <p className="text-xs text-neutral-500 mt-2">Select one or more recruiters to join this pod (Max 10 total).</p>
                                 </div>
                             </div>
                         </div>
@@ -278,7 +278,7 @@ export default function DeliveryHeadEditPodPage({ params }: { params: Promise<{ 
                         </div>
                     </form>
                 </DefaultCardComponent>
-            </div>
+            </div >
         </>
     );
 }

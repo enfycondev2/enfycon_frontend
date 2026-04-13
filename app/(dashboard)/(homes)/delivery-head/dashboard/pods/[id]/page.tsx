@@ -128,12 +128,12 @@ export default function PodDetailsPage({ params }: { params: { id: string } }) {
                             <div className="flex flex-col items-center text-center space-y-4 py-2">
                                 <Avatar className="h-20 w-20 border-2 border-primary/10 p-0.5">
                                     <AvatarFallback className="bg-primary/5 text-primary text-xl font-bold">
-                                        {dummyPodData.lead.fullName.split(' ').map(n => n[0]).join('')}
+                                        {dummyPodData.lead?.fullName?.split(' ').map(n => n[0]).join('') || "?"}
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="space-y-1">
                                     <h3 className="font-bold text-lg text-slate-900 dark:text-white leading-tight">
-                                        {dummyPodData.lead.fullName}
+                                        {dummyPodData.lead?.fullName || "No Head Assigned"}
                                     </h3>
                                     <div className="flex items-center justify-center gap-1.5 text-sm text-slate-500">
                                         <Mail className="h-3.5 w-3.5" />

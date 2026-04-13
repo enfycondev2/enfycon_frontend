@@ -89,10 +89,10 @@ export default function PodCycleStatusPanel({ data }: Props) {
     summary.status === "FRESH_CYCLE"
       ? "bg-emerald-500"
       : summary.status === "IN_PROGRESS"
-      ? "bg-amber-500"
-      : summary.status === "CYCLE_COMPLETE_WILL_AUTO_RESET"
-      ? "bg-red-500"
-      : "bg-gray-400";
+        ? "bg-amber-500"
+        : summary.status === "CYCLE_COMPLETE_WILL_AUTO_RESET"
+          ? "bg-red-500"
+          : "bg-gray-400";
 
   return (
     <Card className="border border-gray-200 dark:border-neutral-700 bg-white dark:bg-slate-800 rounded-md shadow-none">
@@ -188,11 +188,10 @@ export default function PodCycleStatusPanel({ data }: Props) {
                 return (
                   <div
                     key={pod.id}
-                    className={`relative rounded-lg border p-4 space-y-2 transition-colors ${
-                      available
+                    className={`relative rounded-lg border p-4 space-y-2 transition-colors ${available
                         ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10"
                         : "border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-900/10"
-                    }`}
+                      }`}
                   >
                     {/* Pod name + slot badge */}
                     <div className="flex items-start justify-between gap-2">
@@ -200,11 +199,10 @@ export default function PodCycleStatusPanel({ data }: Props) {
                         {pod.name}
                       </p>
                       <span
-                        className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
-                          available
+                        className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${available
                             ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
                             : "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300"
-                        }`}
+                          }`}
                       >
                         {available ? (
                           <CheckCircle2 className="h-3 w-3" />
@@ -229,7 +227,7 @@ export default function PodCycleStatusPanel({ data }: Props) {
 
                     {pod.podHead && (
                       <p className="text-xs text-muted-foreground truncate">
-                        <span className="font-medium">Pod Head:</span> {pod.podHead}
+                        <span className="font-medium">Pod Head:</span> {pod.podHead || "No Head Assigned"}
                       </p>
                     )}
 

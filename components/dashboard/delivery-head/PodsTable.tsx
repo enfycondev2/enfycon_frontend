@@ -12,8 +12,10 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Edit2, Users } from "lucide-react";
+import { Eye, Edit2, Users, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import DeletePodDialog from "./DeletePodDialog";
 import {
     Select,
     SelectContent,
@@ -64,7 +66,15 @@ export default function PodsTable({
     basePath = "/delivery-head/dashboard/pods",
     showSorting = false,
 }: PodsTableProps) {
+    const router = useRouter();
     const [filter, setFilter] = useState("all");
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [podToDelete, setPodToDelete] = useState<{ id: string; name: string } | null>(null);
+
+    const openDeleteDialog = (id: string, name: string) => {
+        setPodToDelete({ id, name });
+        setIsDeleteDialogOpen(true);
+    };
 
     const displayedPods = useMemo(() => {
         // EST Timezone Helpers (copied from ManagerPerformanceTable)
@@ -276,7 +286,7 @@ export default function PodsTable({
                                     </TableCell>
                                     <TableCell className="py-3 px-4 border-b border-neutral-200 dark:border-slate-600 text-start">
                                         <div className="flex flex-col">
-                                            <span className="font-medium text-sm">{pod.podHead?.fullName || "Unassigned"}</span>
+                                            <span className="font-medium text-sm">{pod.podHead?.fullName || "No Head Assigned"}</span>
                                             <span className="text-xs text-muted-foreground">{pod.podHead?.email}</span>
                                         </div>
                                     </TableCell>
@@ -369,6 +379,14 @@ export default function PodsTable({
                                                         <Edit2 className="h-4 w-4" />
                                                     </Link>
                                                 </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-900/20"
+                                                    onClick={() => openDeleteDialog(pod.id, pod.name)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
                                             </div>
                                         </TableCell>
                                     )}
@@ -378,6 +396,20 @@ export default function PodsTable({
                     </TableBody>
                 </Table>
             </div>
+
+            {podToDelete && (
+                <DeletePodDialog
+                    isOpen={isDeleteDialogOpen}
+                    onClose={() => setIsDeleteDialogOpen(false)}
+                    podId={podToDelete.id}
+                    podName={podToDelete.name}
+                    availablePods={pods}
+                    onSuccess={() => {
+                        setIsDeleteDialogOpen(false);
+                        router.refresh();
+                    }}
+                />
+            )}
         </div>
     );
 }
