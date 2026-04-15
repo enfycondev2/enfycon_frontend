@@ -15,7 +15,6 @@ import {
     ChevronsLeft,
     ChevronsRight,
     Search,
-    Download,
     FilterX,
     Maximize,
     Minimize,
@@ -240,39 +239,7 @@ export default function InterviewTrackerTable() {
         setPage(1);
     };
 
-    const exportToCSV = () => {
-        if (submissions.length === 0) return;
-        
-        const headers = ["SL No", "Sales Manager", "Job Title", "Client", "End Client", "Candidate", "L1 Status", "L1 Date", "L2 Status", "L2 Date", "L3 Status", "L3 Date", "Remarks", "Recruiter", "Submission Date"];
-        const rows = submissions.map((sub, idx) => [
-            ((page - 1) * 20) + idx + 1,
-            sub.job.accountManager.fullName,
-            sub.job.jobTitle,
-            sub.job.clientName,
-            sub.job.endClientName,
-            sub.candidateName,
-            sub.l1Status,
-            sub.l1Date ? formatUsDate(sub.l1Date) : "",
-            sub.l2Status,
-            sub.l2Date ? formatUsDate(sub.l2Date) : "",
-            sub.l3Status,
-            sub.l3Date ? formatUsDate(sub.l3Date) : "",
-            sub.remarks ? sub.remarks.replace(/,/g, " ") : "", // Remove commas to avoid CSV break
-            sub.recruiter.fullName,
-            formatUsDate(sub.submissionDate)
-        ]);
 
-        const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Interview_Tracker_${new Date().toISOString().split('T')[0]}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
 
     return (
         <div
@@ -402,9 +369,6 @@ export default function InterviewTrackerTable() {
                     <Button variant="outline" size="icon" onClick={() => setIsFullScreen(!isFullScreen)} className="h-9 w-9 rounded-lg border-blue-100 text-blue-600 bg-blue-50/30">
                         {isFullScreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
                     </Button>
-                    <Button onClick={exportToCSV} variant="outline" className="h-9 px-3 gap-2 rounded-lg text-[11px] font-bold text-blue-600 border-blue-100 bg-blue-50/50 hover:bg-blue-50">
-                        <Download className="h-3.5 w-3.5" /> Export
-                    </Button>
                 </div>
             </div>
 
@@ -414,6 +378,7 @@ export default function InterviewTrackerTable() {
                     <TableHeader className="bg-gray-50/50">
                         <TableRow className="hover:bg-transparent border-b">
                             <TableHead className="w-14 text-[10px] font-bold text-neutral-500 uppercase">SL</TableHead>
+                            <TableHead className="text-[10px] font-bold text-neutral-500 uppercase">Job ID</TableHead>
                             <TableHead className="text-[10px] font-bold text-neutral-500 uppercase">Sales Manager</TableHead>
                             <TableHead className="text-[10px] font-bold text-neutral-500 uppercase">Job / End Client</TableHead>
                             <TableHead className="text-[10px] font-bold text-neutral-500 uppercase">Candidate</TableHead>
@@ -429,12 +394,12 @@ export default function InterviewTrackerTable() {
                         {loading ? (
                             Array.from({ length: 5 }).map((_, i) => (
                                 <TableRow key={i}>
-                                    <TableCell colSpan={10} className="h-16 text-center animate-pulse bg-gray-50/20" />
+                                    <TableCell colSpan={11} className="h-16 text-center animate-pulse bg-gray-50/20" />
                                 </TableRow>
                             ))
                         ) : submissions.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={10} className="h-32 text-center text-gray-400">
+                                <TableCell colSpan={11} className="h-32 text-center text-gray-400">
                                     No interview records found.
                                 </TableCell>
                             </TableRow>
@@ -450,6 +415,11 @@ export default function InterviewTrackerTable() {
                                 )}>
                                     <TableCell className="text-xs font-medium text-gray-400">
                                         {((page - 1) * 20) + idx + 1}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col">
+                                            <span className="text-[11px] font-mono font-bold text-blue-600 bg-blue-50/50 px-1.5 py-0.5 rounded border border-blue-100 max-w-max">{sub.job.jobCode}</span>
+                                        </div>
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex flex-col">

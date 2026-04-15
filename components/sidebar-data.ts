@@ -63,14 +63,25 @@ export const getSidebarData = (role: string) => {
           icon: ClipboardList,
         },
         {
-          title: "Interview Tracker_Sales",
-          url: "/admin/dashboard/interview-tracker-sales",
-          icon: ChartPie,
-        },
-        {
           title: "Assignment Logs",
           url: "/admin/dashboard/assignment-logs",
           icon: ClipboardList,
+        },
+      ],
+    },
+    {
+      label: "Interview Pipeline",
+    },
+    {
+      title: "Pipeline Tracking",
+      url: "#",
+      icon: ChartPie,
+      isActive: true,
+      items: [
+        {
+          title: "Interview Tracker",
+          url: "/admin/dashboard/interview-tracker-sales",
+          icon: ChartPie,
         },
       ],
     },
@@ -96,8 +107,28 @@ export const getSidebarData = (role: string) => {
       title:"Users Management",
       url:"/admin/dashboard/users",
       icon: UsersRound,
-    }
-
+    },
+    {
+      label: "CRM",
+    },
+    {
+      title: "Client Management",
+      url: "#",
+      icon: BriefcaseBusiness,
+      isActive: true,
+      items: [
+        {
+          title: "All Clients",
+          url: "/admin/dashboard/crm/clients",
+          icon: UsersRound,
+        },
+        {
+          title: "Client Onboarding",
+          url: "/admin/dashboard/crm/clients/create",
+          icon: StickyNote,
+        },
+      ],
+    },
   ];
 
   const accountManagerNav = [
@@ -126,6 +157,43 @@ export const getSidebarData = (role: string) => {
           title: "Submitted Jobs",
           url: "/account-manager/dashboard/jobs-submitted",
           icon: ClipboardList,
+        },
+      ],
+    },
+    {
+      label: "Interview Pipeline",
+    },
+    {
+      title: "Pipeline Tracking",
+      url: "#",
+      icon: ChartPie,
+      isActive: true,
+      items: [
+        {
+          title: "Interview Tracker",
+          url: "/account-manager/dashboard/interview-tracker",
+          icon: ChartPie,
+        },
+      ],
+    },
+    {
+      label: "CRM",
+    },
+    {
+      title: "Client Relationship",
+      url: "#",
+      icon: BriefcaseBusiness,
+      isActive: true,
+      items: [
+        {
+          title: "My Clients",
+          url: "/account-manager/dashboard/crm/clients",
+          icon: UsersRound,
+        },
+        {
+          title: "Client Onboarding",
+          url: "/account-manager/dashboard/crm/clients/create",
+          icon: StickyNote,
         },
       ],
     },
@@ -183,6 +251,22 @@ export const getSidebarData = (role: string) => {
           title: "Submitted Jobs",
           url: "/delivery-head/dashboard/jobs-submitted",
           icon: ClipboardList,
+        },
+      ],
+    },
+    {
+      label: "Interview Pipeline",
+    },
+    {
+      title: "Pipeline Tracking",
+      url: "#",
+      icon: ChartPie,
+      isActive: true,
+      items: [
+        {
+          title: "Interview Tracker",
+          url: "/delivery-head/dashboard/interview-tracker",
+          icon: ChartPie,
         },
       ],
     },

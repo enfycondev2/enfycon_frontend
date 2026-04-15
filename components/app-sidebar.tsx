@@ -73,7 +73,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <LogoSidebar />
       </SidebarHeader>
 
-      <SidebarContent className="scrollbar-thin scrollbar-invisible hover:scrollbar-visible">
+      <SidebarContent className="scrollbar-thin">
         <NavMain items={data.navMain} />
       </SidebarContent>
 

@@ -18,39 +18,21 @@ export default function AccountManagerSubmittedJobsPage() {
         setError("");
 
         try {
-            const userId = (session?.user as any)?.id;
+            // The backend /recruiter-submissions API automatically enforces Account Manager limitations securely.
+            // Using a high limit to pull all records so the client-side table can paginate them accurately.
+            const subsRes = await apiClient("/recruiter-submissions?limit=10000");
 
-            // Fetch all jobs and all submissions in parallel
-            const [jobsRes, subsRes] = await Promise.all([
-                apiClient("/jobs"),
-                apiClient("/recruiter-submissions"),
-            ]);
-
-            if (!jobsRes.ok || !subsRes.ok) {
-                throw new Error("Failed to fetch data");
+            if (!subsRes.ok) {
+                throw new Error("Failed to fetch submissions");
             }
 
-            const jobsData = await jobsRes.json();
             const subsData = await subsRes.json();
-
-            // /jobs returns { data: [...] }
-            const allJobs: { id: string; accountManagerId?: string }[] =
-                Array.isArray(jobsData?.data) ? jobsData.data : [];
-
-            // Keep only jobs where this user is the account manager
-            const myJobIds = new Set(
-                allJobs
-                    .filter((j) => j.accountManagerId === userId)
-                    .map((j) => j.id)
-            );
-
-            // Filter submissions to only this AM's jobs
+            
             const allSubs: CandidateSubmission[] = Array.isArray(subsData)
                 ? subsData
                 : (subsData?.data ?? subsData?.submissions ?? []);
 
-            const mySubs = allSubs.filter((s: any) => s.jobId && myJobIds.has(s.jobId));
-            setSubmissions(mySubs);
+            setSubmissions(allSubs);
         } catch (err: any) {
             console.error("Fetch submissions error:", err);
             setError(err.message || "An error occurred while fetching submissions");

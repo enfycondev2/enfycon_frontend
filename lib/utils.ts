@@ -7,11 +7,19 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatUsDate(dateString: string | Date | null | undefined): string {
   if (!dateString) return "-";
-  const date = new Date(dateString);
+  
+  const str = dateString instanceof Date ? dateString.toISOString() : String(dateString);
+  const date = new Date(str);
   if (isNaN(date.getTime())) return "-";
 
+  // If the stored date is exactly midnight UTC, it represents a strict Date (no time context).
+  // Applying an EST timezone to midnight UTC shifts it back 4/5 hours into the previous day.
+  // We use UTC timezone for these to strictly preserve the calendar date the user entered.
+  const isMidnightUTC = str.endsWith("T00:00:00.000Z") || (str.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(str));
+  const timeZone = isMidnightUTC ? "UTC" : "America/New_York";
+
   return new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
+    timeZone,
     month: "short",
     day: "numeric",
     year: "numeric"

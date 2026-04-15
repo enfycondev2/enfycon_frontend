@@ -8,6 +8,8 @@ import StatCard from "@/app/(dashboard)/(homes)/dashboard/components/stat-card";
 import { Card, CardContent } from "@/components/ui/card";
 import AudienceStatsChart from "@/components/charts/audience-stats-chart";
 import AnalysisDonutChart from "@/components/dashboard/admin/AnalysisDonutChart";
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -193,21 +195,32 @@ export default async function AccountManagerDashboard() {
                             Top Client Demand Analysis
                         </h6>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                            {(topClients.length ? topClients : [["No client data", 0]]).map(([client, count]) => (
-                                <div
-                                    key={client}
-                                    className="rounded-lg border border-neutral-200 dark:border-slate-700 p-4 bg-neutral-50 dark:bg-slate-800/50"
-                                >
-                                    <p className="text-sm text-neutral-500 dark:text-neutral-300">Client</p>
-                                    <p className="font-semibold text-neutral-900 dark:text-white mt-1 truncate">
-                                        {client}
-                                    </p>
-                                    <p className="text-2xl font-bold text-primary mt-2">{count}</p>
-                                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                                        Opened requisitions
-                                    </p>
-                                </div>
-                            ))}
+                            {(() => {
+                                const displayClients = topClients.length ? topClients : [["No client data", 0]];
+                                return displayClients.map(([clientName, count]) => (
+                                    <Link
+                                        key={clientName}
+                                        href={clientName !== "No client data" ? `/account-manager/dashboard/crm/clients?search=${encodeURIComponent(clientName)}` : "#"}
+                                        className="group relative rounded-lg border border-neutral-200 dark:border-slate-700 p-4 bg-neutral-50 dark:bg-slate-800/50 hover:border-primary/50 transition-all cursor-pointer"
+                                    >
+                                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Client</p>
+                                        <p className="font-bold text-neutral-900 dark:text-white mt-1 truncate group-hover:text-primary transition-colors">
+                                            {clientName}
+                                        </p>
+                                        <div className="flex items-end justify-between mt-2">
+                                            <div>
+                                                <p className="text-2xl font-black text-primary leading-none">{count}</p>
+                                                <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium mt-1">
+                                                    Opened requisitions
+                                                </p>
+                                            </div>
+                                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <ChevronRight className="w-4 h-4 text-primary" />
+                                            </div>
+                                        </div>
+                                    </Link>
+                                ));
+                            })()}
                         </div>
                     </CardContent>
                 </Card>

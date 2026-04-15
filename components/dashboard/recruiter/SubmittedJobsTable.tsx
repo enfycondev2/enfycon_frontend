@@ -30,7 +30,11 @@ import {
     MoreVertical,
     FileText,
     Eye,
+    Calendar as CalendarIcon,
 } from "lucide-react";
+import { format } from "date-fns";
+import { DateRange } from "react-day-picker";
+import { Calendar } from "@/components/ui/calendar";
 import { useRouter } from "next/navigation";
 import {
     DropdownMenu,
@@ -437,7 +441,7 @@ export default function SubmittedJobsTable({
     const [l1Filter, setL1Filter] = useState("all");
     const [l2Filter, setL2Filter] = useState("all");
     const [l3Filter, setL3Filter] = useState("all");
-    const [dateFilter, setDateFilter] = useState("");
+    const [dateFilter, setDateFilter] = useState<DateRange | undefined>(undefined);
     const itemsPerPage = 10;
     const isInteractiveTarget = (target: EventTarget | null) => {
         if (!target || !(target instanceof Element)) return false;
@@ -521,7 +525,20 @@ export default function SubmittedJobsTable({
             const matchesL1 = l1Filter === "all" || (sub.l1Status && sub.l1Status.toUpperCase() === l1Filter.toUpperCase());
             const matchesL2 = l2Filter === "all" || (sub.l2Status && sub.l2Status.toUpperCase() === l2Filter.toUpperCase());
             const matchesL3 = l3Filter === "all" || (sub.l3Status && sub.l3Status.toUpperCase() === l3Filter.toUpperCase());
-            const matchesDate = !dateFilter || new Date(sub.submissionDate).toISOString().split('T')[0] === dateFilter;
+
+            let matchesDate = true;
+            if (dateFilter?.from) {
+                const subDate = new Date(sub.submissionDate);
+                subDate.setHours(0, 0, 0, 0);
+
+                if (dateFilter.to) {
+                    const toDate = new Date(dateFilter.to);
+                    toDate.setHours(23, 59, 59, 999);
+                    matchesDate = subDate >= dateFilter.from && subDate <= toDate;
+                } else {
+                    matchesDate = subDate >= dateFilter.from;
+                }
+            }
 
             return matchesSearch && matchesStatus && matchesL1 && matchesL2 && matchesL3 && matchesDate;
         });
@@ -581,7 +598,7 @@ export default function SubmittedJobsTable({
         setL1Filter("all");
         setL2Filter("all");
         setL3Filter("all");
-        setDateFilter("");
+        setDateFilter(undefined);
         setCurrentPage(1);
     };
 
@@ -694,16 +711,46 @@ export default function SubmittedJobsTable({
                     </Select>
                 </div>
 
-                <div className="flex flex-col gap-1.5 min-w-[120px]">
+                <div className="flex flex-col gap-1.5 min-w-[200px]">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider ml-1 flex items-center gap-1">
-                        <Filter className="h-3 w-3" /> Submission Date
+                        <CalendarIcon className="h-3 w-3" /> Range
                     </label>
-                    <Input
-                        type="date"
-                        className="h-10 bg-white border-gray-200 rounded-lg"
-                        value={dateFilter}
-                        onChange={(e) => { setDateFilter(e.target.value); setCurrentPage(1); }}
-                    />
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-[220px] h-10 justify-start text-left font-normal bg-white border-gray-200 rounded-lg",
+                                    !dateFilter && "text-muted-foreground"
+                                )}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                <div className="flex-1 truncate">
+                                    {dateFilter?.from ? (
+                                        dateFilter.to ? (
+                                            <>
+                                                {format(dateFilter.from, "MMM d")} - {format(dateFilter.to, "MMM d")}
+                                            </>
+                                        ) : (
+                                            format(dateFilter.from, "MMM d")
+                                        )
+                                    ) : (
+                                        <span>Pick a range</span>
+                                    )}
+                                </div>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={dateFilter?.from}
+                                selected={dateFilter}
+                                onSelect={(d) => { setDateFilter(d); setCurrentPage(1); }}
+                                numberOfMonths={2}
+                            />
+                        </PopoverContent>
+                    </Popover>
                 </div>
 
                 <div className="flex flex-col gap-1.5 min-w-[150px]">
