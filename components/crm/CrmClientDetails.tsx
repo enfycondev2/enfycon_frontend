@@ -32,7 +32,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import AddContactModal from "./modals/AddContactModal";
 import LogActivityModal from "./modals/LogActivityModal";
 import EditCrmClientModal from "./modals/EditCrmClientModal";
-import EditContactModal from "./modals/EditContactModal";
 import { 
   Select, 
   SelectContent, 
