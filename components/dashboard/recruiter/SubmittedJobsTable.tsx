@@ -189,8 +189,11 @@ function EditStatusDialog({
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({
         l1Status: sub.l1Status || "PENDING",
+        l1Date: sub.l1Date ? sub.l1Date.split('T')[0] : "",
         l2Status: sub.l2Status || "PENDING",
+        l2Date: sub.l2Date ? sub.l2Date.split('T')[0] : "",
         l3Status: sub.l3Status || "PENDING",
+        l3Date: sub.l3Date ? sub.l3Date.split('T')[0] : "",
         finalStatus: sub.finalStatus || "PENDING",
         remarks: sub.remarks || "",
     });
@@ -200,8 +203,11 @@ function EditStatusDialog({
         try {
             const changedFields: any = {};
             if (form.l1Status !== sub.l1Status) changedFields.l1Status = form.l1Status;
+            if (form.l1Date !== (sub.l1Date ? sub.l1Date.split('T')[0] : "")) changedFields.l1Date = form.l1Date || null;
             if (form.l2Status !== sub.l2Status) changedFields.l2Status = form.l2Status;
+            if (form.l2Date !== (sub.l2Date ? sub.l2Date.split('T')[0] : "")) changedFields.l2Date = form.l2Date || null;
             if (form.l3Status !== sub.l3Status) changedFields.l3Status = form.l3Status;
+            if (form.l3Date !== (sub.l3Date ? sub.l3Date.split('T')[0] : "")) changedFields.l3Date = form.l3Date || null;
             if (form.finalStatus !== sub.finalStatus) changedFields.finalStatus = form.finalStatus;
             if (form.remarks !== (sub.remarks || "")) changedFields.remarks = form.remarks;
 
@@ -257,7 +263,12 @@ function EditStatusDialog({
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md p-6 space-y-4">
+            <DialogContent 
+                className="sm:max-w-md p-6 space-y-4"
+                onPointerDownOutside={(e) => e.preventDefault()}
+                onInteractOutside={(e) => e.preventDefault()}
+                onClick={(e) => e.stopPropagation()}
+            >
                 <DialogHeader>
                     <DialogTitle className="text-base font-semibold text-neutral-800 tracking-tight">
                         {isRecruiter ? "Update Recruitment Feedback" : "Update Candidate Pipeline Status"}
@@ -267,19 +278,36 @@ function EditStatusDialog({
                 <div className="space-y-4 py-2">
                     {!isRecruiter && (
                         <div className="grid grid-cols-1 gap-3">
+                            <div className="flex items-center gap-3 mb-1 px-1">
+                                <span className="w-12"></span> {/* Spacer for the stage label */}
+                                <span className="w-[150px] text-[10px] font-bold text-neutral-400 uppercase tracking-widest pl-2">Interview Date</span>
+                                <span className="flex-1 text-[10px] font-bold text-neutral-400 uppercase tracking-widest pl-2">Status</span>
+                            </div>
+
                             {stages.map((stage) => (
-                                <div key={stage.key} className="flex items-center gap-3">
-                                    <span className="text-xs font-bold w-12 text-neutral-500 uppercase tracking-wider">{stage.label}</span>
-                                    <Select value={form[stage.key]} onValueChange={sf(stage.key)} disabled={stage.disabled}>
-                                        <SelectTrigger className="h-9 text-sm flex-1 border-neutral-200 focus:ring-blue-500 rounded-lg">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {STAGE_STATUSES.map(s => (
-                                                <SelectItem key={s} value={s} className="text-sm">{s}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                <div key={stage.key} className="flex flex-col gap-1.5">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs font-bold w-12 text-neutral-500 uppercase tracking-wider">{stage.label}</span>
+                                        
+                                        <Input
+                                            type="date"
+                                            value={form[`${stage.key.replace('Status', 'Date')}` as keyof typeof form]}
+                                            onChange={(e) => setForm(p => ({ ...p, [`${stage.key.replace('Status', 'Date')}`]: e.target.value }))}
+                                            disabled={stage.disabled}
+                                            className="h-9 text-sm w-[150px] border-neutral-200 focus:ring-blue-500 rounded-lg"
+                                        />
+
+                                        <Select value={form[stage.key]} onValueChange={sf(stage.key)} disabled={stage.disabled}>
+                                            <SelectTrigger className="h-9 text-sm flex-1 border-neutral-200 focus:ring-blue-500 rounded-lg">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {STAGE_STATUSES.map(s => (
+                                                    <SelectItem key={s} value={s} className="text-sm">{s}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
                             ))}
 
@@ -412,14 +440,19 @@ export default function SubmittedJobsTable({
     const [dateFilter, setDateFilter] = useState("");
     const itemsPerPage = 10;
     const isInteractiveTarget = (target: EventTarget | null) => {
-        if (!target || !(target instanceof HTMLElement)) return false;
+        if (!target || !(target instanceof Element)) return false;
         return (
             target.closest("button") ||
             target.closest("a") ||
             target.closest("input") ||
             target.closest("textarea") ||
             target.closest("select") ||
+            target.closest("label") ||
+            target.closest("svg") ||
             target.closest("[role='menuitem']") ||
+            target.closest("[role='dialog']") ||
+            target.closest("[data-radix-portal]") ||
+            target.closest("[data-slot^='dialog-']") ||
             target.closest(".interactive")
         );
     };

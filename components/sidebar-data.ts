@@ -63,6 +63,11 @@ export const getSidebarData = (role: string) => {
           icon: ClipboardList,
         },
         {
+          title: "Interview Tracker_Sales",
+          url: "/admin/dashboard/interview-tracker-sales",
+          icon: ChartPie,
+        },
+        {
           title: "Assignment Logs",
           url: "/admin/dashboard/assignment-logs",
           icon: ClipboardList,
