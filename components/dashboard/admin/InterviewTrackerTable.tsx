@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import {
     Table,
     TableBody,
@@ -59,6 +60,7 @@ interface Submission {
 }
 
 const STAGE_STATUSES = ["PENDING", "CLEARED", "REJECTED"];
+const FINAL_STATUSES = ["PENDING", "SUBMITTED", "REJECTED", "OFFER", "JOIN", "PLACED"];
 
 const StatusDot = ({ status, label, date }: { status: string; label: string; date?: string }) => {
     const s = (status || "PENDING").toUpperCase();
@@ -149,18 +151,43 @@ export default function InterviewTrackerTable() {
     // UI State
     const [isFullScreen, setIsFullScreen] = useState(false);
     
+    const searchParams = useSearchParams();
+    
     // Filters
-    const [amFilter, setAmFilter] = useState("all");
-    const [clientFilter, setClientFilter] = useState("");
-    const [l1Filter, setL1Filter] = useState("all");
-    const [l2Filter, setL2Filter] = useState("all");
-    const [l3Filter, setL3Filter] = useState("all");
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
+    const [amFilter, setAmFilter] = useState(searchParams.get("accountManagerId") || "all");
+    const [clientFilter, setClientFilter] = useState(searchParams.get("clientName") || "");
+    const [l1Filter, setL1Filter] = useState(searchParams.get("l1Status") || "all");
+    const [l2Filter, setL2Filter] = useState(searchParams.get("l2Status") || "all");
+    const [l3Filter, setL3Filter] = useState(searchParams.get("l3Status") || "all");
+    const [finalFilter, setFinalFilter] = useState(searchParams.get("finalStatus") || "all");
+    const [startDate, setStartDate] = useState(searchParams.get("startDate") || "");
+    const [endDate, setEndDate] = useState(searchParams.get("endDate") || "");
     
     // Lists for dropdowns
     const [accountManagers, setAccountManagers] = useState<{ id: string, fullName: string }[]>([]);
     const [stats, setStats] = useState({ total: 0, l1Pending: 0, l2Pending: 0, l3Pending: 0 });
+
+    // Sync state with URL params
+    useEffect(() => {
+        const amRes = searchParams.get("accountManagerId") || "all";
+        const clientRes = searchParams.get("clientName") || "";
+        const l1Res = searchParams.get("l1Status") || "all";
+        const l2Res = searchParams.get("l2Status") || "all";
+        const l3Res = searchParams.get("l3Status") || "all";
+        const finalRes = searchParams.get("finalStatus") || "all";
+        const startRes = searchParams.get("startDate") || "";
+        const endRes = searchParams.get("endDate") || "";
+
+        setAmFilter(amRes);
+        setClientFilter(clientRes);
+        setL1Filter(l1Res);
+        setL2Filter(l2Res);
+        setL3Filter(l3Res);
+        setFinalFilter(finalRes);
+        setStartDate(startRes);
+        setEndDate(endRes);
+        setPage(1);
+    }, [searchParams]);
 
     useEffect(() => {
         const fetchAMs = async () => {
@@ -200,6 +227,7 @@ export default function InterviewTrackerTable() {
                 ...(l1Filter !== "all" && { l1Status: l1Filter }),
                 ...(l2Filter !== "all" && { l2Status: l2Filter }),
                 ...(l3Filter !== "all" && { l3Status: l3Filter }),
+                ...(finalFilter !== "all" && { finalStatus: finalFilter }),
                 ...(startDate && { startDate }),
                 ...(endDate && { endDate }),
             });
@@ -219,7 +247,7 @@ export default function InterviewTrackerTable() {
 
     useEffect(() => {
         fetchSubmissions();
-    }, [page, amFilter, l1Filter, l2Filter, l3Filter, startDate, endDate]);
+    }, [page, amFilter, l1Filter, l2Filter, l3Filter, finalFilter, startDate, endDate]);
 
     // Use debounced trigger for client filter if needed, or manual trigger
     const handleClientSearch = (e: React.FormEvent) => {
@@ -234,6 +262,7 @@ export default function InterviewTrackerTable() {
         setL1Filter("all");
         setL2Filter("all");
         setL3Filter("all");
+        setFinalFilter("all");
         setStartDate("");
         setEndDate("");
         setPage(1);
@@ -358,6 +387,23 @@ export default function InterviewTrackerTable() {
                         <SelectContent>
                              <SelectItem value="all">All</SelectItem>
                              {STAGE_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="flex flex-col gap-1.5 w-32">
+                    <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest pl-1">Final Status</label>
+                    <Select value={finalFilter} onValueChange={(v) => { setFinalFilter(v); setPage(1); }}>
+                        <SelectTrigger className="h-9 text-xs rounded-lg bg-gray-50 border-gray-200">
+                             <SelectValue placeholder="All" />
+                        </SelectTrigger>
+                        <SelectContent>
+                             <SelectItem value="all">All Statuses</SelectItem>
+                             {FINAL_STATUSES.map(s => (
+                                <SelectItem key={s} value={s}>
+                                    {s === "PLACED" ? "OFFER + JOIN" : s}
+                                </SelectItem>
+                             ))}
                         </SelectContent>
                     </Select>
                 </div>

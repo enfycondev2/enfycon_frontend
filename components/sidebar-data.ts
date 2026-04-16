@@ -36,13 +36,11 @@ export const getSidebarData = (role: string) => {
           url: "/admin/dashboard/pods",
           icon: Boxes,
         },
-
         {
           title: "Recruiter",
           url: "/admin/dashboard/recruiter",
           icon: UsersRound,
         },
-
       ],
     },
    
@@ -86,27 +84,12 @@ export const getSidebarData = (role: string) => {
       ],
     },
     {
-      label: "Application",
+      label: "Mail Management",
     },
     {
-      title: "Chat",
-      url: "/admin/dashboard/chats",
-      icon: MessageCircleMore,
-    },
-    {
-      title:"Change Login Image",
-      url:"/admin/login-media",
-      icon: ImageIcon,
-    },
-    {
-      title:"Live Notification",
-      url:"/admin/dashboard/notifications",
-      icon: Bell,
-    },
-    {
-      title:"Users Management",
-      url:"/admin/dashboard/users",
-      icon: UsersRound,
+      title: "Employee Mail Reader",
+      url: "/admin/employee-mail",
+      icon: Mail,
     },
     {
       label: "CRM",
@@ -123,11 +106,39 @@ export const getSidebarData = (role: string) => {
           icon: UsersRound,
         },
         {
+          title: "Client Insights",
+          url: "/admin/dashboard/crm/insights",
+          icon: ChartPie,
+        },
+        {
           title: "Client Onboarding",
           url: "/admin/dashboard/crm/clients/create",
           icon: StickyNote,
         },
       ],
+    },
+    {
+      label: "Application",
+    },
+    {
+      title: "Chat",
+      url: "/admin/dashboard/chats",
+      icon: MessageCircleMore,
+    },
+    {
+      title: "Change Login Image",
+      url: "/admin/login-media",
+      icon: ImageIcon,
+    },
+    {
+      title: "Live Notification",
+      url: "/admin/dashboard/notifications",
+      icon: Bell,
+    },
+    {
+      title: "Users Management",
+      url: "/admin/dashboard/users",
+      icon: UsersRound,
     },
   ];
 
