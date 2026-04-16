@@ -180,15 +180,27 @@ export default function EditCrmClientModal({ client, isOpen, onClose, onSuccess 
                  />
               </div>
 
-              <LocationSelect 
-                 country={formData.country}
-                 state={formData.state}
-                 city={formData.city}
-                 onChange={(loc) => setFormData({
-                   ...formData,
-                   ...loc
-                 })}
-              />
+              <div className="space-y-4 pt-4 border-t border-dashed border-neutral-100 dark:border-slate-800">
+                  <h4 className="text-[10px] font-bold text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                     <MapPin className="w-3.5 h-3.5" /> Office Location
+                  </h4>
+                  <div className="space-y-2">
+                     <Label>Headquarters Location</Label>
+                     <LocationSelect 
+                       value={formData.city && formData.state ? `${formData.city.toLowerCase()}-${formData.state.toLowerCase()}` : (formData.country === 'Remote' ? 'remote' : "")}
+                       onChange={(val) => {
+                         const [city, state] = val.split('-');
+                         setFormData({
+                           ...formData,
+                           city: city ? city.charAt(0).toUpperCase() + city.slice(1) : "",
+                           state: state ? state.toUpperCase() : "",
+                           country: val === "remote" ? "Remote" : "USA"
+                         });
+                       }}
+                       placeholder="Search city (e.g. Seattle, WA)..."
+                     />
+                  </div>
+              </div>
            </div>
 
            {accountManagers.length > 0 && (
