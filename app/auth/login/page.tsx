@@ -129,7 +129,7 @@ const Login = () => {
                       <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-[9px] text-emerald-600 dark:text-emerald-400 rounded-full">Recommended</span>
                     </h5>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">
-                      Click the <strong>"Sign In with Microsoft"</strong> button. This syncs your official corporate profile instantly—no new password needed.
+                      One-tap login via Microsoft. Your account is created instantly, then simply <strong>Wait for Admin Sync</strong> to finalize your pod and work settings.
                     </p>
                   </div>
                 </div>
