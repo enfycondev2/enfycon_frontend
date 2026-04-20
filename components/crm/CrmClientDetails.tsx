@@ -638,7 +638,7 @@ function ContactCard({ contact, isInactive, clientId, onUpdate }: { contact: Con
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
     <div className="space-y-3">
        <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{title}</h4>

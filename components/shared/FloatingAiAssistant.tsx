@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useChat } from "@/contexts/ChatContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import AiContentRenderer from "../chat/AiContentRenderer";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";

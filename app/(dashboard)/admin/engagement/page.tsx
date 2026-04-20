@@ -136,8 +136,8 @@ export default function TeamEngagementPage() {
     return (
         <div className="space-y-6">
             <DashboardBreadcrumb 
-                pageName="Team Engagement" 
-                links={[{ title: "Admin", url: "/admin/dashboard" }, { title: "Engagement", url: "/admin/engagement" }]} 
+                title="Team Engagement" 
+                text="Engagement" 
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
