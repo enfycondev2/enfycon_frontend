@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { HelpCircle, ChevronRight, Share2, ShieldCheck, UserCheck } from "lucide-react";
+import { HelpCircle, ChevronRight, Share2, ShieldCheck, UserCheck, LogOut as LogOutIcon } from "lucide-react";
 
 const forgotPassImage: StaticImg = {
   image: AuthImage,
