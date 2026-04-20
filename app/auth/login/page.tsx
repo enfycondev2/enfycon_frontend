@@ -97,16 +97,41 @@ const Login = () => {
             </p>
           </div>
 
-          {/* Login Form */}
-          <LoginForm />
-
-          {/* Divider and Social Login */}
-          <div className="mt-8 relative text-center before:absolute before:w-full before:h-px before:bg-neutral-300 dark:before:bg-slate-600 before:top-1/2 before:left-0">
-            <span className="relative z-10 px-4 bg-white dark:bg-slate-900 text-base">
-              Or sign in with
-            </span>
+          {/* Official Sign In Section (Primary) */}
+          <div className="relative mb-10 overflow-hidden group">
+            <div className="p-5 bg-indigo-50/40 dark:bg-indigo-900/10 border border-indigo-100/50 dark:border-indigo-500/20 rounded-3xl relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              
+              <div className="relative z-10 flex flex-col items-center gap-4">
+                <p className="text-xs text-indigo-700/80 dark:text-indigo-300/80 text-center font-semibold tracking-wide uppercase">
+                  Corporate Sign-In
+                </p>
+                <div className="w-full">
+                  <SocialLogin />
+                </div>
+                <p className="text-[11px] text-indigo-600/60 dark:text-indigo-400/60 text-center font-medium">
+                  Recommended for all employees to sync profile 👇
+                </p>
+              </div>
+            </div>
           </div>
-          <SocialLogin />
+
+          {/* Neutral Divider */}
+          <div className="relative mb-10 text-center">
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <div className="w-full border-t border-neutral-200 dark:border-slate-700"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="px-4 bg-white dark:bg-slate-900 text-xs font-bold text-neutral-400 dark:text-neutral-500 tracking-widest uppercase">
+                Internal Access Only
+              </span>
+            </div>
+          </div>
+
+          {/* Manual Login Section (Secondary) */}
+          <div className="relative pt-2">
+            <LoginForm />
+          </div>
         </div>
       </div>
     </section>
