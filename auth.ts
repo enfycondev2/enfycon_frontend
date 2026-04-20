@@ -179,7 +179,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     maxAge: 24 * 60 * 60, // 24 hours fallback
   },
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger, session }) {
+      // Handle the update trigger from useSession().update()
+      if (trigger === "update" && session?.user) {
+        return { ...token, ...session.user };
+      }
+
       // Initial sign in
       if (account && user) {
         let expiresAt = Date.now() + 3600 * 1000; // Default 1 hour
