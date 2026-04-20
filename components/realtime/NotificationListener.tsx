@@ -6,6 +6,7 @@ import { useSocket } from "@/contexts/SocketContext";
 import { useNotifications } from "@/contexts/NotificationContext";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { Heart } from "lucide-react";
 
 const NotificationListener = () => {
     const { data: session } = useSession();
@@ -97,6 +98,43 @@ const NotificationListener = () => {
                         {
                             duration: 6000,
                             position: "top-right",
+                        }
+                    );
+                }
+            } else if (payload.type === "APPRECIATION") {
+                // Special handling for Appreciation messages
+                if (!isInitiator) {
+                    toast.success(
+                        (t) => (
+                            <div className="flex flex-col gap-1">
+                                <span className="font-bold text-sm text-pink-600 flex items-center gap-2">
+                                    <Heart className="w-4 h-4 fill-current" /> 
+                                    {payload.title}
+                                </span>
+                                <span className="text-xs">{payload.message}</span>
+                                <button
+                                    onClick={() => {
+                                        toast.dismiss(t.id);
+                                        window.dispatchEvent(new CustomEvent("show-appreciation", { 
+                                            detail: {
+                                                id: payload.data?.announcementId,
+                                                title: payload.title === "Special Message for You! 💝" || payload.title === "New Appreciation Message! 🎉" ? "Appreciation" : payload.title,
+                                                content: payload.message,
+                                                category: payload.data?.category || "CONGRATS",
+                                                hasImage: true 
+                                            } 
+                                        }));
+                                    }}
+                                    className="text-xs text-pink-600 font-bold text-left underline mt-1"
+                                >
+                                    Open Special Message
+                                </button>
+                            </div>
+                        ),
+                        {
+                            duration: 10000,
+                            position: "top-right",
+                            icon: "💝"
                         }
                     );
                 }

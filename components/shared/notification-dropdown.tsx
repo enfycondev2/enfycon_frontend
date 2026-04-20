@@ -5,7 +5,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { Bell, CircleCheck, Info, AlertTriangle, MessageSquare } from "lucide-react";
+import { Bell, CircleCheck, Info, AlertTriangle, MessageSquare, Heart } from "lucide-react";
 import Link from "next/link";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { formatDistanceToNow, isValid } from "date-fns";
@@ -24,6 +24,8 @@ const NotificationDropdown = () => {
         return <AlertTriangle className="text-yellow-500" />;
       case "NEW_MESSAGE":
         return <MessageSquare className="text-primary" />;
+      case "APPRECIATION":
+        return <Heart className="text-pink-500 fill-pink-500/20" />;
       default:
         return <Bell className="text-gray-500" />;
     }
@@ -40,6 +42,8 @@ const NotificationDropdown = () => {
         return "bg-yellow-100 dark:bg-yellow-600/25";
       case "NEW_MESSAGE":
         return "bg-primary/10 dark:bg-primary/25";
+      case "APPRECIATION":
+        return "bg-pink-100 dark:bg-pink-600/25";
       default:
         return "bg-gray-100 dark:bg-gray-700";
     }
@@ -110,7 +114,7 @@ const NotificationDropdown = () => {
                           <span className="absolute top-0 right-0 h-2.5 w-2.5 bg-blue-500 rounded-full border-2 border-white dark:border-slate-800" />
                         )}
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <h6 className={cn(
                           "text-sm mb-0.5",
                           !n.isRead ? "font-bold text-neutral-900 dark:text-white" : "font-medium text-neutral-600 dark:text-neutral-300"
@@ -120,6 +124,28 @@ const NotificationDropdown = () => {
                         <p className="mb-0 text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2 leading-relaxed">
                           {n.message}
                         </p>
+                        {n.type === "APPRECIATION" && (
+                           <Button 
+                              variant="link" 
+                              className="p-0 h-auto text-[10px] text-pink-600 font-bold hover:no-underline"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                markAsRead(n.id);
+                                window.dispatchEvent(new CustomEvent("show-appreciation", { 
+                                    detail: {
+                                        id: n.data?.announcementId,
+                                        title: n.title === "Special Message for You! 💝" || n.title === "New Appreciation Message! 🎉" ? "Appreciation" : n.title,
+                                        content: n.message,
+                                        category: n.data?.category || "CONGRATS",
+                                        hasImage: true
+                                    } 
+                                }));
+                              }}
+                           >
+                              Re-watch appreciation →
+                           </Button>
+                        )}
                       </div>
                     </div>
                     <div className="shrink-0 pt-1">

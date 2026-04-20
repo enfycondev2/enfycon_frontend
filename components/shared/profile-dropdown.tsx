@@ -47,6 +47,8 @@ const ProfileDropdown = () => {
     .filter((role) => validRoles.includes(role))
     .map((role) => role.replace(/-/g, "_"));
   const uniqueDisplayRoles = Array.from(new Set(displayRolesRaw)).sort((a, b) => {
+    if (a === "ADMIN") return -1;
+    if (b === "ADMIN") return 1;
     if (a === "FIN_ADMIN") return 1;
     if (b === "FIN_ADMIN") return -1;
     return 0;
@@ -79,13 +81,9 @@ const ProfileDropdown = () => {
   const switchableRoles = uniqueDisplayRoles.filter(role => role !== effectiveActiveRole);
   const canSwitchDashboard = switchableRoles.length > 0;
 
-  const selectedRoles = effectiveActiveRole
-    ? [effectiveActiveRole]
-    : (hasPodLead && hasRecruiter
-      ? selectedRolesBase.filter((role) => role !== "RECRUITER")
-      : (selectedRolesBase.length > 1 && selectedRolesBase[0] === "FIN_ADMIN"
-        ? [...selectedRolesBase.slice(1), "FIN_ADMIN"].slice(0, 1) // Pick next if FIN_ADMIN is first
-        : selectedRolesBase));
+  const selectedRoles = (hasPodLead && hasRecruiter)
+    ? uniqueDisplayRoles.filter((role) => role !== "RECRUITER")
+    : uniqueDisplayRoles;
 
   const formattedRoles = selectedRoles.map((role) =>
     role

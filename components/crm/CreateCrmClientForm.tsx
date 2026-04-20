@@ -31,14 +31,33 @@ import { LocationSelect } from "@/components/shared/location-select";
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 
+const INDUSTRIES = [
+  "Information Technology",
+  "Healthcare",
+  "Financial Services",
+  "Retail",
+  "Manufacturing",
+  "Telecommunications",
+  "Energy",
+  "Education",
+  "Consulting",
+  "Automotive",
+  "Pharmaceuticals",
+  "Real Estate",
+  "Hospitality & Tourism"
+];
+
 interface CreateCrmClientFormProps {
   basePath: string;
   isAdmin?: boolean;
+  clientId?: string;
+  isEdit?: boolean;
 }
 
-export default function CreateCrmClientForm({ basePath, isAdmin = false }: CreateCrmClientFormProps) {
+export default function CreateCrmClientForm({ basePath, isAdmin = false, clientId, isEdit = false }: CreateCrmClientFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(isEdit);
   const [accountManagers, setAccountManagers] = useState<{ id: string, fullName: string }[]>([]);
 
   const [formData, setFormData] = useState({
@@ -58,30 +77,7 @@ export default function CreateCrmClientForm({ basePath, isAdmin = false }: Creat
   const [nameStatus, setNameStatus] = useState<'IDLE' | 'UNIQUE' | 'DUPLICATE'>('IDLE');
   const debouncedCompanyName = useDebounce(formData.companyName, 500);
 
-  useEffect(() => {
-    if (debouncedCompanyName.trim().length > 2) {
-      const checkName = async () => {
-        setCheckingName(true);
-        try {
-          // Check against the Master Client List (which includes Finance and Jobs)
-          const res = await apiClient(`/clients?type=CLIENT&search=${encodeURIComponent(debouncedCompanyName)}`);
-          if (res.ok) {
-            const data = await res.json();
-            const exists = data.some((c: any) => c.name.toLowerCase() === debouncedCompanyName.toLowerCase());
-            setNameStatus(exists ? 'DUPLICATE' : 'UNIQUE');
-          }
-        } catch (e) {
-          console.error(e);
-        } finally {
-          setCheckingName(false);
-        }
-      };
-      checkName();
-    } else {
-      setNameStatus('IDLE');
-    }
-  }, [debouncedCompanyName]);
-
+  // Fetch AMs for Admin
   useEffect(() => {
     if (isAdmin) {
       const fetchAMs = async () => {
@@ -99,6 +95,63 @@ export default function CreateCrmClientForm({ basePath, isAdmin = false }: Creat
     }
   }, [isAdmin]);
 
+  // Fetch client details if editing
+  useEffect(() => {
+    if (isEdit && clientId) {
+      const fetchClient = async () => {
+        try {
+          setInitialLoading(true);
+          const res = await apiClient(`/crm/clients/${clientId}`);
+          if (!res.ok) throw new Error("Failed to fetch client for edit");
+          const data = await res.json();
+          
+          setFormData({
+            companyName: data.companyName || "",
+            endClientName: data.endClientName || "",
+            clientType: data.clientType || "DIRECT_CLIENT",
+            industry: data.industry || "",
+            website: data.website || "",
+            companySize: data.companySize || "",
+            city: data.city || "",
+            state: data.state || "",
+            country: data.country || "USA",
+            accountManagerId: data.accountManagerId || "",
+          });
+        } catch (error) {
+          console.error(error);
+          toast.error("Could not load client details");
+        } finally {
+          setInitialLoading(false);
+        }
+      };
+      fetchClient();
+    }
+  }, [isEdit, clientId]);
+
+  useEffect(() => {
+    // Only check name uniqueness if NOT editing (company name changes might be allowed but check isn't needed for existing ID)
+    if (!isEdit && debouncedCompanyName.trim().length > 2) {
+      const checkName = async () => {
+        setCheckingName(true);
+        try {
+          const res = await apiClient(`/clients?type=CLIENT&search=${encodeURIComponent(debouncedCompanyName)}`);
+          if (res.ok) {
+            const data = await res.json();
+            const exists = data.some((c: any) => c.name.toLowerCase() === debouncedCompanyName.toLowerCase());
+            setNameStatus(exists ? 'DUPLICATE' : 'UNIQUE');
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setCheckingName(false);
+        }
+      };
+      checkName();
+    } else {
+      setNameStatus('IDLE');
+    }
+  }, [debouncedCompanyName, isEdit]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.companyName) return toast.error("Company Name is required");
@@ -106,30 +159,48 @@ export default function CreateCrmClientForm({ basePath, isAdmin = false }: Creat
     try {
       setLoading(true);
       
-      // Sanitize payload: remove empty accountManagerId to avoid UUID validation errors
       const payload = { ...formData };
       if (!payload.accountManagerId) {
         delete (payload as any).accountManagerId;
       }
 
-      const res = await apiClient("/crm/clients", {
-        method: "POST",
+      const url = isEdit ? `/crm/clients/${clientId}` : "/crm/clients";
+      const method = isEdit ? "PATCH" : "POST";
+
+      const res = await apiClient(url, {
+        method,
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || "Failed to create client");
+        throw new Error(err.message || `Failed to ${isEdit ? 'update' : 'create'} client`);
       }
 
-      toast.success("Client onboarded successfully");
-      router.push(basePath);
+      toast.success(isEdit ? "Client profile rectified" : "Client onboarded successfully");
+      
+      // If editing, redirect back to the client detail page
+      if (isEdit) {
+        router.push(`${basePath}/${clientId}`);
+      } else {
+        router.push(basePath);
+      }
     } catch (error: any) {
       toast.error(error.message);
     } finally {
       setLoading(false);
     }
   };
+
+  if (initialLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <p className="text-neutral-500 animate-pulse">Loading client profile...</p>
+      </div>
+    );
+  }
+
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -143,8 +214,12 @@ export default function CreateCrmClientForm({ basePath, isAdmin = false }: Creat
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div>
-          <h2 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">Onboard New Client</h2>
-          <p className="text-sm text-neutral-500">Establish a new enterprise relationship in the portfolio.</p>
+          <h2 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+            {isEdit ? "Rectify Client Profile" : "Onboard New Client"}
+          </h2>
+          <p className="text-sm text-neutral-500">
+            {isEdit ? "Complete or correct historical information for this relationship." : "Establish a new enterprise relationship in the portfolio."}
+          </p>
         </div>
       </div>
 
@@ -216,15 +291,41 @@ export default function CreateCrmClientForm({ basePath, isAdmin = false }: Creat
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-neutral-50 dark:border-slate-800/60 pt-4 mt-4">
                 <div className="space-y-2">
                   <Label htmlFor="industry">Industry</Label>
-                  <div className="relative">
-                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                    <Input 
-                      id="industry" 
-                      placeholder="e.g. Information Technology" 
-                      className="pl-10 rounded-xl h-11"
-                      value={formData.industry}
-                      onChange={(e) => setFormData({...formData, industry: e.target.value})}
-                    />
+                  <div className="space-y-3">
+                    <Select 
+                      value={INDUSTRIES.includes(formData.industry) ? formData.industry : (formData.industry ? "Other" : "")} 
+                      onValueChange={(val) => {
+                        if (val === "Other") {
+                          setFormData({...formData, industry: ""}); // Clear to let them type
+                        } else {
+                          setFormData({...formData, industry: val});
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="rounded-xl h-11">
+                        <SelectValue placeholder="Select industry" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        {INDUSTRIES.map(ind => (
+                          <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+                        ))}
+                        <SelectItem value="Other">Other / Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {(formData.industry === "" || !INDUSTRIES.includes(formData.industry)) && (
+                      <div className="relative animate-in slide-in-from-top-2 duration-300">
+                        <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                        <Input 
+                          id="industry_custom" 
+                          placeholder="Type custom industry..." 
+                          className="pl-10 rounded-xl h-11 border-primary/20 bg-primary/5 focus:bg-white transition-all shadow-sm"
+                          value={formData.industry}
+                          onChange={(e) => setFormData({...formData, industry: e.target.value})}
+                          autoFocus={!INDUSTRIES.includes(formData.industry) && formData.industry !== ""}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -308,10 +409,10 @@ export default function CreateCrmClientForm({ basePath, isAdmin = false }: Creat
             )}
             disabled={loading}
           >
-            {loading ? "Establishing Relationship..." : (
+            {loading ? (isEdit ? "Updating Profile..." : "Establishing Relationship...") : (
               <>
                 <Save className="w-5 h-5 mr-2" />
-                Onboard Client
+                {isEdit ? "Update Profile" : "Onboard Client"}
               </>
             )}
           </Button>

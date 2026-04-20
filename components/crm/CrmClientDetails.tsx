@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import { 
   Building2, 
   Users, 
@@ -84,6 +84,7 @@ interface CrmClient {
     fullName: string | null;
     email: string;
   };
+  accountManagerId: string;
   contacts: Contact[];
   activities: Activity[];
 }
@@ -91,11 +92,19 @@ interface CrmClient {
 export default function CrmClientDetails() {
   const { id } = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const [client, setClient] = useState<CrmClient | null>(null);
   const [loading, setLoading] = useState(true);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+
+  const [currentUser, setCurrentUser] = useState<{ id: string, roles: string[] } | null>(null);
+
+  const editPath = useMemo(() => {
+    if (pathname?.includes("/admin")) return `/admin/dashboard/crm/clients/onboard/${id}`;
+    return `/account-manager/dashboard/crm/clients/onboard/${id}`;
+  }, [pathname, id]);
 
   const fetchDetails = async () => {
     try {
@@ -113,8 +122,27 @@ export default function CrmClientDetails() {
   };
 
   useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await apiClient("/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentUser(data);
+        }
+      } catch (error) {
+        console.error("Error fetching user:", error);
+      }
+    };
+    fetchUser();
     if (id) fetchDetails();
   }, [id]);
+
+  const canEdit = useMemo(() => {
+    if (!currentUser || !client) return false;
+    const isAdmin = currentUser.roles.includes("ADMIN") || currentUser.roles.includes("DELIVERY_HEAD");
+    const isAssignedAM = client.accountManagerId === currentUser.id;
+    return isAdmin || isAssignedAM;
+  }, [currentUser, client]);
 
   const contacts = useMemo(() => {
     if (!client?.contacts) return [];
@@ -176,45 +204,49 @@ export default function CrmClientDetails() {
            </div>
         </div>
          <div className="flex gap-2 shrink-0">
-           <Select 
-            value={client.status} 
-            onValueChange={async (newStatus) => {
-              try {
-                const res = await apiClient(`/crm/clients/${id}`, {
-                  method: "PATCH",
-                  body: JSON.stringify({ status: newStatus }),
-                });
-                if (!res.ok) throw new Error("Failed to update status");
-                toast.success("Relationship status updated");
-                fetchDetails();
-              } catch (error: any) {
-                toast.error(error.message);
-              }
-            }}
-           >
-              <SelectTrigger className="w-[140px] rounded-xl h-10 border-neutral-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-bold text-[10px] uppercase tracking-widest">
-                <SelectValue placeholder="Update Status" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                <SelectItem value="NEW_LEAD">New Lead</SelectItem>
-                <SelectItem value="CONTACTED">Contacted</SelectItem>
-                <SelectItem value="ACTIVE">Active</SelectItem>
-                <SelectItem value="ON_HOLD">On Hold</SelectItem>
-                <SelectItem value="INACTIVE">Inactive</SelectItem>
-              </SelectContent>
-           </Select>
+           {canEdit && (
+             <Select 
+              value={client.status} 
+              onValueChange={async (newStatus) => {
+                try {
+                  const res = await apiClient(`/crm/clients/${id}`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ status: newStatus }),
+                  });
+                  if (!res.ok) throw new Error("Failed to update status");
+                  toast.success("Relationship status updated");
+                  fetchDetails();
+                } catch (error: any) {
+                  toast.error(error.message);
+                }
+              }}
+             >
+                <SelectTrigger className="w-[140px] rounded-xl h-10 border-neutral-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-bold text-[10px] uppercase tracking-widest">
+                  <SelectValue placeholder="Update Status" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="NEW_LEAD">New Lead</SelectItem>
+                  <SelectItem value="CONTACTED">Contacted</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="ON_HOLD">On Hold</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                </SelectContent>
+             </Select>
+           )}
+
+           {canEdit && (
+             <Button 
+               variant="outline"
+               className="rounded-xl h-10 border-neutral-200 dark:border-slate-800 font-bold text-[10px] uppercase tracking-widest flex gap-2"
+               onClick={() => router.push(editPath)}
+             >
+                <Settings className="w-4 h-4" />
+                Edit Profile
+             </Button>
+           )}
 
            <Button 
-            variant="outline"
-             className="rounded-xl h-10 border-neutral-200 dark:border-slate-800 font-bold text-[10px] uppercase tracking-widest flex gap-2"
-             onClick={() => setIsEditProfileOpen(true)}
-           >
-              <Settings className="w-4 h-4" />
-              Edit Profile
-           </Button>
-
-           <Button 
-            className="rounded-xl shadow-lg shadow-primary/20 flex gap-2 h-10"
+            className="rounded-xl shadow-lg shadow-primary/20 flex gap-2 h-10 font-bold text-[10px] uppercase tracking-widest"
             onClick={() => setIsActivityModalOpen(true)}
            >
               <Plus className="w-4 h-4" />
@@ -260,11 +292,25 @@ export default function CrmClientDetails() {
               <TabsContent value="overview">
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-6">
-                       <Section title="Business Profile">
-                          <DetailItem label="Industry" value={client.industry} />
-                          <DetailItem label="Size" value={client.companySize} />
-                          <DetailItem label="Onboarded On" value={safeFormat(client.onboardingDate, "PPP")} />
-                       </Section>
+                       <div className="flex justify-between items-center group/section">
+                          <Section title="Business Profile">
+                             <DetailItem label="Industry" value={client.industry} />
+                             <DetailItem label="Size" value={client.companySize} />
+                             <DetailItem label="Onboarded On" value={safeFormat(client.onboardingDate, "PPP")} />
+                          </Section>
+                          {canEdit && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 rounded-lg text-neutral-400 hover:text-primary hover:bg-primary/10 transition-all opacity-0 group-hover/section:opacity-100"
+                              onClick={() => router.push(editPath)}
+                              title="Edit Business Profile (Comprehensive)"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                       </div>
+
                        <Section title="Assigned Account Manager">
                           <div className="flex items-center gap-3 p-3 bg-neutral-50 dark:bg-slate-800/50 rounded-2xl border border-neutral-100 dark:border-slate-800">
                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
@@ -278,13 +324,46 @@ export default function CrmClientDetails() {
                              </div>
                           </div>
                        </Section>
+
+                       {canEdit && (
+                         <div className="flex flex-col gap-2 pt-2">
+                            <Button 
+                              variant="outline" 
+                              className="w-full justify-start gap-2 rounded-xl border-dashed border-primary/30 dark:border-primary/20 h-11 text-[10px] font-bold uppercase tracking-widest text-primary hover:bg-primary/5 transition-all shadow-sm"
+                              onClick={() => router.push(editPath)}
+                            >
+                               <Settings className="w-4 h-4" />
+                               Rectify / Complete Company Profile
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              className="w-full justify-start gap-2 rounded-xl border-dashed border-neutral-300 dark:border-slate-700 h-11 text-[10px] font-bold uppercase tracking-widest text-neutral-500 hover:text-primary hover:border-primary/50 transition-all"
+                              onClick={() => setIsContactModalOpen(true)}
+                            >
+                               <UserPlus className="w-4 h-4" />
+                               Add Primary Point of Contact
+                            </Button>
+                         </div>
+                       )}
                     </div>
                     <div>
-                       <Section title="Key Remarks & Notes">
-                          <div className="p-4 bg-amber-50/30 dark:bg-amber-500/5 rounded-2xl border border-amber-500/10 min-h-[150px] text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed italic">
-                             {client.remarks || "No high-level remarks provided for this client profile. Log an activity to start building history."}
-                          </div>
-                       </Section>
+                       <div className="flex justify-between items-center group/remarks">
+                          <Section title="Key Remarks & Notes" />
+                          {canEdit && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 rounded-lg text-neutral-400 hover:text-primary hover:bg-primary/10 transition-all opacity-0 group-hover/remarks:opacity-100"
+                              onClick={() => setIsActivityModalOpen(true)}
+                              title="Log Activity/Note"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          )}
+                       </div>
+                       <div className="mt-2 p-4 bg-amber-50/30 dark:bg-amber-500/5 rounded-2xl border border-amber-500/10 min-h-[150px] text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed italic">
+                          {client.remarks || "No high-level remarks provided for this client profile. Log an activity to start building history."}
+                       </div>
                     </div>
                  </div>
               </TabsContent>

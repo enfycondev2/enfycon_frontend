@@ -33,6 +33,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ConfirmationDialog } from "@/components/shared/confirmation-dialog";
+import AiContentRenderer from "./AiContentRenderer";
 
 interface ChatWindowProps {
     showBackButton?: boolean;
@@ -419,7 +420,7 @@ export default function ChatWindow({ showBackButton, onBack, showCloseButton, on
                                         </DropdownMenu>
                                     </div>
                                 )}
-                                <p className="mb-1 text-sm leading-relaxed break-words">{msg.content}</p>
+                                <AiContentRenderer content={msg.content} isMe={isMe} />
                                 <p className={cn(
                                     "chat-time mb-0 text-[9px] text-end opacity-60 font-medium",
                                     isMe ? "text-neutral-600" : "text-neutral-500 dark:text-neutral-400"

@@ -28,6 +28,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "react-hot-toast";
+import { 
+    Select, 
+    SelectContent, 
+    SelectItem, 
+    SelectTrigger, 
+    SelectValue 
+} from "@/components/ui/select";
 import ClientDetailView from "./components/client-detail-view";
 
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
@@ -48,7 +55,21 @@ export default function ClientInsightsPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
+    const [selectedAM, setSelectedAM] = useState<string>("all_managers");
+    const [ams, setAms] = useState<{ id: string, fullName: string }[]>([]);
     const [selectedClient, setSelectedClient] = useState<string | null>(null);
+
+    const fetchAMs = async () => {
+        try {
+            const res = await apiClient("/auth/account-managers");
+            if (res.ok) {
+                const data = await res.json();
+                setAms(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch AMs", error);
+        }
+    };
 
     const fetchInsights = async () => {
         setLoading(true);
@@ -56,6 +77,7 @@ export default function ClientInsightsPage() {
             const params = new URLSearchParams();
             if (startDate) params.append("startDate", startDate);
             if (endDate) params.append("endDate", endDate);
+            if (selectedAM !== "all_managers") params.append("accountManagerId", selectedAM);
             
             const res = await apiClient(`/crm/insights?${params.toString()}`);
             if (res.ok) {
@@ -70,8 +92,12 @@ export default function ClientInsightsPage() {
     };
 
     useEffect(() => {
+        fetchAMs();
+    }, []);
+
+    useEffect(() => {
         fetchInsights();
-    }, [startDate, endDate]);
+    }, [startDate, endDate, selectedAM]);
 
     const filteredInsights = insights.filter(i => 
         i.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -186,20 +212,40 @@ export default function ClientInsightsPage() {
                             />
                         </div>
                         <div className="flex items-center gap-2">
+                             <Select value={selectedAM} onValueChange={setSelectedAM}>
+                                <SelectTrigger className="w-[200px] bg-gray-50/50 border-none h-10 font-medium">
+                                    <SelectValue placeholder="Account Manager" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl">
+                                    <SelectItem value="all_managers">All Managers</SelectItem>
+                                    {ams.map(am => (
+                                        <SelectItem key={am.id} value={am.id}>{am.fullName}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                             </Select>
+
+                             <div className="h-6 w-[1px] bg-gray-200 mx-1"></div>
+
                              <Input 
                                 type="date" 
                                 value={startDate} 
                                 onChange={(e) => setStartDate(e.target.value)} 
-                                className="w-40 bg-gray-50/50 border-none h-10"
+                                className="w-36 bg-gray-50/50 border-none h-10"
                              />
-                             <span className="text-gray-400 font-bold text-xs uppercase tracking-widest">TO</span>
+                             <span className="text-gray-400 font-bold text-[10px] uppercase tracking-widest">TO</span>
                              <Input 
                                 type="date" 
                                 value={endDate} 
                                 onChange={(e) => setEndDate(e.target.value)} 
-                                className="w-40 bg-gray-50/50 border-none h-10"
+                                className="w-36 bg-gray-50/50 border-none h-10"
                              />
-                             <Button variant="ghost" size="icon" className="hover:bg-red-50 hover:text-red-500 rounded-full" onClick={() => { setStartDate(""); setEndDate(""); }}>
+                             <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="hover:bg-red-50 hover:text-red-500 rounded-full" 
+                                onClick={() => { setStartDate(""); setEndDate(""); setSelectedAM("all_managers"); }}
+                                title="Reset all filters"
+                             >
                                 <FilterX className="h-4 w-4" />
                              </Button>
                         </div>

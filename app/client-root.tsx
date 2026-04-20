@@ -12,6 +12,8 @@ import { SocketProvider } from "@/contexts/SocketContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { ChatProvider } from "@/contexts/ChatContext";
 import NotificationListener from "@/components/realtime/NotificationListener";
+import AppreciationOverlay from "@/components/announcements/AppreciationOverlay";
+import FloatingAiAssistant from "@/components/shared/FloatingAiAssistant";
 
 export function ClientRoot({
   defaultOpen,
@@ -30,6 +32,7 @@ export function ClientRoot({
       <SocketProvider>
         <NotificationProvider>
           <ChatProvider>
+            <AppreciationOverlay />
             <SidebarProvider defaultOpen={defaultOpen}>
               <NotificationListener />
               <AppSidebar />
@@ -43,6 +46,7 @@ export function ClientRoot({
                 <Footer />
               </main>
               <ThemeCustomizer />
+              <FloatingAiAssistant />
               <Toaster position="top-center" reverseOrder={false} />
             </SidebarProvider>
           </ChatProvider>

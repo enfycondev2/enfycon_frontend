@@ -43,6 +43,8 @@ interface ChatContextType {
     clearHistory: (otherUserId: string) => Promise<void>;
     blockUser: (targetUserId: string) => Promise<void>;
     unblockUser: (targetUserId: string) => Promise<void>;
+    sendAiMessage: (content: string) => Promise<void>;
+    aiHistory: any[];
 }
 
 const ChatContext = createContext<ChatContextType>({
@@ -62,6 +64,8 @@ const ChatContext = createContext<ChatContextType>({
     clearHistory: async () => { },
     blockUser: async () => { },
     unblockUser: async () => { },
+    sendAiMessage: async () => { },
+    aiHistory: [],
 });
 
 export const useChat = () => useContext(ChatContext);
@@ -76,6 +80,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [chatUsers, setChatUsers] = useState<ChatUser[]>([]);
     const [activeChatId, setActiveChatId] = useState<string | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [aiHistory, setAiHistory] = useState<any[]>([]);
 
     const openChatWithUser = useCallback((userId: string) => {
         setActiveChatId(userId);
@@ -180,10 +185,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             };
             fetchHistory();
+        } else if (activeChatId === "enfy-ai-assistant") {
+            // History for AI is stored in aiHistory state
+            const mappedMessages = aiHistory.map((h, i) => ({
+                id: `ai-${i}`,
+                senderId: h.role === 'user' ? (session?.user?.id || 'me') : 'enfy-ai-assistant',
+                receiverId: h.role === 'user' ? 'enfy-ai-assistant' : (session?.user?.id || 'me'),
+                content: typeof h.content === 'string' ? h.content : JSON.stringify(h.content),
+                isRead: true,
+                createdAt: h.createdAt || new Date().toISOString()
+            }));
+            setMessages(mappedMessages);
         } else if (!activeChatId) {
             setMessages([]);
         }
-    }, [session?.user?.accessToken, activeChatId]);
+    }, [session?.user?.accessToken, activeChatId, aiHistory, session?.user?.id]);
 
     // 3. Socket Listeners
     useEffect(() => {
@@ -289,6 +305,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [socket, isConnected]);
 
     const sendMessage = useCallback((receiverId: string, receiverKeycloakId: string, content: string) => {
+        if (receiverId === "enfy-ai-assistant") {
+            sendAiMessage(content);
+            return;
+        }
+
         if (socket && session?.user?.id) {
             socket.emit("send_message", {
                 receiverId,
@@ -296,8 +317,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 content,
                 senderDbId: session.user.id
             });
-
-            // Move this user to top of chatUsers immediately
+            // ... (keep reordering logic)
             setChatUsers((prev) => {
                 const userIndex = prev.findIndex(u => u.id === receiverId);
                 if (userIndex > -1) {
@@ -308,7 +328,43 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return prev;
             });
         }
-    }, [socket, session?.user?.id]);
+    }, [socket, session?.user?.id, session?.user?.accessToken]);
+
+    const sendAiMessage = useCallback(async (content: string) => {
+        if (!session?.user?.id || !session?.user?.accessToken) return;
+
+        const userMsg = { role: 'user', content, createdAt: new Date().toISOString() };
+        setAiHistory(prev => [...prev, userMsg]);
+
+        try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/query`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${session.user.accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ query: content, history: [...aiHistory, userMsg] })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                const aiMsg = {
+                    role: 'assistant',
+                    content: data, // JSON object containing answer, previewData, link, etc.
+                    createdAt: new Date().toISOString()
+                };
+                setAiHistory(prev => [...prev, aiMsg]);
+            }
+        } catch (err) {
+            console.error("AI Query failed:", err);
+            const errMsg = {
+                role: 'assistant',
+                content: { answer: "Sorry, I'm having trouble connecting right now." },
+                createdAt: new Date().toISOString()
+            };
+            setAiHistory(prev => [...prev, errMsg]);
+        }
+    }, [session?.user?.id, session?.user?.accessToken, aiHistory]);
 
 
     const setTyping = useCallback((receiverKeycloakId: string, isTyping: boolean) => {
@@ -419,7 +475,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             deleteMessages,
             clearHistory,
             blockUser,
-            unblockUser
+            unblockUser,
+            sendAiMessage,
+            aiHistory
         }}>
             {children}
         </ChatContext.Provider>

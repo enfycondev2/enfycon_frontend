@@ -10,7 +10,8 @@ import {
   UsersRound,
   Mail,
   Bell,
-  ImageIcon
+  ImageIcon,
+  Heart
 } from "lucide-react";
 
 export const getSidebarData = (role: string) => {
@@ -134,6 +135,11 @@ export const getSidebarData = (role: string) => {
       title: "Live Notification",
       url: "/admin/dashboard/notifications",
       icon: Bell,
+    },
+    {
+      title: "Team Engagement",
+      url: "/admin/engagement",
+      icon: Heart,
     },
     {
       title: "Users Management",
