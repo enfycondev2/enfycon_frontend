@@ -123,11 +123,13 @@ export default function TeamEngagementPage() {
                 setPreview(null);
                 setCategory("CONGRATS");
             } else {
-                toast.error("Failed to push appreciation");
+                const errorData = await res.json().catch(() => ({}));
+                const errorMessage = errorData.error || errorData.message || "Failed to push appreciation";
+                toast.error(errorMessage);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Broadcast failed", error);
-            toast.error("An error occurred during push");
+            toast.error(error.message || "An error occurred during push");
         } finally {
             setIsLoading(false);
         }
