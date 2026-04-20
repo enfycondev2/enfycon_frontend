@@ -53,6 +53,12 @@ export default function TeamEngagementPage() {
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            // 5MB limit check (matches backend)
+            if (file.size > 5242880) {
+                toast.error("Image size exceeds 5MB. Please choose a smaller file.");
+                e.target.value = ""; // Clear input
+                return;
+            }
             setImage(file);
             const reader = new FileReader();
             reader.onloadend = () => {

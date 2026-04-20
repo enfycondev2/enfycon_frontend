@@ -6,6 +6,7 @@ import confetti from "canvas-confetti";
 import { X, Heart, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/apiClient";
+import { useSocket } from "@/contexts/SocketContext";
 
 interface AppreciationMessage {
     id: string;
@@ -42,6 +43,7 @@ export default function AppreciationOverlay() {
     const [message, setMessage] = useState<AppreciationMessage | null>(null);
     const [isVisible, setIsVisible] = useState(false);
     const [imgError, setImgError] = useState(false);
+    const { socket } = useSocket();
 
     const getTheme = (cat?: string) => {
         const c = cat?.toUpperCase() || "CONGRATS";
@@ -103,7 +105,7 @@ export default function AppreciationOverlay() {
                 console.error("Failed to check active announcements", error);
             }
         };
-
+        
         const handleManualShow = (e: any) => {
             const data = e.detail;
             if (data) {
@@ -112,12 +114,30 @@ export default function AppreciationOverlay() {
                 setIsVisible(true);
             }
         };
-
+        
+        // Socket listener for real-time broadcasts
+        if (socket) {
+            socket.on("new_appreciation", (data) => {
+                console.log("[Socket] Received new appreciation:", data);
+                if (data) {
+                    setMessage(data);
+                    setImgError(false);
+                    // Shorter delay for real-time to feel responsive
+                    setTimeout(() => setIsVisible(true), 500); 
+                }
+            });
+        }
+        
         window.addEventListener("show-appreciation", handleManualShow);
         checkActive();
 
-        return () => window.removeEventListener("show-appreciation", handleManualShow);
-    }, []);
+        return () => {
+            window.removeEventListener("show-appreciation", handleManualShow);
+            if (socket) {
+                socket.off("new_appreciation");
+            }
+        };
+    }, [socket]);
 
     useEffect(() => {
         if (isVisible && theme.showConfetti) {
