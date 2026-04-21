@@ -39,20 +39,20 @@ export function ClientRoot({
             <SidebarProvider defaultOpen={defaultOpen}>
               {isApproved && <NotificationListener />}
               {isApproved && <AppSidebar />}
-              <main className="dashboard-body-wrapper grow-[1] min-w-0 overflow-x-clip flex flex-col">
-                {isApproved && (
-                  <SidebarInset>
-                    <Header />
-                  </SidebarInset>
-                )}
+              
+              <SidebarInset className="grow-[1] min-w-0 flex flex-col min-h-svh bg-neutral-100 dark:bg-[#1e2734]">
+                {isApproved && <Header />}
+                
                 <div className={cn(
-                  "dashboard-body bg-neutral-100 dark:bg-[#1e2734] flex-1 min-w-0 overflow-x-clip",
+                  "dashboard-body flex-1 min-w-0 overflow-x-clip",
                   isApproved ? "md:p-6 p-4" : "flex items-center justify-center min-h-[80vh]"
                 )}>
                   {children}
                 </div>
+                
                 {isApproved && <Footer />}
-              </main>
+              </SidebarInset>
+
               {isApproved && <ThemeCustomizer />}
               {isApproved && <FloatingAiAssistant />}
               <Toaster position="top-center" reverseOrder={false} />
