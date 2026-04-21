@@ -313,7 +313,7 @@ export const getSidebarData = (role: string) => {
     },
     {
       title: "Users Management",
-      url: "/admin/dashboard/users",
+      url: "/delivery-head/dashboard/users",
       icon: UsersRound,
     },
   ];
