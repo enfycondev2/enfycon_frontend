@@ -54,10 +54,20 @@ const DashboardBreadcrumb = ({ title, text }: BreadcrumbData) => {
 
     const normalisedRoles = rawRoles.map(normalise);
 
+    const ROLE_PRIORITY = [
+        "DELIVERY_HEAD",
+        "ADMIN",
+        "ACCOUNT_MANAGER",
+        "POD_LEAD",
+        "RECRUITER",
+    ];
+
     const validRoles = Object.keys(ROLE_LABELS);
 
-    // Try to match role based on current path
-    let activeRole = normalisedRoles.find(r => {
+    // 1. Try to match role based on current path first (Contextual match)
+    let activeRole = ROLE_PRIORITY.find(r => {
+        if (!normalisedRoles.includes(r)) return false;
+        
         if (r === "FIN_ADMIN" && pathname?.includes("/finance")) return true;
         if (r === "ADMIN" && pathname?.includes("/admin")) return true;
         if (r === "RECRUITER" && pathname?.includes("/recruiter")) return true;
@@ -67,17 +77,14 @@ const DashboardBreadcrumb = ({ title, text }: BreadcrumbData) => {
         return false;
     });
 
-    // Fallback if no path match
+    // 2. Fallback: If no direct path match (e.g. shared pages), use priority order
     if (!activeRole) {
-        const isPodLeadRecruiter =
-            normalisedRoles.includes("POD_LEAD") &&
-            normalisedRoles.includes("RECRUITER");
+        activeRole = ROLE_PRIORITY.find(r => normalisedRoles.includes(r));
+    }
 
-        if (isPodLeadRecruiter) {
-            activeRole = "POD_LEAD";
-        } else {
-            activeRole = normalisedRoles.find((r) => validRoles.includes(r)) ?? "ADMIN";
-        }
+    // 3. Last resort fallback
+    if (!activeRole) {
+        activeRole = normalisedRoles.find((r) => validRoles.includes(r)) ?? "ADMIN";
     }
 
     const roleLabel = ROLE_LABELS[activeRole] ?? "Admin";
