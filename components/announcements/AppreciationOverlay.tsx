@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { X, Heart, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { apiClient } from "@/lib/apiClient";
 import { useSocket } from "@/contexts/SocketContext";
 
 interface AppreciationMessage {
