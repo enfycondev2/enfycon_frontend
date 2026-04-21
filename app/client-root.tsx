@@ -40,11 +40,15 @@ export function ClientRoot({
               {isApproved && <NotificationListener />}
               {isApproved && <AppSidebar />}
               
-              <SidebarInset className="grow-[1] min-w-0 flex flex-col min-h-svh bg-neutral-100 dark:bg-[#1e2734]">
-                {isApproved && <Header />}
+              <SidebarInset className="grow-[1] min-w-0 flex flex-col">
+                {isApproved && (
+                  <div className="sticky top-0 z-20 shrink-0 bg-white dark:bg-[#273142] shadow-sm">
+                    <Header />
+                  </div>
+                )}
                 
                 <div className={cn(
-                  "dashboard-body flex-1 min-w-0 overflow-x-clip",
+                  "dashboard-body flex-1 min-w-0 overflow-x-clip bg-neutral-100 dark:bg-[#1e2734]",
                   isApproved ? "md:p-6 p-4" : "flex items-center justify-center min-h-[80vh]"
                 )}>
                   {children}
