@@ -14,12 +14,15 @@ import { ChatProvider } from "@/contexts/ChatContext";
 import NotificationListener from "@/components/realtime/NotificationListener";
 import AppreciationOverlay from "@/components/announcements/AppreciationOverlay";
 import FloatingAiAssistant from "@/components/shared/FloatingAiAssistant";
+import { cn } from "@/lib/utils";
 
 export function ClientRoot({
   defaultOpen,
+  isApproved,
   children,
 }: {
   defaultOpen: boolean;
+  isApproved: boolean;
   children: ReactNode;
 }) {
   return (
@@ -32,21 +35,26 @@ export function ClientRoot({
       <SocketProvider>
         <NotificationProvider>
           <ChatProvider>
-            <AppreciationOverlay />
+            {isApproved && <AppreciationOverlay />}
             <SidebarProvider defaultOpen={defaultOpen}>
-              <NotificationListener />
-              <AppSidebar />
+              {isApproved && <NotificationListener />}
+              {isApproved && <AppSidebar />}
               <main className="dashboard-body-wrapper grow-[1] min-w-0 overflow-x-clip flex flex-col">
-                <SidebarInset>
-                  <Header />
-                </SidebarInset>
-                <div className="dashboard-body bg-neutral-100 dark:bg-[#1e2734] md:p-6 p-4 flex-1 min-w-0 overflow-x-clip">
+                {isApproved && (
+                  <SidebarInset>
+                    <Header />
+                  </SidebarInset>
+                )}
+                <div className={cn(
+                  "dashboard-body bg-neutral-100 dark:bg-[#1e2734] flex-1 min-w-0 overflow-x-clip",
+                  isApproved ? "md:p-6 p-4" : "flex items-center justify-center min-h-[80vh]"
+                )}>
                   {children}
                 </div>
-                <Footer />
+                {isApproved && <Footer />}
               </main>
-              <ThemeCustomizer />
-              <FloatingAiAssistant />
+              {isApproved && <ThemeCustomizer />}
+              {isApproved && <FloatingAiAssistant />}
               <Toaster position="top-center" reverseOrder={false} />
             </SidebarProvider>
           </ChatProvider>

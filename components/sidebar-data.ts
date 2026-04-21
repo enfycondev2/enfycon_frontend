@@ -308,6 +308,14 @@ export const getSidebarData = (role: string) => {
         },
       ],
     },
+    {
+      label: "Application",
+    },
+    {
+      title: "Users Management",
+      url: "/admin/dashboard/users",
+      icon: UsersRound,
+    },
   ];
 
   const recruiterNav = [

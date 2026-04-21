@@ -43,9 +43,8 @@ const ProfileDropdown = () => {
   ];
 
   const displayRolesRaw = rawRoles
-    .map((role) => role.toUpperCase())
-    .filter((role) => validRoles.includes(role))
-    .map((role) => role.replace(/-/g, "_"));
+    .map((role) => role.toUpperCase().replace(/\s+|-|_/g, "_"))
+    .filter((role) => validRoles.includes(role));
   const uniqueDisplayRoles = Array.from(new Set(displayRolesRaw)).sort((a, b) => {
     if (a === "ADMIN") return -1;
     if (b === "ADMIN") return 1;

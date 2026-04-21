@@ -5,7 +5,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { Bell, CircleCheck, Info, AlertTriangle, MessageSquare, Heart } from "lucide-react";
+import { Bell, CircleCheck, Info, AlertTriangle, MessageSquare, Heart, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { formatDistanceToNow, isValid } from "date-fns";
@@ -26,6 +26,8 @@ const NotificationDropdown = () => {
         return <MessageSquare className="text-primary" />;
       case "APPRECIATION":
         return <Heart className="text-pink-500 fill-pink-500/20" />;
+      case "ROLE_REQUEST":
+        return <ShieldCheck className="text-amber-500" />;
       default:
         return <Bell className="text-gray-500" />;
     }
@@ -44,6 +46,8 @@ const NotificationDropdown = () => {
         return "bg-primary/10 dark:bg-primary/25";
       case "APPRECIATION":
         return "bg-pink-100 dark:bg-pink-600/25";
+      case "ROLE_REQUEST":
+        return "bg-amber-100 dark:bg-amber-600/25";
       default:
         return "bg-gray-100 dark:bg-gray-700";
     }
@@ -97,7 +101,11 @@ const NotificationDropdown = () => {
                 notifications.map((n) => (
                   <Link
                     key={n.id}
-                    href={n.type === "NEW_MESSAGE" ? "/chat" : (n.data?.jobId ? getJobPath(n.data.jobId) : "#")}
+                    href={
+                      n.type === "NEW_MESSAGE" ? "/chat" : 
+                      n.type === "ROLE_REQUEST" ? "/admin/dashboard/users" : 
+                      (n.data?.jobId ? getJobPath(n.data.jobId) : "#")
+                    }
                     onClick={() => markAsRead(n.id)}
                     className={cn(
                       "flex px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700/50 justify-between gap-3 border-b border-gray-100 dark:border-slate-700/50 last:border-0 transition-colors",

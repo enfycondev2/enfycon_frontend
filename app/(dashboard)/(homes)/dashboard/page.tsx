@@ -1,4 +1,6 @@
 import { auth } from "@/auth";
+import RoleSelection from "@/components/auth/role-selection";
+import { serverApiClient } from "@/lib/serverApiClient";
 import { Smile } from "lucide-react";
 import { redirect } from "next/navigation";
 
@@ -9,18 +11,30 @@ export default async function DashboardRedirect() {
         redirect("/auth/login");
     }
 
-    const roles = (session.user as any)?.roles || [];
+    // Fetch fresh user data from DB via backend to avoid stale session data
+    let dbUser: any = null;
+    try {
+        const res = await serverApiClient("/auth/me", { cache: "no-store" });
+        if (res.ok) {
+            dbUser = await res.json();
+        }
+    } catch (err) {
+        console.error("Failed to fetch fresh user data:", err);
+    }
 
-    // Standardize roles for comparison
-    const normalizedRoles = roles.map((r: string) => r.toUpperCase());
+    const roles = dbUser?.roles || (session.user as any)?.roles || [];
+    const requestedRole = dbUser?.requestedRole || (session.user as any)?.requestedRole;
+
+    // Standardize roles for comparison (normalize spaces/dashes/underscores to underscores)
+    const normalizedRoles = roles.map((r: string) => r.toUpperCase().replace(/\s+|-|_/g, "_"));
 
     if (normalizedRoles.includes("ADMIN")) {
         redirect("/admin/dashboard");
-    } else if (normalizedRoles.includes("DELIVERY_HEAD") || normalizedRoles.includes("DELIVERY-HEAD")) {
+    } else if (normalizedRoles.includes("DELIVERY_HEAD")) {
         redirect("/delivery-head/dashboard");
-    } else if (normalizedRoles.includes("ACCOUNT_MANAGER") || normalizedRoles.includes("ACCOUNT-MANAGER")) {
+    } else if (normalizedRoles.includes("ACCOUNT_MANAGER")) {
         redirect("/account-manager/dashboard");
-    } else if (normalizedRoles.includes("POD_LEAD") || normalizedRoles.includes("POD-LEAD")) {
+    } else if (normalizedRoles.includes("POD_LEAD")) {
         redirect("/pod-lead/dashboard");
     } else if (normalizedRoles.includes("RECRUITER")) {
         redirect("/recruiter/dashboard");
@@ -28,24 +42,33 @@ export default async function DashboardRedirect() {
         redirect("/finance");
     } else {
         // Default fallback if no specific role matched
-        return (
-            <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center p-4">
-                <div className="text-center max-w-md mx-auto p-10 bg-white dark:bg-slate-800 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] border border-neutral-100 dark:border-slate-700/50">
-                    <div className="flex justify-center mb-8 relative">
-                        <div className="absolute inset-0 bg-yellow-400/20 blur-2xl rounded-full w-28 h-28 mx-auto animate-pulse"></div>
-                        <div className="w-28 h-28 bg-yellow-400/10 rounded-full flex items-center justify-center relative shadow-inner">
-                            <Smile className="w-16 h-16 text-yellow-500 animate-bounce drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+        // Use the fresh requestedRole fetched from DB at the top
+
+        if (requestedRole) {
+            return (
+                <div className="flex h-[calc(100vh-8rem)] w-full items-center justify-center p-4">
+                    <div className="text-center max-w-md mx-auto p-10 bg-white dark:bg-slate-800 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] border border-neutral-100 dark:border-slate-700/50">
+                        <div className="flex justify-center mb-8 relative">
+                            <div className="absolute inset-0 bg-yellow-400/20 blur-2xl rounded-full w-28 h-28 mx-auto animate-pulse"></div>
+                            <div className="w-28 h-28 bg-yellow-400/10 rounded-full flex items-center justify-center relative shadow-inner">
+                                <Smile className="w-16 h-16 text-yellow-500 animate-bounce drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+                            </div>
+                        </div>
+                        <h1 className="text-2xl sm:text-3xl font-extrabold mb-4 text-neutral-800 dark:text-neutral-100 tracking-tight">Hang Tight!</h1>
+                        <p className="text-neutral-500 dark:text-neutral-400 text-base sm:text-lg mb-2 leading-relaxed">
+                            We've preparing your workspace.
+                        </p>
+                        <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-2 leading-relaxed">
+                            Please kindly wait while your designation is assigned by your admin.
+                        </p>
+                        <div className="mt-6 px-4 py-2 bg-primary/10 rounded-xl inline-block">
+                            <span className="text-xs font-bold text-primary uppercase tracking-widest">Requested: {requestedRole.replace(/_/g, " ")}</span>
                         </div>
                     </div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold mb-4 text-neutral-800 dark:text-neutral-100 tracking-tight">Hang Tight!</h1>
-                    <p className="text-neutral-500 dark:text-neutral-400 text-base sm:text-lg mb-2 leading-relaxed">
-                        We're preparing your workspace.
-                    </p>
-                    <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-2 leading-relaxed">
-                        Please kindly wait while your designation is assigned by your admin.
-                    </p>
                 </div>
-            </div>
-        );
+            );
+        }
+
+        return <RoleSelection />;
     }
 }

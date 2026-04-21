@@ -38,7 +38,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     urlRole = "ADMIN";
   }
 
-  const normalizedRawRoles = rawRoles.map((r: string) => r.toUpperCase().replace('-', '_'));
+  const normalizedRawRoles = rawRoles.map((r: string) => r.toUpperCase().replace(/\s+|-|_/g, '_'));
 
   // Priority order: POD_LEAD must come before RECRUITER because pod leads also have the RECRUITER role.
   // We check the session roles first (source of truth), then fall back to URL-based detection.

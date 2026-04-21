@@ -79,11 +79,11 @@ const AdminUsersManagement = () => {
                             <TabsList className="bg-neutral-100/50 dark:bg-slate-800/50 h-auto p-1 lg:p-1.5 flex gap-1 w-fit rounded-xl">
                                 {[
                                     { label: "All", value: "ALL" },
+                                    { label: "New Requests", value: "NEW" },
                                     { label: "Admin", value: "ADMIN" },
                                     { label: "Delivery Head", value: "DELIVERY_HEAD" },
                                     { label: "Account Manager", value: "ACCOUNT_MANAGER" },
-                                    { label: "Recruiter", value: "RECRUITER" },
-                                    { label: "Pod Head", value: "POD_LEAD" }
+                                    { label: "Recruiter", value: "RECRUITER" }
                                 ].map((tab) => (
                                     <TabsTrigger
                                         key={tab.value}

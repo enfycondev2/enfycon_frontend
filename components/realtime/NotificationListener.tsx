@@ -138,6 +138,37 @@ const NotificationListener = () => {
                         }
                     );
                 }
+            } else if (payload.type === "ROLE_REQUEST") {
+                // Admin specific Role Request notification
+                if (!isInitiator) {
+                    toast.success(
+                        (t) => (
+                            <div className="flex flex-col gap-1">
+                                <span className="font-bold text-sm flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                                    New Role Requested
+                                </span>
+                                <span className="text-[13px] text-gray-600 dark:text-gray-300">
+                                    {payload.message}
+                                </span>
+                                <button
+                                    onClick={() => {
+                                        toast.dismiss(t.id);
+                                        router.push("/admin/dashboard/users");
+                                    }}
+                                    className="text-xs text-primary font-bold text-left underline mt-1 hover:text-primary/80 transition-colors"
+                                >
+                                    Review Request
+                                </button>
+                            </div>
+                        ),
+                        {
+                            duration: 8000,
+                            position: "top-right",
+                            icon: "👮",
+                        }
+                    );
+                }
             } else if (!isInitiator) {
                 // Generic toast for other types
                 toast(payload.message || "New notification received", {

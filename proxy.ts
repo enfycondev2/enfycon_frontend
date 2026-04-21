@@ -52,7 +52,7 @@ export async function proxy(req: NextRequest) {
   }
 
   const userRoles = (((session?.user as { roles?: string[] } | undefined)?.roles) || [])
-    .map((role) => role.toUpperCase());
+    .map((role) => role.toUpperCase().replace(/\s+|-|_/g, "_"));
 
   const requiredAccess = roleRouteAccess.find((route) => pathname.startsWith(route.prefix));
   if (requiredAccess && !requiredAccess.roles.some((role) => userRoles.includes(role))) {
