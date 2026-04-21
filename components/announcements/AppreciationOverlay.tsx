@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { X, Heart, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { apiClient } from "@/lib/apiClient";
 import { useSocket } from "@/contexts/SocketContext";
 
 interface AppreciationMessage {
@@ -90,22 +89,6 @@ export default function AppreciationOverlay() {
     const theme = getTheme(message?.category);
 
     useEffect(() => {
-        const checkActive = async () => {
-            try {
-                const res = await apiClient("/announcements/active");
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data) {
-                        setMessage(data);
-                        setImgError(false);
-                        setTimeout(() => setIsVisible(true), 1500);
-                    }
-                }
-            } catch (error) {
-                console.error("Failed to check active announcements", error);
-            }
-        };
-        
         const handleManualShow = (e: any) => {
             const data = e.detail;
             if (data) {
@@ -115,21 +98,19 @@ export default function AppreciationOverlay() {
             }
         };
         
-        // Socket listener for real-time broadcasts
+        // Socket listener for real-time broadcasts from admin only
         if (socket) {
             socket.on("new_appreciation", (data) => {
                 console.log("[Socket] Received new appreciation:", data);
                 if (data) {
                     setMessage(data);
                     setImgError(false);
-                    // Shorter delay for real-time to feel responsive
                     setTimeout(() => setIsVisible(true), 500); 
                 }
             });
         }
         
         window.addEventListener("show-appreciation", handleManualShow);
-        checkActive();
 
         return () => {
             window.removeEventListener("show-appreciation", handleManualShow);
