@@ -401,17 +401,17 @@ export const getSidebarData = (role: string) => {
     },
   ];
 
-  const roleUpper = role ? role.toUpperCase() : "";
+  const roleUpper = role ? role.toUpperCase().replace(/\s+|-|_/g, '_') : "";
 
   if (roleUpper === "ADMIN") {
     return { navMain: adminNav };
-  } else if (roleUpper === "ACCOUNT_MANAGER" || roleUpper === "ACCOUNT-MANAGER") {
+  } else if (roleUpper === "ACCOUNT_MANAGER") {
     return { navMain: accountManagerNav };
-  } else if (roleUpper === "DELIVERY_HEAD" || roleUpper === "DELIVERY-HEAD") {
+  } else if (roleUpper === "DELIVERY_HEAD") {
     return { navMain: deliveryHeadNav };
   } else if (roleUpper === "RECRUITER") {
     return { navMain: recruiterNav };
-  } else if (roleUpper === "POD_LEAD" || roleUpper === "POD-LEAD") {
+  } else if (roleUpper === "POD_LEAD") {
     return { navMain: podLeadNav };
   }
 

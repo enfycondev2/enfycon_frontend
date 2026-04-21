@@ -180,9 +180,9 @@ export function NavMain({ items }: { items: SidebarItem[] }) {
                       : ""
                   )}
                 >
-                  <Link href={item.url} className="flex items-center gap-2">
-                    {item.icon && <item.icon className="!w-4.5 !h-4.5" />}
-                    <span>{item.title}</span>
+                  <Link href={item.url} className="flex items-center gap-3 w-full h-full">
+                    {item.icon && <item.icon className="!size-5 shrink-0" />}
+                    <span className="truncate">{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

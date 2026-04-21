@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -304,39 +307,39 @@ const ProfileDropdown = () => {
         side="bottom"
         align="end"
       >
-        <div className={cn("py-3 px-4 rounded-lg flex items-center gap-3", getRoleColors(selectedRoles[0]).banner)}>
+        <div className={cn("py-3 px-4 rounded-lg flex items-center gap-3 mb-1", getRoleColors(selectedRoles[0]).banner)}>
           <img
             src={profilePicture || session?.user?.image || userImg.src}
             className="rounded-full size-12 object-cover flex-shrink-0 border-2 border-white dark:border-slate-700 shadow-sm"
             alt={displayName}
           />
-          <div>
-            <h6 className="text-lg text-neutral-900 dark:text-white font-semibold mb-0">
+          <div className="min-w-0">
+            <h6 className="text-lg text-neutral-900 dark:text-white font-semibold mb-0 truncate">
               {displayName}
             </h6>
-            <span className="text-sm text-neutral-500 dark:text-neutral-300 capitalize">
+            <span className="text-sm text-neutral-500 dark:text-neutral-300 capitalize truncate block">
               {roleAndPodLabel}
             </span>
           </div>
         </div>
 
-        <div className="max-h-[400px] overflow-y-auto scroll-sm pt-4">
+        <div className="max-h-[400px] overflow-y-auto scroll-sm pt-2">
           {podTeamMembers.length > 0 ? (
-            <div className="mb-4 pb-3 border-b border-neutral-200 dark:border-slate-700">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-300 mb-2">
+            <div className="mb-4 pb-3 border-b border-neutral-200 dark:border-slate-700 px-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-3 px-2">
                 Pod Members
               </p>
               <div className="space-y-2">
                 {podTeamMembers.map((member) => (
                   <div
                     key={member.id}
-                    className="rounded-lg border border-neutral-200 dark:border-slate-700 px-2.5 py-2 bg-neutral-50/70 dark:bg-slate-800/40"
+                    className="rounded-xl border border-neutral-100 dark:border-slate-800 px-3 py-2 bg-neutral-50/50 dark:bg-slate-900/40"
                   >
-                    <p className="text-sm font-medium text-neutral-900 dark:text-white leading-tight truncate">
+                    <p className="text-sm font-bold text-neutral-900 dark:text-white leading-tight truncate">
                       {member.fullName || member.email}
                     </p>
                     {member.email ? (
-                      <p className="text-xs text-neutral-500 dark:text-neutral-300 leading-tight truncate">
+                      <p className="text-[11px] text-neutral-400 dark:text-slate-500 leading-tight truncate mt-0.5 font-medium">
                         {member.email}
                       </p>
                     ) : null}
@@ -345,67 +348,73 @@ const ProfileDropdown = () => {
               </div>
             </div>
           ) : null}
-          <ul className="flex flex-col gap-3">
-            {canSwitchDashboard ? (
+
+          <div className="space-y-1">
+            {canSwitchDashboard && (
               <>
-                <li className="pt-1 mt-1 -mb-1">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-300">Switch Dashboard</span>
-                </li>
+                <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mt-2 px-3">
+                  Switch Dashboard
+                </DropdownMenuLabel>
                 {switchableRoles.map((role) => {
                   const config = roleConfig[role];
                   if (!config) return null;
                   const Icon = config.icon;
                   return (
-                    <li key={role}>
+                    <DropdownMenuItem key={role} asChild>
                       <Link
                         href={config.path}
-                        className="text-black dark:text-white hover:text-primary dark:hover:text-primary flex items-center gap-3 w-full"
+                        className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-xl transition-all"
                       >
-                        <Icon className="w-5 h-5" /> {config.label}
+                        <div className={cn("p-1.5 rounded-lg", config.chip)}>
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <span className="text-sm font-bold text-neutral-700 dark:text-neutral-200">{config.label}</span>
                       </Link>
-                    </li>
+                    </DropdownMenuItem>
                   );
                 })}
-                <li className="mb-1 border-b border-neutral-200 dark:border-slate-700"></li>
+                <DropdownMenuSeparator className="mx-2 my-2" />
               </>
-            ) : null}
-            <li>
+            )}
+
+            <DropdownMenuItem asChild>
               <Link
                 href={profileUrl}
-                className="text-black dark:text-white hover:text-primary dark:hover:text-primary flex items-center gap-3"
+                className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-xl transition-all"
               >
-                <User className="w-5 h-5" /> My Profile
+                <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500">
+                  <User className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-bold text-neutral-700 dark:text-neutral-200">My Profile</span>
               </Link>
-            </li>
-            {/* <li>
-              <Link
-                href="/email"
-                className="text-black dark:text-white hover:text-primary dark:hover:text-primary flex items-center gap-3"
-              >
-                <Mail className="w-5 h-5" /> Inbox
-              </Link>
-            </li> */}
-            <li>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem asChild>
               <Link
                 href="/company"
-                className="text-black dark:text-white hover:text-primary dark:hover:text-primary flex items-center gap-3 w-full"
+                className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-xl transition-all"
               >
-                <Settings className="w-5 h-5" /> Settings
+                <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500">
+                  <Settings className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-bold text-neutral-700 dark:text-neutral-200">Settings</span>
               </Link>
-            </li>
-            <li>
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('open-theme-customizer'))}
-                className="text-black dark:text-white hover:text-primary dark:hover:text-primary flex items-center gap-3 w-full"
-              >
-                <Settings className="w-5 h-5" /> Theme Settings
-              </button>
-            </li>
-            <li>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem 
+              className="flex items-center gap-3 px-3 py-2.5 cursor-pointer rounded-xl transition-all"
+              onSelect={() => window.dispatchEvent(new CustomEvent('open-theme-customizer'))}
+            >
+              <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500">
+                <Settings className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-neutral-700 dark:text-neutral-200">Theme Settings</span>
+            </DropdownMenuItem>
+
+            <div className="pt-2">
               <Logout />
-            </li>
-          </ul>
+            </div>
+          </div>
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
