@@ -283,18 +283,28 @@ const ProfileDropdown = () => {
                   <span className="truncate">{activePodName}</span>
                 </span>
               ) : null}
-              {isRoleResolved ? formattedRoles.slice(0, 2).map((roleLabel, index) => (
-                <span
-                  key={roleLabel}
-                  className={cn(
-                    "inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border max-w-full",
-                    getRoleColors(selectedRoles[index]).chip
-                  )}
-                >
-                  <Sparkles className="size-3 shrink-0" />
-                  <span className="truncate">{roleLabel}</span>
-                </span>
-              )) : <span className="inline-block h-5 w-16 rounded-full bg-slate-100 dark:bg-slate-700 animate-pulse" />}
+              {isRoleResolved ? (() => {
+                // Only show the currently active role based on the URL.
+                // Falls back to the first role if no URL match.
+                const displayRole = effectiveActiveRole || selectedRoles[0];
+                if (!displayRole) return null;
+                const roleLabel = displayRole
+                  .replace(/[_:-]/g, " ")
+                  .toLowerCase()
+                  .replace(/\b\w/g, (char: string) => char.toUpperCase());
+                return (
+                  <span
+                    key={displayRole}
+                    className={cn(
+                      "inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border max-w-full",
+                      getRoleColors(displayRole).chip
+                    )}
+                  >
+                    <Sparkles className="size-3 shrink-0" />
+                    <span className="truncate">{roleLabel}</span>
+                  </span>
+                );
+              })() : <span className="inline-block h-5 w-16 rounded-full bg-slate-100 dark:bg-slate-700 animate-pulse" />}
             </span>
           </div>
 
