@@ -476,7 +476,7 @@ export default function RecruiterJobsTable({
                 )}
             </div>
 
-            <div className="rounded-lg border border-neutral-200 dark:border-slate-600 overflow-hidden">
+            <div className="rounded-lg border border-neutral-200 dark:border-slate-600 overflow-x-auto">
                 <Table className="table-auto border-spacing-0 border-separate min-w-max">
                     <TableHeader>
                         <TableRow className="border-0">

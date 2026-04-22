@@ -812,7 +812,7 @@ export default function JobsTable({
                 </div>
             )}
 
-            <div className="rounded-lg border border-neutral-200 dark:border-slate-600 overflow-hidden">
+            <div className="rounded-lg border border-neutral-200 dark:border-slate-600 overflow-x-auto">
                 <Table className="jobs-table-grid table-auto border-spacing-0 border-separate">
                     <TableHeader>
                         <TableRow className="border-0">
