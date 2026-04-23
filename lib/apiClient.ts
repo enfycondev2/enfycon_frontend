@@ -17,8 +17,10 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://api.enfycon.com").r
  * @returns The Response object from the fetch call.
  */
 export async function apiClient(endpoint: string, options: RequestInit = {}): Promise<Response> {
-    // 1. Get the current session
-    let session = await getSession();
+    // Optimization: We use getSession here, but in a real-world scenario with frequent calls,
+    // we should ideally use a context-provided session or local storage cache if security permits.
+    // However, the primary issue is the BLOCKING nature of this call on every sub-request.
+    const session = await getSession();
     let token = (session as any)?.user?.accessToken;
 
     const url = `${API_URL}/${endpoint.replace(/^\/+/, "")}`;
