@@ -29,6 +29,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 auth: {
                     userId: session.user.keycloakId,
                 },
+                transports: ["polling", "websocket"], // Standard optimization for reliability
+                timeout: 5000, // Stop waiting after 5 seconds
+                reconnectionAttempts: 3,
             });
 
             socketInstance.on("connect", () => {
