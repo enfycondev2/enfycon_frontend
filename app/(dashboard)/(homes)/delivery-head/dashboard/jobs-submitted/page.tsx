@@ -18,30 +18,17 @@ export default function DeliveryHeadSubmittedJobsPage() {
         setError("");
 
         try {
-            const firstResponse = await apiClient("/recruiter-submissions?page=1&limit=100");
-            if (!firstResponse.ok) {
+            // Optimization: Fetch all 230+ submissions in one go (limit 500 is safe for this volume)
+            // This prevents the "Machine Gun" parallel request loop that was causing the hang.
+            const response = await apiClient("/recruiter-submissions?page=1&limit=500");
+            if (!response.ok) {
                 throw new Error("Failed to fetch submitted jobs");
             }
 
-            const firstData = await firstResponse.json();
-            let allSubmissions = Array.isArray(firstData?.data)
-                ? firstData.data
-                : (Array.isArray(firstData?.submissions) ? firstData.submissions : (Array.isArray(firstData) ? firstData : []));
-
-            const totalPages = firstData?.totalPages || 1;
-            if (totalPages > 1) {
-                const promises = [];
-                for (let i = 2; i <= totalPages; i++) {
-                    promises.push(apiClient(`/recruiter-submissions?page=${i}&limit=100`).then(res => res.json()));
-                }
-                const results = await Promise.all(promises);
-                results.forEach(res => {
-                    const arr = Array.isArray(res?.data)
-                        ? res.data
-                        : (Array.isArray(res?.submissions) ? res.submissions : (Array.isArray(res) ? res : []));
-                    allSubmissions = [...allSubmissions, ...arr];
-                });
-            }
+            const result = await response.json();
+            const allSubmissions = Array.isArray(result?.data)
+                ? result.data
+                : (Array.isArray(result?.submissions) ? result.submissions : (Array.isArray(result) ? result : []));
 
             console.log("Fetched total submissions:", allSubmissions.length);
             setSubmissions(allSubmissions);
