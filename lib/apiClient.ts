@@ -20,7 +20,7 @@ export async function apiClient(endpoint: string, options: RequestInit = {}): Pr
     // Optimization: We use getSession here, but in a real-world scenario with frequent calls,
     // we should ideally use a context-provided session or local storage cache if security permits.
     // However, the primary issue is the BLOCKING nature of this call on every sub-request.
-    const session = await getSession();
+    let session = await getSession();
     let token = (session as any)?.user?.accessToken;
 
     const url = `${API_URL}/${endpoint.replace(/^\/+/, "")}`;
