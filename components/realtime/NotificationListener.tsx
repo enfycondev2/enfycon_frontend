@@ -66,15 +66,17 @@ const NotificationListener = () => {
                 playNotificationSound();
             }
 
-            // 3. Trigger refresh for new jobs
+            // 3. Trigger refresh for new jobs (Disabled to prevent refresh storm)
             if (payload.type === "NEW_JOB") {
-                console.log("[Notification Listener] NEW_JOB received, triggering router.refresh()");
+                console.log("[Notification Listener] NEW_JOB received, skipping automatic refresh to avoid rendering loop");
+                /*
                 try {
                     router.refresh();
                     console.log("[Notification Listener] router.refresh() called successfully");
                 } catch (err) {
                     console.error("[Notification Listener] router.refresh() failed:", err);
                 }
+                */
 
                 if (!isInitiator) {
                     toast.success(
