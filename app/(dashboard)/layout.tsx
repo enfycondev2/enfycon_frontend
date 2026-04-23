@@ -12,16 +12,14 @@ export default async function DashboardLayout({
     const cookieStore = await cookies();
     const defaultOpen = cookieStore.get("sidebar_state")?.value === "true";
 
-    // Fetch fresh user data to determine if we should show the full dashboard shell
     let isApproved = false;
     try {
-      const res = await serverApiClient("/auth/me", { cache: "no-store" });
-      if (res.ok) {
-        const user = await res.json();
-        isApproved = (user?.roles && user.roles.length > 0) || user?.isApproved;
-      }
+      const { auth } = await import("@/auth");
+      const session = await auth();
+      const roles = (session?.user as any)?.roles;
+      isApproved = (roles && roles.length > 0) ? true : false;
     } catch (err) {
-      console.error("[DashboardLayout] Error checking approval status:", err);
+      console.error("[DashboardLayout] Error checking approval status from session:", err);
     }
 
     return (

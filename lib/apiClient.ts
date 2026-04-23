@@ -16,11 +16,19 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://api.enfycon.com").r
  * @param options Standard fetch RequestInit options.
  * @returns The Response object from the fetch call.
  */
+let cachedSession: any = null;
+let lastSessionFetch = 0;
+const SESSION_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+
 export async function apiClient(endpoint: string, options: RequestInit = {}): Promise<Response> {
-    // Optimization: We use getSession here, but in a real-world scenario with frequent calls,
-    // we should ideally use a context-provided session or local storage cache if security permits.
-    // However, the primary issue is the BLOCKING nature of this call on every sub-request.
-    let session = await getSession();
+    // Optimization: Cache the session locally in memory. 
+    // getSession() makes an HTTP request to /api/auth/session which pauses the main thread for every API call.
+    if (!cachedSession || Date.now() - lastSessionFetch > SESSION_CACHE_TTL_MS) {
+        cachedSession = await getSession();
+        lastSessionFetch = Date.now();
+    }
+    
+    let session = cachedSession;
     let token = (session as any)?.user?.accessToken;
 
     const url = `${API_URL}/${endpoint.replace(/^\/+/, "")}`;
@@ -48,7 +56,9 @@ export async function apiClient(endpoint: string, options: RequestInit = {}): Pr
         // We pass { broadcast: true } / { update: true } equivalent if update() was exposed, 
         // but getSession() triggers a fetch to /api/auth/session which forces a check.
         // In NextAuth v5, `update()` from `useSession` is also an option, but `getSession` works standalone.
-        session = await getSession();
+        cachedSession = await getSession();
+        lastSessionFetch = Date.now();
+        session = cachedSession;
         token = (session as any)?.user?.accessToken;
 
         if (token) {
