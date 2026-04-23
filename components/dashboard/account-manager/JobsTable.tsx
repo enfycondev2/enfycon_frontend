@@ -175,7 +175,7 @@ function InlineExtendMenu({
 }: {
     jobId: string;
     requirementType?: string;
-    onSuccess?: () => void;
+    onSuccess?: (data?: any) => void;
 }) {
     const isCfr = requirementType === "CFR";
     const isExtended = requirementType === "CFR_EXTENDED";
@@ -207,7 +207,10 @@ function InlineExtendMenu({
                 toast.success(`CFR extended by ${days} day${days > 1 ? "s" : ""}`);
             }
 
-            if (onSuccess) onSuccess();
+            if (onSuccess) {
+                const updatedData = await res.json().catch(() => null);
+                onSuccess(updatedData);
+            }
         } catch (e: any) {
             toast.error(e.message || "Action failed");
         } finally {
@@ -301,7 +304,7 @@ function InlineExtendMenu({
     );
 }
 
-function JobStatusSelect({ job, onRefresh }: { job: Job; onRefresh?: () => void }) {
+function JobStatusSelect({ job, onRefresh }: { job: Job; onRefresh?: (updatedJob?: any) => void }) {
     const [status, setStatus] = useState(job.status);
     const [isUpdating, setIsUpdating] = useState(false);
     const { data: session } = useSession();
@@ -324,7 +327,10 @@ function JobStatusSelect({ job, onRefresh }: { job: Job; onRefresh?: () => void 
             }
 
             toast.success("Job status updated");
-            if (onRefresh) onRefresh();
+            if (onRefresh) {
+                const updatedData = await res.json().catch(() => null);
+                onRefresh(updatedData);
+            }
         } catch (error: any) {
             toast.error(error.message || "Something went wrong");
             setStatus(job.status); // revert on error
@@ -645,9 +651,9 @@ export default function JobsTable({
      * Calls onJobUpdated if the parent supports silent patching,
      * otherwise falls back to onRefresh (full re-fetch).
      */
-    const refreshJob = useCallback((jobId: string) => {
+    const refreshJob = useCallback((jobDataOrId: string | any) => {
         if (onJobUpdated) {
-            onJobUpdated(jobId);
+            onJobUpdated(jobDataOrId);
         } else if (onRefresh) {
             onRefresh();
         }

@@ -240,11 +240,19 @@ export default function DeliveryHeadJobsClient() {
     };
 
     /** Silently patch one job in state after an edit — no loading flicker */
-    const handleJobUpdated = useCallback(async (jobId: string) => {
+    const handleJobUpdated = useCallback(async (jobDataOrId: string | any) => {
         try {
-            const res = await apiClient(`/jobs/${jobId}`);
-            if (!res.ok) return;
-            const updated = await res.json();
+            let updated: any;
+            if (typeof jobDataOrId === "string") {
+                const res = await apiClient(`/jobs/${jobDataOrId}`);
+                if (!res.ok) return;
+                updated = await res.json();
+            } else {
+                updated = jobDataOrId;
+            }
+
+            if (!updated || !updated.id) return;
+
             setJobs(prev => prev.map(j => j.id === updated.id ? updated : j));
             // Invalidate prefetch cache so next page nav gets fresh data
             prefetchCache.current.clear();

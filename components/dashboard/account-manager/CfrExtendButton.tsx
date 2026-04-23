@@ -16,7 +16,7 @@ interface CfrExtendButtonProps {
     jobId: string;
     /** Pass the current requirementType so we can show the right UI */
     currentType?: string;
-    onSuccess?: () => void;
+    onSuccess?: (data?: any) => void;
 }
 
 /**
@@ -69,8 +69,12 @@ export default function CfrExtendButton({ jobId, currentType, onSuccess }: CfrEx
             }
 
             setOpen(false);
-            if (onSuccess) onSuccess();
-            else router.refresh();
+            if (onSuccess) {
+                const updatedData = await res.json().catch(() => null);
+                onSuccess(updatedData);
+            } else {
+                router.refresh();
+            }
         } catch (e: any) {
             toast.error(e.message || "Action failed");
         } finally {
@@ -99,10 +103,11 @@ export default function CfrExtendButton({ jobId, currentType, onSuccess }: CfrEx
                         {[1, 2, 3, 4, 5].map(d => (
                             <button
                                 key={d}
+                                type="button"
                                 onClick={() => setDays(d)}
-                                className={`h-8 w-8 rounded-md text-sm font-semibold border transition-colors ${days === d
-                                        ? "bg-amber-500 text-white border-amber-500"
-                                        : "border-neutral-200 text-neutral-600 hover:border-amber-400 hover:text-amber-700"
+                                className={`h-8 w-8 rounded-md border text-xs font-bold transition-all ${days === d
+                                    ? "bg-amber-500 border-amber-500 text-white shadow-sm"
+                                    : "bg-white border-neutral-200 text-neutral-600 hover:border-amber-300"
                                     }`}
                             >
                                 {d}
@@ -111,18 +116,18 @@ export default function CfrExtendButton({ jobId, currentType, onSuccess }: CfrEx
                     </div>
                     <Button
                         size="sm"
-                        className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                        className="w-full h-8 bg-amber-500 hover:bg-amber-600 text-white"
                         onClick={handleSubmit}
                         disabled={loading}
                     >
-                        {loading ? "Extending…" : `Extend ${days}d`}
+                        {loading ? "Extending..." : "Confirm Extension"}
                     </Button>
                 </PopoverContent>
             </Popover>
         );
     }
 
-    // ── Re-extend (CFR_EXTENDED → adjust): options 0 / 1 / 2 / 3
+    // ── Re-extend (CFR_EXTENDED → new days or revert): options 0 / 1 / 2 / 3
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -135,44 +140,43 @@ export default function CfrExtendButton({ jobId, currentType, onSuccess }: CfrEx
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-56 p-3 space-y-3" align="start">
-                <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">
-                    Adjust extension days
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                    Selecting <span className="font-bold text-red-500">0</span> reverts job to CFR — submissions will be blocked.
-                </p>
+                <div>
+                    <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">
+                        Adjust CFR Extension
+                    </p>
+                    <p className="text-[10px] text-neutral-400">
+                        0 = Stop extension (revert to CFR)
+                    </p>
+                </div>
+
                 <div className="flex gap-1 flex-wrap">
                     {[0, 1, 2, 3, 4].map(d => (
                         <button
                             key={d}
+                            type="button"
                             onClick={() => setDays(d)}
-                            className={`h-8 w-8 rounded-md text-sm font-semibold border transition-colors ${days === d
-                                    ? d === 0
-                                        ? "bg-red-500 text-white border-red-500"
-                                        : "bg-violet-500 text-white border-violet-500"
-                                    : d === 0
-                                        ? "border-red-200 text-red-500 hover:border-red-400 hover:bg-red-50"
-                                        : "border-neutral-200 text-neutral-600 hover:border-violet-400 hover:text-violet-700"
+                            className={`h-8 w-8 rounded-md border text-xs font-bold transition-all ${days === d
+                                ? d === 0
+                                    ? "bg-red-500 border-red-500 text-white shadow-sm"
+                                    : "bg-violet-500 border-violet-500 text-white shadow-sm"
+                                : "bg-white border-neutral-200 text-neutral-600 hover:border-violet-300"
                                 }`}
                         >
                             {d}
                         </button>
                     ))}
                 </div>
+
                 <Button
                     size="sm"
-                    className={`w-full text-white ${days === 0
-                            ? "bg-red-500 hover:bg-red-600"
-                            : "bg-violet-500 hover:bg-violet-600"
-                        }`}
+                    className={`w-full h-8 ${days === 0
+                        ? "bg-red-500 hover:bg-red-600"
+                        : "bg-violet-500 hover:bg-violet-600"
+                        } text-white`}
                     onClick={handleSubmit}
                     disabled={loading}
                 >
-                    {loading
-                        ? "Saving…"
-                        : days === 0
-                            ? "Revert to CFR"
-                            : `Extend ${days}d`}
+                    {loading ? "Processing..." : days === 0 ? "Revert to CFR" : "Update Extension"}
                 </Button>
             </PopoverContent>
         </Popover>
