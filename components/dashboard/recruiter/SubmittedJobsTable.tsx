@@ -476,8 +476,12 @@ export default function SubmittedJobsTable({
             const l3Status = (sub.l3Status || "PENDING").toUpperCase();
             const final = (sub.finalStatus || "").toUpperCase();
 
+            // Unified Logic: "Selected" includes both OFFER recipients and JOINERS.
+            // This ensures consistency with the Home Dashboard stats.
+            const isSelected = final === "JOIN" || final === "OFFER";
+
             if (statsMode === "cleared") {
-                if (final === "JOIN") {
+                if (isSelected) {
                     selected++;
                 } else if (l3Status === "CLEARED") {
                     l3++;
@@ -487,7 +491,7 @@ export default function SubmittedJobsTable({
                     l1++;
                 }
             } else {
-                if (final === "SELECTED") selected++;
+                if (isSelected) selected++;
                 if (l1Status === "PENDING") l1++;
                 if (l1Status === "CLEARED" && l2Status === "PENDING") l2++;
                 if (l1Status === "CLEARED" && l2Status === "CLEARED" && l3Status === "PENDING") l3++;
