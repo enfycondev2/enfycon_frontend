@@ -11,7 +11,8 @@ import {
   Mail,
   Bell,
   ImageIcon,
-  Heart
+  Heart,
+  Download
 } from "lucide-react";
 
 export const getSidebarData = (role: string) => {
@@ -315,6 +316,14 @@ export const getSidebarData = (role: string) => {
       title: "Users Management",
       url: "/delivery-head/dashboard/users",
       icon: UsersRound,
+    },
+    {
+      label: "Reports",
+    },
+    {
+      title: "Export Raw Data",
+      url: "/delivery-head/dashboard/raw-data",
+      icon: Download,
     },
   ];
 
